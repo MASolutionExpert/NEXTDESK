@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# chatdesk-deploy-version: 1.0.0
+# chatdesk-deploy-version: 1.1.0-dev.11
 
 set -uo pipefail
 
@@ -33,6 +33,13 @@ handle_exit() {
 }
 
 handle_interrupt() {
+  # If an update stopped the ChatDesk service and the operator pressed Ctrl+C
+  # before the restart step, restore the service immediately so the site does
+  # not sit behind nginx with HTTP 502. Guarded with declare -F because traps
+  # can fire before this function's dependencies are defined.
+  if declare -F restore_chatdesk_service_after_update >/dev/null 2>&1; then
+    restore_chatdesk_service_after_update || true
+  fi
   handle_exit
   exit 130
 }
@@ -46,8 +53,11 @@ LOG_FILE="/opt/chatdesk/logs/install.log"
 DATA_COMMAND_LAUNCHER="${DATA_COMMAND_LAUNCHER:-${INSTALL_DIR}/scripts/run-data-command.sh}"
 # Repository source. Point REPO_URL / REPO_BRANCH at any fork to install it.
 # Example: REPO_URL=https://github.com/<you>/<repo>.git REPO_BRANCH=dev bash scripts/install.sh
-REPO_URL="${REPO_URL:-https://github.com/miladalefbusiness/chatdesk.git}"
+REPO_URL="${REPO_URL:-https://github.com/MASolutionExpert/NEXTDESK.git}"
 REPO_BRANCH="${REPO_BRANCH:-main}"
+# Install metadata: remembers which repo/branch the server was installed from
+# so later updates keep tracking that branch (dev installs keep updating from dev).
+INSTALL_CONFIG_FILE="${INSTALL_DIR}/.chatdesk-install.conf"
 SERVICE_USER="chatdesk"
 SERVICE_GROUP="chatdesk"
 SERVICE_NAME="chatdesk"
@@ -79,8 +89,8 @@ ACME_WEBROOT="/var/lib/chatdesk/certbot"
 LEGO_STATE_DIR="/var/lib/chatdesk/lego"
 LEGO_BIN="/usr/local/bin/lego"
 GLOBAL_COMMAND_PATH="/usr/local/bin/chatdesk-deploy"
-CHATDESK_SOCIAL_GITHUB="https://github.com/miladalefbusiness/chatdesk"
-CHATDESK_SOCIAL_DOCS="https://github.com/miladalefbusiness/chatdesk/tree/main/docs"
+CHATDESK_SOCIAL_GITHUB="https://github.com/MASolutionExpert/NEXTDESK"
+CHATDESK_SOCIAL_DOCS="https://github.com/MASolutionExpert/NEXTDESK/tree/main/docs"
 
 # Mirror URLs
 MIRROR_NODESOURCE="${MIRROR_NODESOURCE:-}"
@@ -652,6 +662,26 @@ run_in_install_dir() {
     path_export="export PATH=$(printf '%q' "$path_prefix"):\$PATH; "
   fi
   run_silent run_as_root bash -lc "cd '$INSTALL_DIR' && ${path_export}$*"
+}
+
+# Like run_in_install_dir, but streams the child output LIVE to the terminal
+# (also appended to the log file) while preserving the child's exit code.
+# Used for long-running steps — e.g. database migrations — where capture-and-
+# show-later output looks exactly like a frozen update.
+run_in_install_dir_streaming() {
+  local path_prefix=""
+  local path_export=""
+  path_prefix="$(node_tools_path_prefix)"
+  if [[ -n "$path_prefix" ]]; then
+    path_export="export PATH=$(printf '%q' "$path_prefix"):\$PATH; "
+  fi
+  local log_dir=""
+  log_dir="$(dirname "$LOG_FILE")"
+  if [[ -d "$log_dir" ]]; then
+    run_as_root bash -lc "set -o pipefail; printf '[%s] Running: %s\n' \"\$(date '+%Y-%m-%d %H:%M:%S')\" $(printf '%q' "$*") >> $(printf '%q' "$LOG_FILE") 2>/dev/null || true; cd $(printf '%q' "$INSTALL_DIR") && ${path_export}$* 2>&1 | tee -a $(printf '%q' "$LOG_FILE")"
+  else
+    run_as_root bash -lc "cd $(printf '%q' "$INSTALL_DIR") && ${path_export}$*"
+  fi
 }
 
 run_in_install_dir_output() {
@@ -1643,14 +1673,70 @@ get_installed_lego_version() {
   return 1
 }
 
+# Pure SemVer 2.0.0 comparator: prints -1 (v1 < v2), 0 (v1 == v2), or 1 (v1 > v2).
+semver_compare_versions() {
+  local v1="${1#v}"
+  local v2="${2#v}"
+  v1="${v1%%+*}"
+  v2="${v2%%+*}"
+
+  local core1="${v1%%-*}"
+  local core2="${v2%%-*}"
+  local pre1=""
+  local pre2=""
+  [[ "$v1" == *-* ]] && pre1="${v1#*-}"
+  [[ "$v2" == *-* ]] && pre2="${v2#*-}"
+
+  local IFS=.
+  local -a c1=($core1) c2=($core2)
+  local i max_c=${#c1[@]}
+  (( ${#c2[@]} > max_c )) && max_c=${#c2[@]}
+  for ((i = 0; i < max_c; i++)); do
+    local n1="${c1[i]:-0}"
+    local n2="${c2[i]:-0}"
+    n1="${n1//[^0-9]/}"
+    n2="${n2//[^0-9]/}"
+    n1="${n1:-0}"
+    n2="${n2:-0}"
+    if (( 10#$n1 > 10#$n2 )); then printf "1"; return 0; fi
+    if (( 10#$n1 < 10#$n2 )); then printf "%s" "-1"; return 0; fi
+  done
+
+  if [[ -z "$pre1" && -z "$pre2" ]]; then printf "0"; return 0; fi
+  if [[ -z "$pre1" && -n "$pre2" ]]; then printf "1"; return 0; fi
+  if [[ -n "$pre1" && -z "$pre2" ]]; then printf "%s" "-1"; return 0; fi
+
+  local -a p1=($pre1) p2=($pre2)
+  local max_p=${#p1[@]}
+  (( ${#p2[@]} > max_p )) && max_p=${#p2[@]}
+  for ((i = 0; i < max_p; i++)); do
+    if (( i >= ${#p1[@]} )); then printf "%s" "-1"; return 0; fi
+    if (( i >= ${#p2[@]} )); then printf "1"; return 0; fi
+    local a="${p1[i]}"
+    local b="${p2[i]}"
+    [[ "$a" == "$b" ]] && continue
+    if [[ "$a" =~ ^[0-9]+$ && "$b" =~ ^[0-9]+$ ]]; then
+      if (( 10#$a > 10#$b )); then printf "1"; return 0; fi
+      if (( 10#$a < 10#$b )); then printf "%s" "-1"; return 0; fi
+    elif [[ "$a" =~ ^[0-9]+$ ]]; then
+      printf "%s" "-1"; return 0
+    elif [[ "$b" =~ ^[0-9]+$ ]]; then
+      printf "1"; return 0
+    else
+      if [[ "$a" > "$b" ]]; then printf "1"; return 0; fi
+      printf "%s" "-1"; return 0
+    fi
+  done
+  printf "0"
+}
+
+semver_gt() { [[ "$(semver_compare_versions "$1" "$2")" == "1" ]]; }
+semver_lt() { [[ "$(semver_compare_versions "$1" "$2")" == "-1" ]]; }
+semver_eq() { [[ "$(semver_compare_versions "$1" "$2")" == "0" ]]; }
+semver_ge() { local r; r="$(semver_compare_versions "$1" "$2")"; [[ "$r" == "1" || "$r" == "0" ]]; }
+
 lego_version_ge() {
-  local v1="$1"
-  local v2="$2"
-  if have_cmd dpkg; then
-    dpkg --compare-versions "$v1" ge "$v2"
-  else
-    [[ "$v1" == "$v2" || "$(printf '%s\n%s\n' "$v1" "$v2" | sort -V | head -n 1)" == "$v2" ]]
-  fi
+  semver_ge "$1" "$2"
 }
 
 ensure_lego_installed() {
@@ -1725,6 +1811,113 @@ ensure_lego_installed() {
   fi
 }
 
+read_install_config_value() {
+  local key="$1"
+  grep -E "^${key}=" "$INSTALL_CONFIG_FILE" 2>/dev/null \
+    | head -n 1 \
+    | cut -d '=' -f 2- \
+    | tr -d '\r\n' || true
+}
+
+write_install_config() {
+  [[ -d "$INSTALL_DIR" ]] || return 0
+  local branch_to_save="${1:-}"
+  if [[ -z "$branch_to_save" ]]; then
+    branch_to_save="$(detect_install_branch 2>/dev/null || printf "%s" "$REPO_BRANCH")"
+  fi
+  [[ -z "$branch_to_save" ]] && branch_to_save="$REPO_BRANCH"
+  run_silent run_as_root tee "$INSTALL_CONFIG_FILE" >/dev/null <<EOF || return 1
+REPO_URL=${REPO_URL}
+REPO_BRANCH=${branch_to_save}
+EOF
+  run_silent run_as_root chmod 644 "$INSTALL_CONFIG_FILE" || true
+}
+
+run_updated_finalize_pipeline() {
+  local updated_script="${INSTALL_DIR}/scripts/install.sh"
+  if [[ -f "$updated_script" ]] && grep -q -- "--finalize-update" "$updated_script"; then
+    log "Handing off finalization to updated installer script..."
+    REPO_URL="$REPO_URL" REPO_BRANCH="$REPO_BRANCH" bash "$updated_script" --finalize-update
+    return $?
+  fi
+  finalize_chatdesk_source_change
+}
+
+clean_tracked_lockfiles_for_pull() {
+  run_in_install_dir "git checkout -- package-lock.json client/package-lock.json server/package-lock.json worker/package-lock.json 2>/dev/null || true"
+}
+
+# Release channels. ChatDesk ships two completely separate channels so a
+# test install never receives production releases and a production install
+# never receives test builds:
+#   dev branch  -> Test channel    (prereleases vX.Y.Z-dev.N)
+#   main branch -> Stable channel  (production releases vX.Y.Z)
+channel_label_for_branch() {
+  case "$1" in
+    dev) printf "Test channel (dev)" ;;
+    main) printf "Stable channel (main)" ;;
+    "") printf "unknown channel" ;;
+    *) printf "unknown channel ($1)" ;;
+  esac
+}
+
+# Detect which branch an existing install tracks. Priority:
+# 1. The branch currently checked out in the install dir (what the app runs)
+# 2. The persisted install config (written at install/update time)
+# 3. The REPO_BRANCH value (env override or default)
+detect_install_branch() {
+  local branch=""
+  if [[ -d "$INSTALL_DIR/.git" ]]; then
+    branch="$(run_in_install_dir_output "git rev-parse --abbrev-ref HEAD" 2>/dev/null | tr -d '\r\n' || true)"
+    [[ "$branch" == "HEAD" ]] && branch=""
+  fi
+  if [[ -z "$branch" && -f "$INSTALL_CONFIG_FILE" ]]; then
+    branch="$(read_install_config_value "REPO_BRANCH")"
+  fi
+  [[ -z "$branch" ]] && branch="$REPO_BRANCH"
+  printf "%s" "$branch"
+}
+
+# Shared tail of every code path that changes the installed source
+# (update via git, offline zip update, channel switch). Keeping this in ONE
+# function is a release-engineering rule: whenever the pipeline gains a step
+# it is added here once, so an install made through any path always applies
+# the complete change set (dependencies, migrations, client build, CLI sync,
+# systemd units, service restart and health verification).
+finalize_chatdesk_source_change() {
+  log "Installing dependencies..."
+  install_chatdesk_dependencies || return 1
+  ensure_vapid_keys || return 1
+
+  log "Synchronizing database schema with latest version..."
+  run_migrations || return 1
+
+  ensure_service_user_exists || return 1
+  apply_ownership || return 1
+  if install_global_command_from_path "$INSTALL_DIR/scripts/install.sh"; then
+    log "Global command synchronized from updated install script."
+  else
+    warn "Failed to synchronize global command after update."
+  fi
+
+  # Unit files are fully generated: refresh them on every update.
+  if have_cmd systemctl && [[ -f "$SERVICE_FILE" ]]; then
+    log "Refreshing systemd services..."
+    configure_systemd_service || true
+  fi
+
+  log "Restarting ChatDesk service..."
+  run_as_root systemctl restart chatdesk.service || return 1
+  if have_cmd systemctl && systemctl list-unit-files | grep -q "^chatdesk-worker.service"; then
+    run_as_root systemctl restart chatdesk-worker.service || true
+  fi
+  run_as_root systemctl reload nginx || return 1
+  verify_chatdesk_service_health || true
+
+  write_install_config || true
+  return 0
+}
+
 clone_repo() {
   run_silent run_as_root mkdir -p "$INSTALL_DIR" || return 1
 
@@ -1733,6 +1926,7 @@ clone_repo() {
     run_in_install_dir "git fetch --all --prune" || return 1
     run_in_install_dir "git checkout ${REPO_BRANCH}" || return 1
     run_in_install_dir "git pull --ff-only origin ${REPO_BRANCH}" || return 1
+    write_install_config || true
     return 0
   fi
 
@@ -1747,6 +1941,7 @@ clone_repo() {
 
   log "Cloning ChatDesk repository..."
   run_silent run_as_root git clone --branch "$REPO_BRANCH" "$REPO_URL" "$INSTALL_DIR" || return 1
+  write_install_config || true
 }
 
 prepare_install_dir_for_offline() {
@@ -1906,13 +2101,13 @@ compare_offline_source_version() {
   fi
 
   local __cosv_relation=""
-  if dpkg --compare-versions "$__cosv_source_version" gt "$__cosv_install_version"; then
+  if semver_gt "$__cosv_source_version" "$__cosv_install_version"; then
     log "Offline source version ${__cosv_source_version} is newer than installed version ${__cosv_install_version}."
     __cosv_relation="newer"
-  elif dpkg --compare-versions "$__cosv_source_version" lt "$__cosv_install_version"; then
+  elif semver_lt "$__cosv_source_version" "$__cosv_install_version"; then
     log "Offline source version ${__cosv_source_version} is lower than installed version ${__cosv_install_version}."
     __cosv_relation="lower"
-  elif dpkg --compare-versions "$__cosv_source_version" eq "$__cosv_install_version"; then
+  elif semver_eq "$__cosv_source_version" "$__cosv_install_version"; then
     log "Offline source version ${__cosv_source_version} is the same as installed version ${__cosv_install_version}."
     __cosv_relation="same"
   else
@@ -3518,7 +3713,35 @@ run_migrations() {
     return 0
   fi
   log "Running database migrations..."
-  run_in_install_dir "npm --prefix server run db:migrate" || return 1
+  warn "Migration output below is LIVE: every migration prints its number and elapsed time."
+  warn "Do NOT press Ctrl+C here: interrupting a migration can corrupt the schema and leave the site down (HTTP 502)."
+
+  # Hard ceiling (last-resort watchdog): the DB layer itself fails fast
+  # (connection/statement timeouts + per-migration watchdog), but if something
+  # outside those knobs stalls, force-stop instead of hanging forever.
+  # Override with DB_MIGRATION_MAX_SECONDS for very large datasets.
+  local migration_max_seconds="${DB_MIGRATION_MAX_SECONDS:-900}"
+  local migrate_cmd="npm --prefix server run db:migrate"
+  if have_cmd timeout; then
+    migrate_cmd="timeout --kill-after=15 ${migration_max_seconds} ${migrate_cmd}"
+  else
+    warn "Coreutils 'timeout' not found — the ${migration_max_seconds}s migration ceiling cannot be enforced."
+  fi
+
+  local migration_rc=0
+  run_in_install_dir_streaming "$migrate_cmd" || migration_rc=$?
+
+  if [[ "$migration_rc" -eq 124 || "$migration_rc" -eq 137 ]]; then
+    warn "Database migrations were force-stopped after ${migration_max_seconds}s (hard ceiling)."
+    warn "A migration on a small database finishes in milliseconds — this is a database-layer problem, not a data-size problem."
+    warn "Diagnostics: cd ${INSTALL_DIR}/server && npm run db:doctor"
+    return 1
+  elif [[ "$migration_rc" -ne 0 ]]; then
+    warn "Database migrations FAILED with exit code ${migration_rc}. See the output above for the exact error."
+    warn "Diagnostics: cd ${INSTALL_DIR}/server && npm run db:doctor"
+    return 1
+  fi
+  return 0
 }
 
 chatdesk_service_is_running() {
@@ -3602,6 +3825,80 @@ ensure_chatdesk_stopped_for_update() {
   return 0
 }
 
+# Restores the ChatDesk service when an update stopped it but never reached
+# its restart step (failed dependency install, failed build, failed migration,
+# aborted prompt, "already up to date" exit, ...). Without this the site stays
+# down behind nginx (HTTP 502) after any interrupted update.
+restore_chatdesk_service_after_update() {
+  if ! have_cmd systemctl || ! systemctl list-unit-files 2>/dev/null | grep -q "^chatdesk.service"; then
+    return 0
+  fi
+  if chatdesk_service_is_running; then
+    return 0
+  fi
+  warn "ChatDesk service is stopped after an interrupted update. Restoring it..."
+  if ! run_as_root systemctl restart chatdesk.service; then
+    warn "Automatic restart failed. Start it manually: systemctl restart chatdesk.service"
+    warn "Then check the logs: journalctl -u chatdesk --no-pager -n 50"
+    return 0
+  fi
+  if have_cmd systemctl && systemctl list-unit-files 2>/dev/null | grep -q "^chatdesk-worker.service"; then
+    run_as_root systemctl restart chatdesk-worker.service || true
+  fi
+  run_as_root systemctl reload nginx || true
+
+  local port=""
+  port="$(get_existing_env_value_with_fallback "SERVER_PORT" "PORT" "$DEFAULT_SERVER_PORT")"
+  port="$(sanitize_input_value "$port")"
+  if [[ ! "$port" =~ ^[0-9]+$ ]]; then
+    port="$DEFAULT_SERVER_PORT"
+  fi
+  local restored="no"
+  for _ in $(seq 1 20); do
+    if chatdesk_healthcheck_responds "$port"; then
+      restored="yes"
+      break
+    fi
+    sleep 1
+  done
+  if [[ "$restored" == "yes" ]]; then
+    log "ChatDesk service restored and responding on port ${port}."
+  else
+    warn "ChatDesk service did not respond on port ${port} after restore."
+    warn "Check the logs: journalctl -u chatdesk --no-pager -n 50"
+  fi
+}
+
+# Post-restart health verification for the successful update path. Warning
+# only: a failed health check does not fail the update, but the operator gets
+# actionable output instead of a silent 502 later.
+verify_chatdesk_service_health() {
+  if ! have_cmd systemctl || ! systemctl list-unit-files 2>/dev/null | grep -q "^chatdesk.service"; then
+    return 0
+  fi
+  local port=""
+  port="$(get_existing_env_value_with_fallback "SERVER_PORT" "PORT" "$DEFAULT_SERVER_PORT")"
+  port="$(sanitize_input_value "$port")"
+  if [[ ! "$port" =~ ^[0-9]+$ ]]; then
+    port="$DEFAULT_SERVER_PORT"
+  fi
+  local healthy="no"
+  for _ in $(seq 1 15); do
+    if chatdesk_healthcheck_responds "$port"; then
+      healthy="yes"
+      break
+    fi
+    sleep 1
+  done
+  if [[ "$healthy" == "yes" ]]; then
+    log "ChatDesk is up and responding on port ${port}."
+    return 0
+  fi
+  warn "ChatDesk service did not respond on port ${port} within 15s — the site may be unreachable."
+  warn "Check the logs: journalctl -u chatdesk --no-pager -n 50"
+  return 1
+}
+
 update_nginx_runtime_values() {
   if [[ ! -f "$NGINX_SITE_FILE" ]]; then
     warn "Nginx site config not found at ${NGINX_SITE_FILE}. Skipping nginx update."
@@ -3659,7 +3956,19 @@ rebuild_and_restart_after_settings_change() {
   fi
 }
 
+# Update entry point.
+#
+# update_chatdesk_run stops the service first and has many failure / early-exit
+# paths; this wrapper guarantees the service is restored afterwards on every
+# path, so an interrupted update can never leave the site down (nginx 502).
 update_chatdesk() {
+  update_chatdesk_run
+  local update_rc=$?
+  restore_chatdesk_service_after_update
+  return "$update_rc"
+}
+
+update_chatdesk_run() {
   if [[ ! -d "$INSTALL_DIR" ]]; then
     warn "No ChatDesk install found at ${INSTALL_DIR}."
     press_enter_to_continue
@@ -3738,33 +4047,7 @@ update_chatdesk() {
     preserve_backup_and_restore_data
     update_source_from_zip "$offline_zip_path" || return 1
 
-    log "Installing dependencies..."
-    install_chatdesk_dependencies || return 1
-    ensure_vapid_keys || return 1
-
-    log "Synchronizing database schema with latest version..."
-    run_migrations || return 1
-
-    ensure_service_user_exists || return 1
-    apply_ownership || return 1
-    if install_global_command_from_path "$INSTALL_DIR/scripts/install.sh"; then
-      log "Global command synchronized from updated install script."
-    else
-      warn "Failed to synchronize global command after update."
-    fi
-
-    # Unit files are fully generated: refresh them on every update.
-    if have_cmd systemctl && [[ -f "$SERVICE_FILE" ]]; then
-      log "Refreshing systemd services..."
-      configure_systemd_service || true
-    fi
-
-    log "Restarting ChatDesk service..."
-    run_as_root systemctl restart chatdesk.service || return 1
-    if have_cmd systemctl && systemctl list-unit-files | grep -q "^chatdesk-worker.service"; then
-      run_as_root systemctl restart chatdesk-worker.service || true
-    fi
-    run_as_root systemctl reload nginx || return 1
+    finalize_chatdesk_source_change || { press_enter_to_continue; return 1; }
 
     show_deployment_success_frame "update"
     press_enter_to_continue
@@ -3787,10 +4070,18 @@ update_chatdesk() {
     return 1
   fi
 
+  # Track the branch this install came from (dev installs keep updating from dev)
+  local active_branch=""
+  active_branch="$(detect_install_branch)"
+  if [[ -z "$active_branch" ]]; then
+    active_branch="main"
+  fi
+  log "Tracking branch: ${active_branch}"
+
   # Get local and remote commit hashes
   local local_commit remote_commit
   local_commit="$(run_in_install_dir_output "git rev-parse HEAD" | tr -d '\r\n')"
-  remote_commit="$(run_in_install_dir_output "git rev-parse origin/main" | tr -d '\r\n')"
+  remote_commit="$(run_in_install_dir_output "git rev-parse origin/${active_branch}" | tr -d '\r\n')"
 
   if [[ -z "$local_commit" || -z "$remote_commit" ]]; then
     warn "Failed to determine current version. Check git repository status."
@@ -3799,7 +4090,7 @@ update_chatdesk() {
   fi
 
   local is_downgrade="no"
-  local target_ref="main"
+  local target_ref="${active_branch}"
   local target_version=""
 
   # Check if update is available
@@ -3846,50 +4137,111 @@ update_chatdesk() {
     log "Update available. Preparing to update ChatDesk..."
     preserve_backup_and_restore_data
 
-    # Ensure we're on main branch and pull latest
-    if ! run_in_install_dir "git checkout main"; then
-      warn "Failed to checkout main branch."
+    clean_tracked_lockfiles_for_pull
+    # Ensure we're on the tracked branch and pull latest
+    if ! run_in_install_dir "git checkout ${active_branch}"; then
+      warn "Failed to checkout ${active_branch} branch."
       press_enter_to_continue
       return 1
     fi
-
-    if ! run_in_install_dir "git pull --ff-only origin main"; then
+    if ! run_in_install_dir "git pull --ff-only origin ${active_branch}"; then
       warn "Failed to pull updates. Repository may have non-fast-forward changes."
       press_enter_to_continue
       return 1
     fi
   fi
-
-  log "Installing dependencies..."
-  install_chatdesk_dependencies || return 1
-  ensure_vapid_keys || return 1
-  
-  log "Synchronizing database schema with latest version..."
-  run_migrations || return 1
-
-  ensure_service_user_exists || return 1
-  apply_ownership || return 1
-  if install_global_command_from_path "$INSTALL_DIR/scripts/install.sh"; then
-    log "Global command synchronized from updated install script."
-  else
-    warn "Failed to synchronize global command after update."
-  fi
-
-  # Unit files are fully generated: refresh them on every update.
-  if have_cmd systemctl && [[ -f "$SERVICE_FILE" ]]; then
-    log "Refreshing systemd services..."
-    configure_systemd_service || true
-  fi
-
-  log "Restarting ChatDesk service..."
-  run_as_root systemctl restart chatdesk.service || return 1
-  if have_cmd systemctl && systemctl list-unit-files | grep -q "^chatdesk-worker.service"; then
-    run_as_root systemctl restart chatdesk-worker.service || true
-  fi
-  run_as_root systemctl reload nginx || return 1
+  REPO_BRANCH="${active_branch}"
+  run_updated_finalize_pipeline || { press_enter_to_continue; return 1; }
 
   show_deployment_success_frame "update"
   press_enter_to_continue
+  return 0
+}
+
+# Switch an existing GitHub install between the two release channels
+# (Test channel on dev <-> Stable channel on main). Updates always keep
+# tracking the channel the install came from, so this is the only entry
+# point needed to move an install across channels. Runs the exact same
+# finalization pipeline as a normal update (see finalize_chatdesk_source_change).
+switch_release_channel() {
+  if [[ ! -d "$INSTALL_DIR" ]]; then
+    warn "No ChatDesk install found at ${INSTALL_DIR}."
+    press_enter_to_continue
+    return 0
+  fi
+  if [[ ! -d "$INSTALL_DIR/.git" ]]; then
+    warn "Channel switch requires a GitHub install (offline/zip installs cannot switch)."
+    press_enter_to_continue
+    return 0
+  fi
+
+  local current_branch=""
+  current_branch="$(detect_install_branch)"
+  local target_branch=""
+  case "$current_branch" in
+    dev) target_branch="main" ;;
+    main) target_branch="dev" ;;
+    *)
+      warn "Install is on unexpected branch '${current_branch}'. Expected 'dev' or 'main'."
+      press_enter_to_continue
+      return 1
+      ;;
+  esac
+
+  local current_channel target_channel installed_version=""
+  current_channel="$(channel_label_for_branch "$current_branch")"
+  target_channel="$(channel_label_for_branch "$target_branch")"
+  installed_version="$(read_version_file_value "$INSTALL_DIR/VERSION" 2>/dev/null || true)"
+
+  printf "\n"
+  log "Current: ${current_channel}, version ${installed_version:-unknown}"
+  log "Target:  ${target_channel}"
+
+  if [[ "$(prompt_yes_no "Switch ChatDesk from ${current_channel} to ${target_channel}?" "no")" != "yes" ]]; then
+    log "Channel switch canceled."
+    press_enter_to_continue
+    return 0
+  fi
+
+  ensure_chatdesk_stopped_for_update || return 1
+
+  if [[ "$(prompt_yes_no "Create a database backup before switching?" "no")" == "yes" ]]; then
+    backup_database || return 1
+  fi
+
+  if ! run_in_install_dir "git fetch --all --prune --tags"; then
+    warn "Failed to fetch from remote. Check your network and credentials."
+    restore_chatdesk_service_after_update
+    press_enter_to_continue
+    return 1
+  fi
+
+  preserve_backup_and_restore_data
+  clean_tracked_lockfiles_for_pull
+
+  if ! run_in_install_dir "git checkout -B ${target_branch} origin/${target_branch}"; then
+    warn "Failed to checkout ${target_branch}."
+    restore_chatdesk_service_after_update
+    press_enter_to_continue
+    return 1
+  fi
+
+  REPO_BRANCH="${target_branch}"
+  run_updated_finalize_pipeline || {
+    warn "Channel switch failed while rebuilding. Check the logs before retrying."
+    restore_chatdesk_service_after_update
+    press_enter_to_continue
+    return 1
+  }
+
+  restore_chatdesk_service_after_update
+
+  local new_version=""
+  new_version="$(read_version_file_value "$INSTALL_DIR/VERSION" 2>/dev/null || true)"
+  log "Channel switched. ChatDesk is now on ${target_channel} (version ${new_version:-unknown})."
+  show_deployment_success_frame "update"
+  press_enter_to_continue
+  return 0
 }
 
 restart_chatdesk() {
@@ -4162,6 +4514,7 @@ install_chatdesk() {
       return 1
     }
   fi
+  write_install_config || true
   ensure_log_dir || return 1
   write_full_env_with_defaults || return 1
   ensure_local_postgres_setup || return 1
@@ -4213,7 +4566,7 @@ install_global_command_from_path() {
     return 1
   }
 
-  if ! sed -i "1s|^# chatdesk-deploy-version:.*$|# chatdesk-deploy-version: ${install_version}|" "$temp_target"; then
+  if ! sed -i "s|^# chatdesk-deploy-version:.*$|# chatdesk-deploy-version: ${install_version}|" "$temp_target"; then
     rm -f "$temp_target"
     return 1
   fi
@@ -4232,11 +4585,16 @@ install_global_command_from_remote() {
   local install_version="$SCRIPT_VERSION"
   local temp_target=""
   temp_target="$(mktemp)"
-  if ! curl -fsSL "$SCRIPT_REMOTE_URL" > "$temp_target"; then
+  if ! fetch_remote_installer_script "$temp_target"; then
     rm -f "$temp_target"
     return 1
   fi
-  if ! sed -i "1s|^# chatdesk-deploy-version:.*$|# chatdesk-deploy-version: ${install_version}|" "$temp_target"; then
+  local fetched_version=""
+  fetched_version="$(read_script_version_header "$temp_target" 2>/dev/null || true)"
+  if [[ -n "$fetched_version" ]]; then
+    install_version="$fetched_version"
+  fi
+  if ! sed -i "s|^# chatdesk-deploy-version:.*$|# chatdesk-deploy-version: ${install_version}|" "$temp_target"; then
     rm -f "$temp_target"
     return 1
   fi
@@ -4265,7 +4623,17 @@ fetch_remote_installer_script() {
   if ! have_cmd curl; then
     return 1
   fi
-  curl -fsSL --connect-timeout 10 --max-time 30 "$SCRIPT_REMOTE_URL" > "$target_file" || return 1
+  # Follow the branch the installed app tracks so the menu always updates
+  # from the same channel (dev menu updates from dev, main from main).
+  local installed_branch=""
+  installed_branch="$(detect_install_branch 2>/dev/null || true)"
+  local remote_url="$SCRIPT_REMOTE_URL"
+  if [[ -n "$installed_branch" && "$installed_branch" != "$REPO_BRANCH" ]]; then
+    local repo_path="${REPO_URL#*github.com/}"
+    repo_path="${repo_path%.git}"
+    remote_url="https://raw.githubusercontent.com/${repo_path}/${installed_branch}/scripts/install.sh"
+  fi
+  curl -fsSL --connect-timeout 10 --max-time 30 "$remote_url" > "$target_file" || return 1
   [[ -s "$target_file" ]] || return 1
 }
 
@@ -4313,7 +4681,7 @@ update_menu() {
     return 0
   fi
 
-  if dpkg --compare-versions "$remote_version" gt "$SCRIPT_VERSION"; then
+  if semver_gt "$remote_version" "$SCRIPT_VERSION"; then
     log "Newer version available (${remote_version} > ${SCRIPT_VERSION}). Updating menu..."
     if ! run_silent run_as_root install -m 755 "$temp_remote" "$GLOBAL_COMMAND_PATH"; then
       rm -f "$temp_remote"
@@ -4378,7 +4746,7 @@ ensure_global_command_on_first_run() {
     return 0
   fi
 
-  if dpkg --compare-versions "$installed_version" lt "$SCRIPT_VERSION"; then
+  if semver_lt "$installed_version" "$SCRIPT_VERSION"; then
     log "Global command version ${installed_version} is older than script version ${SCRIPT_VERSION}. Updating it automatically..."
     if ! install_global_command_core "$CURRENT_SCRIPT_PATH"; then
       warn "Automatic global command update failed. You can retry from the menu."
@@ -4451,17 +4819,28 @@ show_banner() {
   cat << 'EOF'
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                                                                           ║
-║      ███████╗ ██████╗ ███╗   ██╗ ██████╗ ██████╗ ██╗██████╗ ██████╗       ║
-║      ██╔════╝██╔═══██╗████╗  ██║██╔════╝ ██╔══██╗██║██╔══██╗██╔══██╗      ║
-║      ███████╗██║   ██║██╔██╗ ██║██║  ███╗██████╔╝██║██████╔╝██║  ██║      ║
-║      ╚════██║██║   ██║██║╚██╗██║██║   ██║██╔══██╗██║██╔══██╗██║  ██║      ║
-║      ███████║╚██████╔╝██║ ╚████║╚██████╔╝██████╔╝██║██║  ██║██████╔╝      ║
-║      ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚═╝╚═╝  ╚═╝╚═════╝       ║
+║      ███╗   ██╗███████╗██╗  ██╗████████╗██████╗ ███████╗███████╗██╗  ██╗  ║
+║      ████╗  ██║██╔════╝╚██╗██╔╝╚══██╔══╝██╔══██╗██╔════╝██╔════╝██║ ██╔╝  ║
+║      ██╔██╗ ██║█████╗   ╚███╔╝    ██║   ██║  ██║█████╗  ███████╗█████╔╝   ║
+║      ██║╚██╗██║██╔══╝   ██╔██╗    ██║   ██║  ██║██╔══╝  ╚════██║██╔═██╗   ║
+║      ██║ ╚████║███████╗██╔╝ ██╗   ██║   ██████╔╝███████╗███████║██║  ██╗  ║
+║      ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝  ║
 ║                                                                           ║
 ║                           D E P L O Y   T O O L                           ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 EOF
+  printf '\033[0m'
   printf 'Script Version: %s\n' "$SCRIPT_VERSION"
+  # Show what is actually installed (channel-aware) so operators can always
+  # tell a Test-channel (dev) install from a Stable-channel (main) one.
+  local installed_version="" installed_branch=""
+  installed_version="$(read_version_file_value "$INSTALL_DIR/VERSION" 2>/dev/null || true)"
+  installed_branch="$(detect_install_branch 2>/dev/null || true)"
+  if [[ -n "$installed_version" ]]; then
+    printf 'Installed ChatDesk: %s — %s\n' "$installed_version" "$(channel_label_for_branch "$installed_branch")"
+  else
+    printf 'Installed ChatDesk: not installed\n'
+  fi
   printf '\033[0m'      # reset
 }
 
@@ -4472,14 +4851,15 @@ show_menu() {
   printf "\n"
   printf "ChatDesk Deploy Menu\n"
   printf $'1) 📥  Install ChatDesk\n'
-  printf $'2) 🔄️  Update ChatDesk\n'
+  printf $'2) 🔄️  Update ChatDesk (stays on current channel)\n'
   printf $'3) ♻️  Restart ChatDesk\n'
-  printf $'4) ⚙️  Edit Settings (.env)\n'
-  printf $'5) 🗃️  Manage Database\n'
-  printf $'6) 🗑️  Remove ChatDesk\n'
-  printf $'7) 🔄️  Update menu\n'
-  printf $'8) 🌐  Configure mirrors\n'
-  printf $'9) 📋  View Logs\n'
+  printf $'4) 🔀  Switch Test (dev) / Stable (main) channel\n'
+  printf $'5) ⚙️  Edit Settings (.env)\n'
+  printf $'6) 🗃️  Manage Database\n'
+  printf $'7) 🗑️  Remove ChatDesk\n'
+  printf $'8) 🔄️  Update menu\n'
+  printf $'9) 🌐  Configure mirrors\n'
+  printf $'l) 📋  View Logs\n'
   printf $'0) 🚪  Exit\n\n'
 }
 
@@ -4787,6 +5167,19 @@ db_restore() {
     return 0
   fi
   run_db_command npm --prefix server run db:restore -- -y --file "$backup_path"
+  press_enter_to_continue
+}
+
+db_doctor() {
+  if [[ ! -d "$INSTALL_DIR/server" ]]; then
+    warn "Server directory not found."
+    press_enter_to_continue
+    return 0
+  fi
+  log "Running database diagnostics (db:doctor)..."
+  if ! run_db_command npm --prefix server run db:doctor; then
+    warn "The doctor reported failures — see the [FAIL] lines above for the exact cause and fix."
+  fi
   press_enter_to_continue
 }
 
@@ -5409,11 +5802,12 @@ show_db_menu() {
     printf "│                                              │\n"
     printf "│  23) ❔  Show help                           │\n"
     printf "│  24) ↩️  Go back                             │\n"
+    printf "│  25) 🩺  Database diagnostics (db:doctor)    │\n"
     printf "│  0) 🚪  Exit                                 │\n"
     printf "│                                              │\n"
     printf "└──────────────────────────────────────────────┘\n\n"
 
-    prompt_read "Choose an option [0-24]: " choice
+    prompt_read "Choose an option [0-25]: " choice
     case "$choice" in
       1) db_inspect "all" ;;
       2) db_inspect "chat" ;;
@@ -5439,16 +5833,41 @@ show_db_menu() {
       22) db_file_delete ;;
       23) db_help ;;
       24) return ;;
+      25) db_doctor ;;
       0) exit 0 ;;
-      *) printf "Invalid choice. Select a number from 0 to 24.\n" ;;
+      *) printf "Invalid choice. Select a number from 0 to 25.\n" ;;
     esac
   done
 }
 
 main() {
+  if [[ "${1:-}" == "--finalize-update" ]]; then
+    SKIP_CLEAR_ON_EXIT="1"
+    detect_os
+    ensure_sudo
+    finalize_chatdesk_source_change
+    return $?
+  fi
+
   if [[ "${1:-}" == "--version" || "${1:-}" == "-v" ]]; then
     SKIP_CLEAR_ON_EXIT="1"
     printf "%s\n" "$SCRIPT_VERSION"
+    return 0
+  fi
+
+  # Non-interactive status for scripts and quick checks: chatdesk-deploy --status
+  if [[ "${1:-}" == "--status" ]]; then
+    SKIP_CLEAR_ON_EXIT="1"
+    local status_version="" status_branch=""
+    status_version="$(read_version_file_value "$INSTALL_DIR/VERSION" 2>/dev/null || true)"
+    status_branch="$(detect_install_branch 2>/dev/null || true)"
+    printf "Installer/CLI version: %s\n" "$SCRIPT_VERSION"
+    if [[ -n "$status_version" ]]; then
+      printf "Installed ChatDesk: %s\n" "$status_version"
+      printf "Release channel:    %s\n" "$(channel_label_for_branch "$status_branch")"
+    else
+      printf "Installed ChatDesk: not installed\n"
+    fi
     return 0
   fi
 
@@ -5463,19 +5882,20 @@ main() {
   local choice=""
   while true; do
     show_menu
-    prompt_read "Choose an option [0-9]: " choice
+    prompt_read "Choose an option [0-9, l]: " choice
     case "$choice" in
       1) run_menu_action install_chatdesk ;;
       2) run_menu_action update_chatdesk ;;
       3) run_menu_action restart_chatdesk ;;
-      4) run_menu_action edit_settings ;;
-      5) run_menu_action show_db_menu ;;
-      6) run_menu_action remove_chatdesk ;;
-      7) run_menu_action update_menu ;;
-      8) run_menu_action configure_mirrors_menu ;;
-      9) run_menu_action show_logs_menu ;;
+      4) run_menu_action switch_release_channel ;;
+      5) run_menu_action edit_settings ;;
+      6) run_menu_action show_db_menu ;;
+      7) run_menu_action remove_chatdesk ;;
+      8) run_menu_action update_menu ;;
+      9) run_menu_action configure_mirrors_menu ;;
+      l|L) run_menu_action show_logs_menu ;;
       0) break ;;
-      *) printf "Invalid choice. Select a number from 0 to 9.\n" ;;
+      *) printf "Invalid choice. Select a number from 0 to 9, or l.\n" ;;
     esac
   done
 }

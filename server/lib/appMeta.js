@@ -19,6 +19,30 @@ function parseVersion(value) {
   };
 }
 
+function comparePrereleaseIdentifiers(left, right) {
+  const leftParts = String(left || "").split(".").filter(Boolean);
+  const rightParts = String(right || "").split(".").filter(Boolean);
+  const maxLen = Math.max(leftParts.length, rightParts.length);
+  for (let i = 0; i < maxLen; i += 1) {
+    if (i >= leftParts.length) return -1;
+    if (i >= rightParts.length) return 1;
+    const l = leftParts[i];
+    const r = rightParts[i];
+    if (l === r) continue;
+    const lNum = /^\d+$/.test(l);
+    const rNum = /^\d+$/.test(r);
+    if (lNum && rNum) {
+      const diff = Number(l) - Number(r);
+      if (diff !== 0) return diff > 0 ? 1 : -1;
+      continue;
+    }
+    if (lNum && !rNum) return -1;
+    if (!lNum && rNum) return 1;
+    return l < r ? -1 : 1;
+  }
+  return 0;
+}
+
 function compareVersions(left, right) {
   const a = parseVersion(left);
   const b = parseVersion(right);
@@ -33,7 +57,7 @@ function compareVersions(left, right) {
   if (!a.prerelease && b.prerelease) return 1;
   if (a.prerelease && !b.prerelease) return -1;
   if (a.prerelease === b.prerelease) return 0;
-  return a.prerelease.localeCompare(b.prerelease);
+  return comparePrereleaseIdentifiers(a.prerelease, b.prerelease);
 }
 
 function parseGitHubRepository(url) {
@@ -147,9 +171,17 @@ function readAppMeta({ fs, path, projectRootDir }) {
   const changelogSections = parseChangelogSections(changelog);
   const currentVersionSection = findChangelogVersionSection(changelog, version);
 
+  // Release channel derived from the VERSION file. Dev installs carry a
+  // prerelease suffix (X.Y.Z-dev.N) and run the Test channel; plain X.Y.Z
+  // runs the Stable channel. The client uses this so the update check only
+  // ever offers tags from the SAME channel (a stable install is never told
+  // to update to a -dev prerelease and vice versa).
+  const channel = /-dev(?:\.\d+)?$/i.test(version) ? "dev" : "stable";
+
   return {
     version,
     normalizedVersion: normalizeVersion(version),
+    channel,
     changelog,
     changelogSections,
     currentChangelog:

@@ -1,7 +1,8 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, afterEach } from "vitest";
 import {
   normalizeVersion,
   compareVersions,
+  fetchLatestGitHubTag,
 } from "../../src/utils/versioning.js";
 
 describe("normalizeVersion", () => {
@@ -110,5 +111,55 @@ describe("compareVersions", () => {
     test("compares mixed v-prefix and plain versions", () => {
       expect(compareVersions("v1.0.1", "1.0.0")).toBe(1);
     });
+  });
+  it("compares numeric prerelease identifiers numerically (dev.10 > dev.9)", () => {
+    expect(compareVersions("1.1.0-dev.10", "1.1.0-dev.9")).toBe(1);
+    expect(compareVersions("1.1.0-dev.9", "1.1.0-dev.10")).toBe(-1);
+    expect(compareVersions("1.1.0", "1.1.0-dev.10")).toBe(1);
+    expect(compareVersions("1.1.0-dev.10", "1.1.0")).toBe(-1);
+  });
+});
+
+describe("fetchLatestGitHubTag release channels", () => {
+  const mockTagsResponse = (tags) => {
+    global.fetch = async () => ({
+      ok: true,
+      json: async () => tags.map((name) => ({ name })),
+    });
+  };
+
+  afterEach(() => {
+    delete global.fetch;
+  });
+
+  const MIXED_TAGS = ["v1.1.0-dev.7", "v1.1.0-dev.6", "v1.0.0"];
+
+  test("stable channel ignores prerelease tags", async () => {
+    mockTagsResponse(MIXED_TAGS);
+    const latest = await fetchLatestGitHubTag({
+      owner: "MASolutionExpert",
+      repo: "chatdesk",
+      channel: "stable",
+    });
+    expect(latest.rawTag).toBe("v1.0.0");
+  });
+
+  test("dev channel follows prerelease tags", async () => {
+    mockTagsResponse(MIXED_TAGS);
+    const latest = await fetchLatestGitHubTag({
+      owner: "MASolutionExpert",
+      repo: "chatdesk",
+      channel: "dev",
+    });
+    expect(latest.rawTag).toBe("v1.1.0-dev.7");
+  });
+
+  test("defaults to the stable channel when channel is missing", async () => {
+    mockTagsResponse(MIXED_TAGS);
+    const latest = await fetchLatestGitHubTag({
+      owner: "MASolutionExpert",
+      repo: "chatdesk",
+    });
+    expect(latest.rawTag).toBe("v1.0.0");
   });
 });

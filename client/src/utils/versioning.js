@@ -19,6 +19,30 @@ function parseVersion(value) {
   };
 }
 
+function comparePrereleaseIdentifiers(left, right) {
+  const leftParts = String(left || "").split(".").filter(Boolean);
+  const rightParts = String(right || "").split(".").filter(Boolean);
+  const maxLen = Math.max(leftParts.length, rightParts.length);
+  for (let i = 0; i < maxLen; i += 1) {
+    if (i >= leftParts.length) return -1;
+    if (i >= rightParts.length) return 1;
+    const l = leftParts[i];
+    const r = rightParts[i];
+    if (l === r) continue;
+    const lNum = /^\d+$/.test(l);
+    const rNum = /^\d+$/.test(r);
+    if (lNum && rNum) {
+      const diff = Number(l) - Number(r);
+      if (diff !== 0) return diff > 0 ? 1 : -1;
+      continue;
+    }
+    if (lNum && !rNum) return -1;
+    if (!lNum && rNum) return 1;
+    return l < r ? -1 : 1;
+  }
+  return 0;
+}
+
 export function compareVersions(left, right) {
   const a = parseVersion(left);
   const b = parseVersion(right);
@@ -33,16 +57,16 @@ export function compareVersions(left, right) {
   if (!a.prerelease && b.prerelease) return 1;
   if (a.prerelease && !b.prerelease) return -1;
   if (a.prerelease === b.prerelease) return 0;
-  return a.prerelease.localeCompare(b.prerelease);
+  return comparePrereleaseIdentifiers(a.prerelease, b.prerelease);
 }
 
-export async function fetchLatestGitHubTag({ owner, repo }) {
+export async function fetchLatestGitHubTag({ owner, repo, channel } = {}) {
   if (!owner || !repo) {
     throw new Error("GitHub repository information is not configured.");
   }
 
   const response = await fetch(
-    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/tags?per_page=30`,
+    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/tags?per_page=100`,
     {
       headers: {
         Accept: "application/vnd.github+json",
@@ -56,6 +80,7 @@ export async function fetchLatestGitHubTag({ owner, repo }) {
 
   const tags = await response.json();
   const tagList = Array.isArray(tags) ? tags : [];
+  const isDevChannel = String(channel || "").trim().toLowerCase() === "dev";
   const semverTags = tagList
     .map((tag) => {
       const rawTag = String(tag?.name || "").trim();
@@ -64,7 +89,13 @@ export async function fetchLatestGitHubTag({ owner, repo }) {
         ? { rawTag, normalizedTag }
         : null;
     })
-    .filter(Boolean);
+    .filter(Boolean)
+    // Release channels must stay separate: a Stable-channel install is only
+    // offered stable tags (no -dev prereleases), while a Test-channel install
+    // may follow prereleases.
+    .filter(
+      (entry) => isDevChannel || !parseVersion(entry.normalizedTag)?.prerelease,
+    );
 
   if (!semverTags.length) {
     throw new Error("No version tags were found on GitHub.");
