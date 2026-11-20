@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# chatdesk-deploy-version: 1.1.0-dev.8
+# chatdesk-deploy-version: 1.1.0-dev.9
 
 set -uo pipefail
 
@@ -33,6 +33,13 @@ handle_exit() {
 }
 
 handle_interrupt() {
+  # If an update stopped the ChatDesk service and the operator pressed Ctrl+C
+  # before the restart step, restore the service immediately so the site does
+  # not sit behind nginx with HTTP 502. Guarded with declare -F because traps
+  # can fire before this function's dependencies are defined.
+  if declare -F restore_chatdesk_service_after_update >/dev/null 2>&1; then
+    restore_chatdesk_service_after_update || true
+  fi
   handle_exit
   exit 130
 }
@@ -3611,6 +3618,8 @@ run_migrations() {
     return 0
   fi
   log "Running database migrations..."
+  warn "On large databases this step can take several minutes. Do NOT press Ctrl+C here:"
+  warn "interrupting a migration can corrupt the schema and leave the site down (HTTP 502)."
   run_in_install_dir "npm --prefix server run db:migrate" || return 1
 }
 

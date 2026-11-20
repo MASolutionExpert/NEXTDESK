@@ -520,6 +520,56 @@ async function setSchemaVersion(version) {
   }
 }
 
+// Tables that must exist for ChatDesk to boot. Derived from the CREATE TABLE
+// statements in server/migrations/*.js (excluding the temporary *_new rebuild
+// tables used by table-rebuild migrations). Used to decide whether the
+// idempotent self-heal re-run is needed; see runDatabaseMigrations below.
+const CRITICAL_TABLES = [
+  "admin_audit_logs",
+  "app_settings",
+  "chat_left_members",
+  "chat_members",
+  "chat_message_files",
+  "chat_message_reads",
+  "chat_messages",
+  "chat_mutes",
+  "chats",
+  "departments",
+  "group_removed_members",
+  "hidden_chat_messages",
+  "hidden_chats",
+  "meta",
+  "pending_presigned_uploads",
+  "push_subscriptions",
+  "remote_channel_provider_state",
+  "remote_channel_queue",
+  "remote_channel_sources",
+  "sessions",
+  "users",
+];
+
+async function missingCriticalTables() {
+  if (isPostgresMode()) {
+    const rows = await getAll(
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'",
+    );
+    const existing = new Set(
+      (Array.isArray(rows) ? rows : []).map((row) =>
+        String(row?.table_name || "").toLowerCase(),
+      ),
+    );
+    return CRITICAL_TABLES.filter((table) => !existing.has(table));
+  }
+
+  const rows = getAll("SELECT name FROM sqlite_master WHERE type = 'table'");
+  const existing = new Set(
+    (Array.isArray(rows) ? rows : []).map((row) =>
+      String(row?.name || "").toLowerCase(),
+    ),
+  );
+  return CRITICAL_TABLES.filter((table) => !existing.has(table));
+}
+
 async function runDatabaseMigrations() {
   const tablesSet = new Set();
   const columnsSet = new Set();
@@ -632,18 +682,38 @@ async function runDatabaseMigrations() {
     const currentVersion = await getSchemaVersion();
     if (currentVersion >= migration.version) continue;
 
+    const migrationLabel = String(migration.version).padStart(3, "0");
+    const migrationStart = Date.now();
+    console.log(`[db-migrations] Applying migration ${migrationLabel} ...`);
     await migration.up(migrationContext);
     await migrationPromiseChain;
     await setSchemaVersion(migration.version);
     appliedMigration = true;
+    console.log(
+      `[db-migrations] Migration ${migrationLabel} applied in ${Date.now() - migrationStart}ms`,
+    );
   }
 
   // Self-heal schemas where PRAGMA user_version advanced but tables are missing.
   // All migrations are written to be idempotent (CREATE IF NOT EXISTS / guarded ALTERs),
-  // so re-applying ensures critical tables exist.
-  for (const migration of orderedMigrations) {
-    await migration.up(migrationContext);
-    await migrationPromiseChain;
+  // but re-applying every migration on every startup is expensive on large
+  // databases, so first run a cheap existence check and only re-apply when a
+  // critical table is actually missing.
+  const missingTables = await missingCriticalTables();
+  if (missingTables.length > 0) {
+    console.log(
+      `[db-migrations] Self-heal: missing tables (${missingTables.join(", ")}); re-applying idempotent migrations...`,
+    );
+    for (const migration of orderedMigrations) {
+      await migration.up(migrationContext);
+      await migrationPromiseChain;
+    }
+    const stillMissing = await missingCriticalTables();
+    if (stillMissing.length > 0) {
+      console.error(
+        `[db-migrations] Self-heal finished but tables are still missing: ${stillMissing.join(", ")}`,
+      );
+    }
   }
 
   const currentVersion = await getSchemaVersion();

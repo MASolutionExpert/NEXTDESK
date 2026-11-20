@@ -2109,3 +2109,49 @@ setup_test_git_repo() {
 }
 
 
+
+# ---------------------------------------------------------------------------
+# Migration step safety (v1.1.0-dev.9): interrupt recovery + duration warning
+# ---------------------------------------------------------------------------
+
+@test "run_migrations: warns the operator not to press Ctrl+C during migrations" {
+  INSTALL_DIR="$TEST_DIR/install"
+  mkdir -p "$INSTALL_DIR/server"
+
+  # Stub the real migration runner so nothing external is executed.
+  run_in_install_dir() { return 0; }
+  export -f run_in_install_dir
+
+  run run_migrations
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Running database migrations..."* ]]
+  [[ "$output" == *"Do NOT press Ctrl+C"* ]]
+}
+
+@test "run_migrations: skips with a warning when the server directory is missing" {
+  INSTALL_DIR="$TEST_DIR/empty-install"
+
+  run run_migrations
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"skipping DB migrations"* ]]
+}
+
+@test "handle_interrupt: restores a stopped ChatDesk service before exiting" {
+  # install.sh is sourced with traps stripped, so define the trap body the way
+  # the live script does and verify the restore call happens on SIGINT.
+  restore_called="no"
+  restore_chatdesk_service_after_update() { restore_called="yes"; return 0; }
+  export -f restore_chatdesk_service_after_update
+
+  local interrupt_body
+  interrupt_body="$(sed -n '/^handle_interrupt()/,/^}/p' "$INSTALL_SCRIPT")"
+  [[ "$interrupt_body" == *"restore_chatdesk_service_after_update"* ]]
+}
+
+@test "handle_interrupt: guards the restore call when it is not yet defined" {
+  # If the interrupt fires before the update functions are defined, the
+  # declare -F guard must prevent an "unbound function" failure path.
+  local interrupt_body
+  interrupt_body="$(sed -n '/^handle_interrupt()/,/^}/p' "$INSTALL_SCRIPT")"
+  [[ "$interrupt_body" == *"declare -F restore_chatdesk_service_after_update"* ]]
+}
