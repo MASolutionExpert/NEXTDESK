@@ -115,7 +115,7 @@ describe("Migration watchdog (db.js)", () => {
 
     // 0 disables the watchdog.
     process.env.DB_MIGRATION_TIMEOUT_MS = "0";
-    expect(dbModule.getMigrationTimeoutMs()).toBe(120_000);
+    expect(dbModule.getMigrationTimeoutMs()).toBe(0);
   });
 
   test("withMigrationTimeout aborts a hung migration with a labeled error", async () => {
@@ -164,7 +164,19 @@ describe("db:doctor diagnostics", () => {
     }
   });
 
+  test("collectDiagnostics stays strictly read-only on an uninitialized sqlite database", async () => {
+    const doctorModule = await import("../../scripts/db-doctor.js");
+    const report = await doctorModule.collectDiagnostics();
+
+    expect(report.findings.failures).toBeGreaterThan(0);
+    expect(report.currentSchemaVersion).toBe(0);
+    expect(report.lines.join("\n")).toMatch(/missing critical table|schema/i);
+  });
+
   test("collectDiagnostics reports a healthy sqlite schema", async () => {
+    // Explicitly bootstrap & migrate the temp SQLite DB first, because db:doctor
+    // is strictly read-only and must never run migrations as a side-effect.
+    await import("../../db.js");
     const doctorModule = await import("../../scripts/db-doctor.js");
     const report = await doctorModule.collectDiagnostics();
 

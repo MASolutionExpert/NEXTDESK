@@ -19,6 +19,7 @@ function bootServer(timeoutMs = BOOT_TIMEOUT_MS) {
       SERVER_PORT: "0",
       BIND_ADDRESS: "127.0.0.1",
       DATA_DIR: dataDir,
+      NEXTDESK_API_ONLY: "true",
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -55,7 +56,7 @@ describe("Server boot", () => {
         result.ok,
         `server exited early (code=${result.code}, signal=${result.signal}) stderr:\n${result.stderr}`,
       ).toBe(true);
-      expect(result.stdout).toContain("ChatDesk server running");
+      expect(result.stdout).toMatch(/(NextDesk|ChatDesk).*server running/i);
       expect(result.stderr).not.toMatch(/ReferenceError/);
     } finally {
       fs.rmSync(result.dataDir, { recursive: true, force: true });

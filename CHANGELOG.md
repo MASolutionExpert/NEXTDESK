@@ -2,6 +2,13 @@
 
 All notable changes to ChatDesk are documented in this file.
 
+## 2.0.0-dev.2
+
+- Fixed client unit test suite (`test/utils/versioning.test.js`) by replacing unimported `it(...)` with `test(...)`.
+- Fixed `server/test/serverBoot.test.js` to run isolated backend boot with `NEXTDESK_API_ONLY=true` and match the NextDesk server startup log.
+- Updated `server/test/db/databaseHardening.test.js` to assert the fixed `DB_MIGRATION_TIMEOUT_MS=0` watchdog-disable behavior and to verify both read-only uninitialized diagnostics and healthy migrated SQLite diagnostics for `db:doctor`.
+- Updated GitHub Action versions in `codeql.yml` and `docker.yml` (`@v4`/`@v3`/`@v5`/`@v6`) and limited automatic Docker release builds to non-prerelease `released` events.
+
 ## 2.0.0-dev.1
 
 ### New
