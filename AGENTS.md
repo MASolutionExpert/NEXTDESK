@@ -18,28 +18,44 @@ Every agent (and any AI/human contributor) working on this project MUST follow t
 10. **No unnecessary work**: Do only what is asked plus what is strictly required for correctness/security/integration. No refactoring for taste, no scope creep, no changes that could break working features.
 11. **When fixing a bug**: Change ONLY what is needed for that bug. Never break other working features while fixing one. After the fix, mentally (or via tests) re-verify the affected flows end-to-end.
 
-## DevOps Release Registration (MANDATORY — every completed task)
+## DevOps Workflow: Two GitHub Spaces (MANDATORY — read every session)
 
-Every time a unit of work is completed (bug fix, feature, i18n batch, refactor), the agent MUST fully register it on `dev` — a bare push of commits is NOT enough. The full DevOps flow, executed automatically by the agent (token is provided for this purpose):
+ChatDesk has EXACTLY TWO spaces on GitHub — `dev` and `main`. Their install commands are completely separate. NEVER mix them, and NEVER let `dev` changes leak into `main` by yourself.
 
-1. **Push commits** to `dev` (see Sandbox / Environment Workflow below).
-2. **Bump the version**: edit the root `VERSION` file. Dev versions MUST contain the word `dev` and be clearly distinguishable from release versions. Format: `X.Y.Z-dev.N` (e.g. `1.1.0-dev.1`, and `1.1.0-dev.2` for the next iteration on the same base).
-3. **Tag it**: create an annotated git tag `v{VERSION}` (e.g. `v1.1.0-dev.1`, always contains "dev") on the release commit and push the tag to origin.
-4. **Create a GitHub Release** for that tag via the GitHub API, marked as **prerelease**, with bilingual (English + Persian) release notes summarizing what changed. Title includes the dev version.
+### Space 1 — `dev` (development & testing)
 
-Release (non-dev) versions on `main` are still gated by explicit user approval (see below); dev versions/tags/releases on `dev` require no approval and are part of finishing the task.
+- EVERY completed change (bug fix, feature, i18n, docs, rules, installer) is IMMEDIATELY pushed to `dev` and registered as a NEW dev version:
+  1. Bump the root `VERSION` file — format `X.Y.Z-dev.N`, ALWAYS contains the word `dev` (e.g. `1.1.0-dev.3`; increment N for the next iteration).
+  2. Create an annotated git tag `v{VERSION}` (always contains "dev") and push it.
+  3. Publish a GitHub **prerelease** for that tag with bilingual (EN + FA) release notes, and report the direct release URL to the user.
+- After registration, the user tests on their test server using the **dev install link** and presses "Update" in the CLI (`chatdesk-deploy`). Dev installs track the `dev` branch forever (the installer persists the branch).
+- Dev releases require NO user approval — registering them is part of finishing the task.
+
+### Space 2 — `main` (stable releases)
+
+- `main` is FROZEN for the agent. NEVER push, merge, or build a stable version on `main` on your own initiative.
+- The ONLY trigger: after all tests pass, the user EXPLICITLY says — e.g. "OK, version `X.Y.Z-dev.N` of dev is fine without problems; build a new stable version on main". Then, and only then:
+  1. Merge the approved dev commit(s) into `main`.
+  2. Set a stable version `X.Y.Z` (NEVER contains "dev").
+  3. Tag `vX.Y.Z` and publish a full (non-prerelease) GitHub release.
+
+### Separate install commands (never mix)
+
+- **Main / stable**: `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/main/scripts/install.sh | bash`
+- **Dev / test**: `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/dev/scripts/install.sh | REPO_BRANCH=dev bash`
+
+### Bug-fix loop
+
+User reports a bug from dev testing → fix ONLY that bug (root cause, no patch-work, nothing else broken) → push to `dev` + register a new dev version → user re-tests. When everything is confirmed, the user triggers the stable release on `main`.
 
 ## Sandbox / Environment Workflow (IMPORTANT)
 
 The development sandbox used for coding is EPHEMERAL and UNSTABLE — it resets and loses local state. Therefore:
 
 - **Never rely on the sandbox to run or prove the app.** Do not waste time trying to run, serve, or manually test the full stack inside the sandbox. Static checks only (lint, build, unit tests if they pass in the environment).
-- **Deliverable = git branch.** The source of truth is GitHub, not the sandbox. When a task is complete, push the work to the `dev` branch.
+- **Deliverable = git branch + registered dev version.** The source of truth is GitHub, not the sandbox. When a task is complete, push to `dev` AND register a new dev version exactly as defined in "DevOps Workflow: Two GitHub Spaces" above.
 - **Push incrementally (MANDATORY)**: The sandbox can reset and lose local changes at any moment. Therefore EVERY important completed change (bug fix, new feature, i18n batch, refactor) MUST be committed and pushed to `dev` on GitHub IMMEDIATELY after it passes a build/lint check — do not batch up hours of work locally. At the end of each planned step, review and summarize the changes, then push again to `dev`.
-- **Release flow**: user tests `dev` on their real server → reports bugs → fixes go to `dev` → after the user EXPLICITLY approves, a new release version is built on `main`. Never build/release on `main` without that explicit approval.
-- **Testing happens on the user's real test server** using the `dev` branch installer. The user reports results back.
-- **Bug-fix loop**: user reports a bug → fix only that bug (root cause, no patch-work, nothing else broken) → push to `dev` again → user re-tests.
-- **`main` is release-only**: NEVER push or merge to `main` without explicit user approval after successful testing on the user's server.
+- **Testing happens on the user's real test server** using the dev install link and the CLI update. The user reports results back.
 - If a task genuinely cannot be implemented or verified without a running environment, say so honestly instead of faking verification.
 
 ## Workspace Architecture
@@ -81,7 +97,7 @@ npm run docs:build           # Build documentation site
 
 ## Development & Git Workflow
 
-- **Git Execution & Branching**: Work on the `dev` branch. `main` is release-only and must never be pushed/merged without explicit user approval after testing on the user's server. Commit messages use the format `type(scope): description`. Pushing to `dev` is part of delivering a task (see Sandbox / Environment Workflow).
+- **Git Execution & Branching**: Work on the `dev` branch. Follow the "DevOps Workflow: Two GitHub Spaces" rules above: `main` is frozen for the agent and only receives a stable release when the user explicitly asks for it. Commit messages use the format `type(scope): description`. Pushing to `dev` + registering a new dev version is part of delivering a task.
 - **Bug Fixing Workflow**: Do not guess or fix immediately upon a bug report. First write a test reproducing the issue under test scenarios, verify it catches the bug, then apply the fix.
 - **Response Style**: Keep task completions concise. Do not generate unrequested markdown summary files.
 
