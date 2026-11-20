@@ -18,6 +18,17 @@ Every agent (and any AI/human contributor) working on this project MUST follow t
 10. **No unnecessary work**: Do only what is asked plus what is strictly required for correctness/security/integration. No refactoring for taste, no scope creep, no changes that could break working features.
 11. **When fixing a bug**: Change ONLY what is needed for that bug. Never break other working features while fixing one. After the fix, mentally (or via tests) re-verify the affected flows end-to-end.
 
+## DevOps Release Registration (MANDATORY — every completed task)
+
+Every time a unit of work is completed (bug fix, feature, i18n batch, refactor), the agent MUST fully register it on `dev` — a bare push of commits is NOT enough. The full DevOps flow, executed automatically by the agent (token is provided for this purpose):
+
+1. **Push commits** to `dev` (see Sandbox / Environment Workflow below).
+2. **Bump the version**: edit the root `VERSION` file. Dev versions MUST contain the word `dev` and be clearly distinguishable from release versions. Format: `X.Y.Z-dev.N` (e.g. `1.1.0-dev.1`, and `1.1.0-dev.2` for the next iteration on the same base).
+3. **Tag it**: create an annotated git tag `v{VERSION}` (e.g. `v1.1.0-dev.1`, always contains "dev") on the release commit and push the tag to origin.
+4. **Create a GitHub Release** for that tag via the GitHub API, marked as **prerelease**, with bilingual (English + Persian) release notes summarizing what changed. Title includes the dev version.
+
+Release (non-dev) versions on `main` are still gated by explicit user approval (see below); dev versions/tags/releases on `dev` require no approval and are part of finishing the task.
+
 ## Sandbox / Environment Workflow (IMPORTANT)
 
 The development sandbox used for coding is EPHEMERAL and UNSTABLE — it resets and loses local state. Therefore:
