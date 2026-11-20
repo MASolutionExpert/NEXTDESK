@@ -102,10 +102,7 @@ export default defineConfig({
 
     socialLinks: [
       {icon: 'docker', link: 'https://hub.docker.com/r/MASolutionExpert/chatdesk'},
-      {icon: 'railway', link: 'https://railway.app/template/chatdesk'},
       {icon: 'github', link: 'https://github.com/MASolutionExpert/chatdesk'},
-      {icon: 'telegram', link: 'https://t.me/chatdeskapp'},
-      {icon: 'linkedin', link: 'https://www.linkedin.com/in/pouyakhalilii/'},
 
     ],
 

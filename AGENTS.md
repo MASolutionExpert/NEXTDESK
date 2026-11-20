@@ -115,19 +115,18 @@ npm run docs:build           # Build documentation site
 - **Bug Fixing Workflow**: Do not guess or fix immediately upon a bug report. First write a test reproducing the issue under test scenarios, verify it catches the bug, then apply the fix.
 - **Response Style**: Keep task completions concise. Do not generate unrequested markdown summary files.
 
-## graphify
+## Release Delivery Checklist (PERMANENT MEMORY — run at the end of EVERY change)
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+This checklist IS the memory of how ChatDesk ships. Never skip a step, no
+matter how small the change is — the user's servers only ever receive changes
+through the installer/CLI, so a change delivered without these steps is NOT
+delivered:
 
-When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
+1. **Root-cause fix only.** Fix exactly the reported problem; no patch-work, no unrelated edits.
+2. **Installer coverage.** If the change touches anything install/update-related, put it in `finalize_chatdesk_source_change()` (the single shared tail used by git update, offline update AND channel switch) — never in one code path only.
+3. **Release-sync gate.** Bump root `VERSION` (`X.Y.Z-dev.N`, increment N), bump the `# chatdesk-deploy-version:` header in `scripts/install.sh` to the SAME version, add a `## {VERSION}` section to `CHANGELOG.md`, then run `bash scripts/verify-release-sync.sh` — it MUST pass.
+4. **Full checks.** `bash -n scripts/install.sh`, bats (`npm run test:scripts` with bats available), server tests (`npm test --prefix server` with `DATABASE_URL= POSTGRES_URL=`), client unit tests (`npm run test:unit --prefix client`). Static checks only — the sandbox is ephemeral; real testing happens on the user's test server.
+5. **Push + register dev release.** Commit with `type(scope): description`, push `dev`, push annotated tag `v{VERSION}`, publish a bilingual (EN + FA) GitHub **prerelease** targeted at `dev`, and report the direct release URL to the user. No approval needed for dev releases.
+6. **Never touch `main`.** Stable releases happen ONLY through the "Promote dev to Stable" workflow after the user explicitly approves a dev version.
 
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output. Always prefer graphify query commands over raw text grepping on graphify-out/.
-- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
-
-## Superpowers
-
-When using superpowers skills, create the plans or specs docs under `.superpowers/docs`.
+Historical note (why step 3 exists): versions 1.1.0-dev.3 through dev.6 shipped without bumping the installer header, so the installed `chatdesk-deploy` CLI stayed frozen at 1.1.0-dev.2 and users' servers never self-updated past their original install. The CI gate now blocks any push with a stale header — do not weaken it.

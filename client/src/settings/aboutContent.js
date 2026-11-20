@@ -9,10 +9,6 @@ export const ABOUT_CONTENT = {
       href: "https://hub.docker.com/r/MASolutionExpert/chatdesk",
     },
     {
-      icon: "railway",
-      href: "https://railway.app/template/chatdesk",
-    },
-    {
       icon: "github",
       href: "https://github.com/MASolutionExpert/chatdesk",
     },

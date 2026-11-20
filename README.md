@@ -4,7 +4,6 @@
 
 # <img src="./client/public/chatdesk-logo.svg" alt="ChatDesk"> ChatDesk
 
-![Version](https://img.shields.io/badge/version-1.0.0-emerald)
 ![License: MIT](https://img.shields.io/badge/License-MIT-red.svg)
 
 **Self-hosted support messenger — a messenger feel with a ticketing engine behind it**
