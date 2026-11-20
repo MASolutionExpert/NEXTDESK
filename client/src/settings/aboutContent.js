@@ -1,12 +1,12 @@
 export const ABOUT_CONTENT = {
   copyright: {
-    ownerLabel: "@miladalefbusiness",
-    ownerHref: "https://github.com/miladalefbusiness",
+    ownerLabel: "@MASolutionExpert",
+    ownerHref: "https://github.com/MASolutionExpert",
   },
   socials: [
     {
       icon: "docker",
-      href: "https://hub.docker.com/r/miladalefbusiness/chatdesk",
+      href: "https://hub.docker.com/r/MASolutionExpert/chatdesk",
     },
     {
       icon: "railway",
@@ -14,7 +14,7 @@ export const ABOUT_CONTENT = {
     },
     {
       icon: "github",
-      href: "https://github.com/miladalefbusiness/chatdesk",
+      href: "https://github.com/MASolutionExpert/chatdesk",
     },
   ],
   supportIntro: "",

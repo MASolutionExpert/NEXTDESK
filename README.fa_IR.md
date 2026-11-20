@@ -40,7 +40,7 @@ ChatDesk یک پلتفرم چت امن، سبک و خودمیزبان است ک�
 (22.04 به بالا) با دسترسی sudo اجرا کنید:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/miladalefbusiness/chatdesk/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/main/scripts/install.sh | bash
 ```
 
 اسکریپت وابستگی‌ها را نصب می‌کند، اپ را build می‌کند، Nginx را تنظیم می‌کند و
@@ -60,7 +60,7 @@ chatdesk-deploy
 نصب نسخه فعلی dev روی یک سرور تست:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/miladalefbusiness/chatdesk/dev/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/dev/scripts/install.sh | bash
 ```
 
 نصب‌کننده برنچ مبدا را به خاطر می‌سپارد؛ پس به‌روزرسانی‌ها با `chatdesk-deploy`
@@ -97,7 +97,7 @@ curl -fsSL https://raw.githubusercontent.com/miladalefbusiness/chatdesk/dev/scri
 
 مشارکت‌ها خوش‌آمد هستند. لطفاً [راهنمای مشارکت](/CONTRIBUTING.md) را بخوانید و
 قبل از شروع تغییرات بزرگ، یک ایشن در
-`https://github.com/miladalefbusiness/chatdesk/issues` باز کنید.
+`https://github.com/MASolutionExpert/chatdesk/issues` باز کنید.
 
 ## مجوز
 

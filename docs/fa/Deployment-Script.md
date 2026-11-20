@@ -13,7 +13,7 @@
 این دستور تک‌خطی را روی سرور خود اجرا کنید:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/miladalefbusiness/chatdesk/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/main/scripts/install.sh | bash
 ```
 
 این دستور اسکریپت را دانلود می‌کند، منو را باز می‌کند و یک دستور سراسری `chatdesk-deploy` را نصب می‌کند. از آن پس، هر زمان که خواستید آن را با این دستور اجرا کنید:

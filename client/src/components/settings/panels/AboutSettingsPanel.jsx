@@ -25,7 +25,7 @@ export function AboutSettingsPanel({
   const { t } = useI18n();
   const versionLabel = String(appInfo?.version || "").trim();
   const ownerHref = ABOUT_CONTENT.copyright?.ownerHref || "";
-  const ownerLabel = ABOUT_CONTENT.copyright?.ownerLabel || "miladalefbusiness";
+  const ownerLabel = ABOUT_CONTENT.copyright?.ownerLabel || "MASolutionExpert";
   const year = new Date().getFullYear();
   const rowBase =
     "flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-200/70 bg-white/90 px-4 py-3 text-left text-sm font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-emerald-200";

@@ -46,7 +46,7 @@ LOG_FILE="/opt/chatdesk/logs/install.log"
 DATA_COMMAND_LAUNCHER="${DATA_COMMAND_LAUNCHER:-${INSTALL_DIR}/scripts/run-data-command.sh}"
 # Repository source. Point REPO_URL / REPO_BRANCH at any fork to install it.
 # Example: REPO_URL=https://github.com/<you>/<repo>.git REPO_BRANCH=dev bash scripts/install.sh
-REPO_URL="${REPO_URL:-https://github.com/miladalefbusiness/chatdesk.git}"
+REPO_URL="${REPO_URL:-https://github.com/MASolutionExpert/chatdesk.git}"
 REPO_BRANCH="${REPO_BRANCH:-main}"
 SERVICE_USER="chatdesk"
 SERVICE_GROUP="chatdesk"
@@ -79,8 +79,8 @@ ACME_WEBROOT="/var/lib/chatdesk/certbot"
 LEGO_STATE_DIR="/var/lib/chatdesk/lego"
 LEGO_BIN="/usr/local/bin/lego"
 GLOBAL_COMMAND_PATH="/usr/local/bin/chatdesk-deploy"
-CHATDESK_SOCIAL_GITHUB="https://github.com/miladalefbusiness/chatdesk"
-CHATDESK_SOCIAL_DOCS="https://github.com/miladalefbusiness/chatdesk/tree/main/docs"
+CHATDESK_SOCIAL_GITHUB="https://github.com/MASolutionExpert/chatdesk"
+CHATDESK_SOCIAL_DOCS="https://github.com/MASolutionExpert/chatdesk/tree/main/docs"
 
 # Mirror URLs
 MIRROR_NODESOURCE="${MIRROR_NODESOURCE:-}"

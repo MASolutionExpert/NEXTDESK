@@ -40,7 +40,7 @@ The easiest way to install ChatDesk is the deployment script. On an Ubuntu
 server (22.04+) with sudo access, run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/miladalefbusiness/chatdesk/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/main/scripts/install.sh | bash
 ```
 
 The script handles dependencies, builds the app, configures Nginx, and can set
@@ -60,7 +60,7 @@ The `dev` branch carries work-in-progress releases before they land on `main`.
 To install the current dev build on a test server:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/miladalefbusiness/chatdesk/dev/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/dev/scripts/install.sh | bash
 ```
 
 The installer remembers which branch it came from, so updates pulled with
@@ -105,7 +105,7 @@ Persian documentation is available under [docs/fa](/docs/fa).
 ## Contributing
 
 Contributions are welcome. Please read the [contributing guide](/CONTRIBUTING.md)
-and open an issue at `https://github.com/miladalefbusiness/chatdesk/issues`
+and open an issue at `https://github.com/MASolutionExpert/chatdesk/issues`
 before starting work on a large change.
 
 ## License
