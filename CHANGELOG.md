@@ -2,6 +2,10 @@
 
 All notable changes to ChatDesk are documented in this file.
 
+## 2.0.0-dev.4
+
+- Updated `web-push` v4 ESM imports in `server/index.js` and `server/lib/secrets.js` (`import * as webpush from "web-push"`) for native `web-push@^4.0.0` named-export compatibility.
+
 ## 2.0.0-dev.3
 
 - Upgraded full-stack runtime to **Next.js 16 (`^16.4.6`)** with Turbopack production builds, **React 19.3 (`^19.3.1`)**, **Tailwind CSS 4.3 (`^4.3.5`)**, **Vitest 5.1 (`^5.1.1`)**, and latest stable packages across root, `server/`, and `worker/` (`bullmq@^6.7.8`, `better-sqlite3@^13.2.0`, `web-push@^4.0.0`, `ws@^8.23.0`, `@aws-sdk/client-s3@^3.1173.0`, `lucide-react@^1.77.0`, `marked@^18.2.1`, `dompurify@^3.4.18`, `undici@^8.13.0`, `express-rate-limit@^8.7.5`, `sql.js@^1.17.0`).

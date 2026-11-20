@@ -11,7 +11,7 @@ import bcrypt from "bcryptjs";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 import multer from "multer";
-import webpush from "web-push";
+import * as webpush from "web-push";
 import { registerApiRoutes } from "./api/index.js";
 import { ensureValidVapidKeys } from "./lib/vapid.js";
 import { createSseHub } from "./lib/sse.js";
