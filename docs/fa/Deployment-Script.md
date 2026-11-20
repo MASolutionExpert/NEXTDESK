@@ -13,7 +13,7 @@
 این دستور تک‌خطی را روی سرور خود اجرا کنید:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/main/scripts/install.sh | bash
 ```
 
 این دستور اسکریپت را دانلود می‌کند، منو را باز می‌کند و یک دستور سراسری `chatdesk-deploy` را نصب می‌کند. از آن پس، هر زمان که خواستید آن را با این دستور اجرا کنید:
@@ -45,8 +45,8 @@ ChatDesk دو کانال انتشار کاملاً جدا دارد — نصب ت
 
 | کانال | برنچ | نسخه‌ها | دستور نصب |
 |---|---|---|---|
-| **اصلی / Stable** (پروداکشن) | `main` | `vX.Y.Z` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/main/scripts/install.sh \| bash` |
-| **تست / Test** (پیش‌انتشار) | `dev` | `vX.Y.Z-dev.N` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/dev/scripts/install.sh \| REPO_BRANCH=dev bash` |
+| **اصلی / Stable** (پروداکشن) | `main` | `vX.Y.Z` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/main/scripts/install.sh \| bash` |
+| **تست / Test** (پیش‌انتشار) | `dev` | `vX.Y.Z-dev.N` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/dev/scripts/install.sh \| REPO_BRANCH=dev bash` |
 
 - نصب‌کننده کانال نصب را به خاطر می‌سپارد؛ **Update** همیشه داخل همان کانال می‌ماند و چک به‌روزرسانی داخل خود اپ هم از همین قانون پیروی می‌کند.
 - بنر منو نسخه و کانال نصب‌شده را نشان می‌دهد؛ `chatdesk-deploy --status` همین اطلاعات را بدون منو چاپ می‌کند.

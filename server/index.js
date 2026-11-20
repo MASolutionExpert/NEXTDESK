@@ -5,6 +5,7 @@ import http from "node:http";
 import crypto from "node:crypto";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 import compression from "compression";
@@ -1231,38 +1232,31 @@ if (isProduction) {
 
 registerApiRoutes(app, apiDeps);
 
-if (isProduction) {
-  app.use(staticLimiter);
-
-  const clientDist = path.resolve(serverDir, "..", "client", "dist");
-  const setStaticCacheHeaders = (res, filePath) => {
-    const normalizedPath = String(filePath || "").replace(/\\/g, "/");
-    if (
-      normalizedPath.endsWith("/index.html") ||
-      normalizedPath.endsWith("/sw.js") ||
-      normalizedPath.endsWith("/manifest.webmanifest")
-    ) {
-      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      return;
-    }
-    if (normalizedPath.includes("/assets/")) {
-      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-      return;
-    }
-    res.setHeader("Cache-Control", "public, max-age=3600");
-  };
-
-  app.use(
-    express.static(clientDist, {
-      index: false,
-      setHeaders: setStaticCacheHeaders,
-    }),
-  );
-
-  app.get("*path", (req, res) => {
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.sendFile(path.join(clientDist, "index.html"));
+// ── Next.js Full-Stack App Router Integration ──────────────────────────────
+// Serves all non-API pages, SSR/RSC payloads, /_next/* assets, and /public/*
+// through the unified Next.js runtime on the exact same HTTP + WebSocket server.
+const nextApiOnly = String(process.env.NEXTDESK_API_ONLY || "").toLowerCase() === "true";
+let nextApp = null;
+let nextRequestHandler = null;
+if (!nextApiOnly) {
+  const rootRequire = createRequire(path.join(projectRootDir, "package.json"));
+  const nextFactory = rootRequire("next");
+  nextApp = nextFactory({
+    dev: !isProduction,
+    dir: projectRootDir,
+    hostname: bindAddress,
+    port,
   });
+  await nextApp.prepare();
+  nextRequestHandler = nextApp.getRequestHandler();
+  if (isProduction) {
+    app.use((req, res, nextFn) => {
+      if (req.path.startsWith("/api/") || req.path.startsWith("/_next/static/")) {
+        return nextFn();
+      }
+      return staticLimiter(req, res, nextFn);
+    });
+  }
 }
 
 app.use((err, req, res, next) => {
@@ -1289,6 +1283,15 @@ app.use((err, req, res, next) => {
   }
   return next(err);
 });
+
+if (nextRequestHandler) {
+  app.use((req, res, nextFn) => {
+    if (req.path.startsWith("/api/") || req.path === "/api") {
+      return nextFn();
+    }
+    return nextRequestHandler(req, res);
+  });
+}
 
 async function cleanupExpiredTextOnlyMessages() {
   if (getSetting("MESSAGE_TEXT_RETENTION") <= 0) {
@@ -1489,7 +1492,7 @@ if (REMOTE_CHANNEL) {
 }
 
 const server = app.listen(port, bindAddress, () => {
-  console.log(`ChatDesk server running on http://${bindAddress}:${port}`);
+  console.log(`NextDesk (Full-Stack Next.js) server running on http://${bindAddress}:${port}`);
   console.log(
     `[server] Media worker webhook callback URL: ${apiDeps.webhookCallbackUrl}`,
   );
@@ -1523,7 +1526,8 @@ wsGlobalBroadcaster = (payload) => wsGateway.broadcastAll(payload);
 // Graceful shutdown for container orchestrators
 process.on("SIGTERM", () => {
   console.log("SIGTERM received, shutting down gracefully...");
-  server.close(() => {
+  server.close(async () => {
+    try { if (nextApp && typeof nextApp.close === "function") await nextApp.close(); } catch {}
     console.log("Server closed");
     process.exit(0);
   });

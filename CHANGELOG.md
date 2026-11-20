@@ -2,6 +2,13 @@
 
 All notable changes to ChatDesk are documented in this file.
 
+## 2.0.0-dev.1
+
+### New
+- ⚡ **Full-Stack Next.js 15 Architecture (1:1 migration)**: replaced the separate Vite SPA with a unified Full-Stack **Next.js 15 App Router** application (`src/app/`, `src/components/`, `src/views/`, `src/hooks/`, `src/i18n/`, `src/utils/`, `public/`, `next.config.mjs`) coupled with the unified Node HTTP + Express 5 + SSE + WebSocket (`/ws`) server entrypoint (`server.mjs`).
+- 🔄 **Zero Logic Loss**: preserved every single feature, route (`/`, `/login`, `/signup`, `/chat`, `/admin`, `/departments`, `/invite/[token]`), 43 database migrations, Helpdesk department routing, WebRTC voice/video calls, BullMQ media worker, Remote Channels, Persian/English i18n, PWA service worker, and all unit/integration tests verbatim.
+- 🧰 **Installer, Docker, CI/CD & Docs synced to NextDesk**: updated `scripts/install.sh` (`nextdesk-deploy` + backwards-compatible `chatdesk-deploy`), `Dockerfile`, `docker-compose.yaml`, `.github/workflows/build.yml`, `AGENTS.md`, `DESIGN.md`, `README.md`, and `README.fa_IR.md` for unified Next.js builds (`npm run build` / `node server.mjs`).
+
 ## 1.1.0-dev.11
 
 ### Fixed

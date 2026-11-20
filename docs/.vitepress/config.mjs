@@ -101,8 +101,8 @@ export default defineConfig({
     logo: '/chatdesk-logo.svg',
 
     socialLinks: [
-      {icon: 'docker', link: 'https://hub.docker.com/r/MASolutionExpert/chatdesk'},
-      {icon: 'github', link: 'https://github.com/MASolutionExpert/chatdesk'},
+      {icon: 'docker', link: 'https://hub.docker.com/r/MASolutionExpert/NEXTDESK'},
+      {icon: 'github', link: 'https://github.com/MASolutionExpert/NEXTDESK'},
 
     ],
 
@@ -119,11 +119,11 @@ export default defineConfig({
         nav: [
           {text: 'Home', link: '/'},
           {text: 'Guide', link: '/Deployment-Script'},
-          {text: 'Releases', link: 'https://github.com/MASolutionExpert/chatdesk/releases'},
+          {text: 'Releases', link: 'https://github.com/MASolutionExpert/NEXTDESK/releases'},
         ],
         sidebar: enSidebar,
         editLink: {
-          pattern: 'https://github.com/MASolutionExpert/chatdesk/edit/main/docs/:path',
+          pattern: 'https://github.com/MASolutionExpert/NEXTDESK/edit/main/docs/:path',
           text: 'Edit this page on GitHub',
         },
         footer: {
@@ -141,11 +141,11 @@ export default defineConfig({
         nav: [
           {text: 'خانه', link: '/fa/'},
           {text: 'راهنما', link: '/fa/Deployment-Script'},
-          {text: 'نسخه‌ها', link: 'https://github.com/MASolutionExpert/chatdesk/releases'},
+          {text: 'نسخه‌ها', link: 'https://github.com/MASolutionExpert/NEXTDESK/releases'},
         ],
         sidebar: faSidebar,
         editLink: {
-          pattern: 'https://github.com/MASolutionExpert/chatdesk/edit/main/docs/:path',
+          pattern: 'https://github.com/MASolutionExpert/NEXTDESK/edit/main/docs/:path',
           text: 'ویرایش این صفحه در GitHub',
         },
         footer: {

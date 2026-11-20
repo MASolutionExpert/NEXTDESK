@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# chatdesk-deploy-version: 1.1.0-dev.11
+# chatdesk-deploy-version: 2.0.0-dev.1
 
 set -uo pipefail
 
@@ -2238,17 +2238,17 @@ install_chatdesk_dependencies() {
     npm_registry_arg="--registry $(printf '%q' "$MIRROR_NPM")"
   fi
 
-  log "Installing server dependencies..."
+  log "Installing Next.js application dependencies..."
+  run_in_install_dir "npm ${npm_registry_arg} install" || return 1
+
+  log "Installing server engine dependencies..."
   run_in_install_dir "npm ${npm_registry_arg} --prefix server install" || return 1
 
   log "Installing worker dependencies..."
   run_in_install_dir "npm ${npm_registry_arg} --prefix worker install" || return 1
 
-  log "Installing client dependencies..."
-  run_in_install_dir "npm ${npm_registry_arg} --prefix client install" || return 1
-
-  log "Building client..."
-  run_in_install_dir "npm --prefix client run build" || return 1
+  log "Building Next.js production bundle..."
+  run_in_install_dir "npm run build" || return 1
 }
 
 get_existing_env_value() {
@@ -3061,7 +3061,8 @@ User=${SERVICE_USER}
 Group=${SERVICE_GROUP}
 EnvironmentFile=${INSTALL_DIR}/.env
 WorkingDirectory=${INSTALL_DIR}/server
-ExecStart=${NODE_EXEC_PATH} ${INSTALL_DIR}/server/index.js
+Environment=NODE_ENV=production
+ExecStart=${NODE_EXEC_PATH} ${INSTALL_DIR}/server.mjs
 Restart=on-failure
 RestartSec=5
 
@@ -3940,7 +3941,7 @@ rebuild_and_restart_after_settings_change() {
   local needs_nginx="${1:-no}"
   sync_values_from_env
   log "Rebuilding client after settings change..."
-  run_in_install_dir "npm --prefix client run build" || return 1
+  run_in_install_dir "npm run build" || return 1
 
   log "Restarting ChatDesk service..."
   run_as_root systemctl restart chatdesk.service || return 1
@@ -4577,6 +4578,7 @@ install_global_command_from_path() {
   fi
 
   rm -f "$temp_target"
+  run_silent run_as_root ln -sf "$GLOBAL_COMMAND_PATH" "/usr/local/bin/nextdesk-deploy" || true
   LAST_GLOBAL_COMMAND_VERSION="$install_version"
   return 0
 }

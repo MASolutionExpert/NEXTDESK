@@ -13,7 +13,7 @@ The script targets Ubuntu (22.04+) and needs root privileges (it uses `sudo` aut
 Run the one-liner on your server:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/main/scripts/install.sh | bash
 ```
 
 This downloads the script, opens the menu, and installs a global `chatdesk-deploy` command. From then on, launch it anytime with:
@@ -46,8 +46,8 @@ builds:
 
 | Channel | Branch | Versions | Install command |
 |---|---|---|---|
-| **Stable** (production) | `main` | `vX.Y.Z` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/main/scripts/install.sh \| bash` |
-| **Test** (pre-release) | `dev` | `vX.Y.Z-dev.N` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/dev/scripts/install.sh \| REPO_BRANCH=dev bash` |
+| **Stable** (production) | `main` | `vX.Y.Z` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/main/scripts/install.sh \| bash` |
+| **Test** (pre-release) | `dev` | `vX.Y.Z-dev.N` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/dev/scripts/install.sh \| REPO_BRANCH=dev bash` |
 
 - The installer remembers the channel it came from; **Update** always stays inside that channel, and the in-app update check follows the same rule.
 - The menu banner shows the installed version and channel; `chatdesk-deploy --status` prints the same information non-interactively.

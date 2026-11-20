@@ -41,3 +41,8 @@ certs/
 .agents/
 paseo.json
 skills-lock.json
+
+# Next.js
+.next/
+out/
+next-env.d.ts

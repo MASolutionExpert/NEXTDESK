@@ -1,118 +1,45 @@
-[English](/README.md) | [فارسی](/README.fa_IR.md)
+# NextDesk (نکست‌دسک)
 
-<div align="center">
+**NextDesk** یک پیام‌رسان سازمانی و سیستم پشتیبانی (Helpdesk) خودمیزبان و بلادرنگ است که به‌صورت یکپارچه روی **Full-Stack Next.js 15** (App Router + سرور یکپارچه Express 5 / SSE / WebSocket + PostgreSQL/SQLite + ورکر مدیای FFmpeg) پیاده‌سازی شده است.
 
-# <img src="./client/public/chatdesk-logo.svg" alt="ChatDesk"> ChatDesk
+## امکانات کلیدی
 
-![License: MIT](https://img.shields.io/badge/License-MIT-red.svg)
+- ⚡ **معماری یکپارچه Full-Stack Next.js 15**: یک سرور واحد (`server.mjs`) هم‌زمان فرانت‌اند Next.js App Router، تمام APIها، جریان بلادرنگ SSE (`/api/events`) و WebSocket (`/ws`) را سرویس می‌دهد.
+- 🎧 **ماژول کامل پشتیبانی (Helpdesk)**: دپارتمان‌ها، نقش اپراتور، توزیع عادلانه درخواست‌ها (Round-Robin / Least-Busy)، صف گفتگوها و گزارش‌های مدیریتی.
+- 💬 **پیام‌رسان کامل سازمانی**: پیام خصوصی، گروه، کانال، ریپلای، فوروارد، منشن، وضعیت خوانده‌شدن، کش آفلاین IndexedDB و PWA.
+- 📞 **تماس صوتی و تصویری**: تماس WebRTC همراه با اشتراک‌گذاری صفحه و ابزار بررسی TURN.
+- 📎 **مدیریت فایل و استوریج ابری**: پشتیبانی از حافظه محلی و S3 / Cloudflare R2 با رمزنگاری، ویس و تبدیل ویدئو با FFmpeg.
+- 🌐 **دوزبانه بومی (فارسی و انگلیسی)**: پشتیبانی کامل RTL/LTR با فونت‌های Vazirmatn و DM Sans و انتخاب زبان برای هر کاربر.
+- 🛡️ **لایه دیتابیس سخت‌سازی‌شده**: PostgreSQL (پیش‌فرض در سرور) و SQLite با ۴۳ مایگریشن idempotent، تایم‌اوت‌های Fail-Fast، بکاپ خودکار پیش از مایگریشن و ابزار تشخیصی صرفاً خواندنی `db:doctor`.
 
-**پیام‌رسان پشتیبانی خودمیزبان — حس یک پیام‌رسان با موتور تیکتینگ پشت آن**
-
-</div>
-
-## چت‌دسک چیست؟
-
-ChatDesk یک پلتفرم چت امن، سبک و خودمیزبان است که برای تیم‌های پشتیبانی
-مشتریان ساخته شده. مشتری‌ها ثبت‌نام می‌کنند، دپارتمان مورد نیاز را انتخاب
-می‌کنند و وارد یک گفتگوی واقعی می‌شوند — در حالی که اپراتورها پشت صحنه یک
-هلپ‌دسک سازمانی با توزیع عادلانه درخواست‌ها در اختیار دارند.
-
-## قابلیت‌های کلیدی
-
-- 🎧 **حالت هلپ‌دسک**: دپارتمان‌ها، نقش اپراتور و توزیع عادلانه (round-robin / کم‌ترین بار) درخواست‌های پشتیبانی
-- 💬 **حس پیام‌رسان**: پیام مستقیم، گروه و کانال با تجربه چت لحظه‌ای
-- 🗂️ **موتور تیکتینگ**: وضعیت درخواست، تخصیص، برچسب و یادداشت داخلی که برای مشتری نمایش داده نمی‌شود
-- 📁 **پشتیبانی رسانه**: آپلود فایل، پیام صوتی، تبدیل ویدیو
-- 🔔 **اعلان فوری**: Web Push با VAPID
-- 📞 **تماس صوتی و تصویری**: تماس واقعی نظیر به نظیر
-- 📡 **کانال‌های راه دور**: دریافت پیام از کانال‌های تلگرام یا ChatDesk
-- 🛡️ **پنل مدیریت**: رابط مدیریت کامل با نقش مالک، حساب‌های اپراتور و مدیریت دپارتمان‌ها
-- 📊 **گزارش‌ها**: حجم مکالمات، زمان پاسخ و فعالیت اپراتورها
-- 🔒 **امنیت**: رمزنگاری داده، هش bcrypt، محدودسازی نرخ درخواست
-- 📱 **PWA**: وب‌اپ پیش‌رونده قابل نصب
-- ☁️ **استقرار ابری**: استقرار روی PaaS و CaaS با پشتیبانی Object Storage
-- 🌍 **چندزبانه**: پشتیبانی از انگلیسی و فارسی
-
-## شروع سریع
-
-ساده‌ترین راه نصب ChatDesk استفاده از اسکریپت استقرار است. روی سرور Ubuntu
-(22.04 به بالا) با دسترسی sudo اجرا کنید:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/main/scripts/install.sh | bash
-```
-
-اسکریپت وابستگی‌ها را نصب می‌کند، اپ را build می‌کند، Nginx را تنظیم می‌کند و
-در صورت نیاز SSL را هم پیاده می‌کند. برای دسترسی مجدد بعد از نصب:
-
-```bash
-chatdesk-deploy
-```
-
-> [!TIP]
-> توصیه می‌شود یک دامنه به IP عمومی سرور متصل باشد. برای اعلان‌های فوری
-> HTTPS الزامی است (به‌جز روی `localhost`).
-
-### کانال‌های انتشار (تست و اصلی)
-
-ChatDesk با پایپ‌لاین DevOps دو کاناله کار می‌کند — نصب تست و نصب اصلی هرگز
-با هم قاطی نمی‌شوند:
+## نصب سریع روی سرور (Ubuntu 22.04 به بالا)
 
 | کانال | برنچ | نسخه‌ها | دستور نصب |
 |-------|------|---------|-----------|
-| **اصلی / Stable** (پروداکشن) | `main` | `vX.Y.Z` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/main/scripts/install.sh \| bash` |
-| **تست / Test** (پیش‌انتشار) | `dev` | `vX.Y.Z-dev.N` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/dev/scripts/install.sh \| REPO_BRANCH=dev bash` |
+| **اصلی / Stable** (پروداکشن) | `main` | `vX.Y.Z` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/main/scripts/install.sh \| bash` |
+| **تست / Test** (پیش‌انتشار) | `dev` | `vX.Y.Z-dev.N` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/dev/scripts/install.sh \| REPO_BRANCH=dev bash` |
 
-- نصب‌کننده کانال نصب را به خاطر می‌سپارد؛ `chatdesk-deploy` → **Update** همیشه
-  داخل همان کانال می‌ماند (نصب Stable هرگز نسخه `-dev` نمی‌گیرد و برعکس).
-  چک به‌روزرسانی داخل خود اپ هم از همین قانون پیروی می‌کند.
-- برای اینکه ببینید سرور چه نسخه‌ای از چه کانالی اجرا می‌کند:
-  `chatdesk-deploy --status` نسخه نصب‌کننده، نسخه نصب‌شده و کانال را چاپ
-  می‌کند؛ بنر منو هم همین اطلاعات را نشان می‌دهد.
-- برای انتقال یک نصب موجود به کانال دیگر: `chatdesk-deploy` →
-  **Switch Test (dev) / Stable channel**. این گزینه بکاپ می‌گیرد، برنچ را
-  عوض می‌کند و کل پایپ‌لاین آپدیت (وابستگی‌ها، مایگریشن‌ها، build کلاینت،
-  ری‌استارت سرویس و health check) را اجرا می‌کند.
-- نسخه dev فقط و فقط از طریق ورک‌فلوی **«Promote dev to Stable»** در اکشن‌های
-  گیت‌هاب به کانال اصلی می‌رود: بعد از تست و تأیید یک نسخه dev، ورک‌فلو را از
-  تب Actions با تگ آن اجرا کنید (مثلا `v1.1.0-dev.6`). این ورک‌فلو تگ را داخل
-  `main` مرج می‌کند، VERSION/نصب‌کننده/CHANGELOG را به فرم پایدار بازنویسی
-  می‌کند، تگ `vX.Y.Z` را روی `main` می‌زند و ریلیز پایدار منتشر می‌کند. هیچ
-  چیز دیگری هرگز به `main` نمی‌نویسد.
+مدیریت کامل سرور با ابزار `nextdesk-deploy` (و معادل سازگار `chatdesk-deploy`):
+- `nextdesk-deploy --status` — مشاهده نسخه نصب‌شده و کانال فعال (`dev` یا `main`).
+- گزینه **2) Update** همیشه داخل همان کانال می‌ماند، ابتدا فایل‌های جدید را دریافت می‌کند و سپس نهایی‌سازی را به نسخه جدید اینستالر واگذار می‌کند (`--finalize-update`).
+- گزینه **4) Switch channel** جابه‌جایی امن بین کانال تست (`dev`) و پایدار (`main`) را انجام می‌دهد.
 
-## مستندات
+## اجرای محلی (توسعه)
 
-مستندات کامل در پوشه [docs](/docs) قرار دارد. نسخه فارسی مستندات در
-[docs/fa](/docs/fa) موجود است:
+```bash
+# نصب وابستگی‌ها (Node >= 24)
+npm install
+npm install --prefix server
+npm install --prefix worker
 
-- [اسکریپت استقرار](/docs/fa/Deployment-Script.md)
-- [راه‌اندازی هلپ‌دسک](/docs/fa/Helpdesk-Setup.md)
-- [نصب با داکر](/docs/fa/Installation-Docker.md)
-- [استقرار ابری](/docs/fa/Cloud-Deployment.md)
-- [نصب دستی](/docs/fa/Manual-Installation.md)
-- [تنظیم Nginx](/docs/fa/Nginx-Configuration.md)
-- [گواهی SSL](/docs/fa/SSL-Certificates.md)
-- [متغیرهای محیطی](/docs/fa/Environment-Variables.md)
-- [پنل مدیریت](/docs/fa/Admin-Panel.md)
-- [به‌روزرسانی اپ نصب‌شده](/docs/fa/Updating.md)
-- [رفع اشکال](/docs/fa/Troubleshooting.md)
+# اجرای یکپارچه Full-Stack Next.js (فرانت + API + SSE + WebSocket)
+npm run dev
 
-## ساختار پروژه
-
-| مسیر       | توضیح                                            |
-| ---------- | ------------------------------------------------ |
-| `client/`  | فرانت‌اند React 19 + Vite (PWA)                  |
-| `server/`  | API با Express 5 و SSE لحظه‌ای (Knex ORM)        |
-| `worker/`  | ورکر تبدیل رسانه (ffmpeg)                        |
-| `docs/`    | مستندات انگلیسی و فارسی                          |
-
-## مشارکت
-
-مشارکت‌ها خوش‌آمد هستند. لطفاً [راهنمای مشارکت](/CONTRIBUTING.md) را بخوانید و
-قبل از شروع تغییرات بزرگ، یک ایشن در
-`https://github.com/MASolutionExpert/chatdesk/issues` باز کنید.
+# بیلد و اجرای نسخه پروداکشن
+npm run build
+npm start
+```
 
 ## مجوز
 
-این پروژه تحت مجوز MIT منتشر شده است. برای جزئیات فایل
-[LICENSE](LICENSE) را ببینید.
+MIT — فایل [LICENSE](./LICENSE) را ببینید.

@@ -14,7 +14,7 @@ hero:
       link: /Deployment-Script
     - theme: alt
       text: View on GitHub
-      link: https://github.com/MASolutionExpert/chatdesk
+      link: https://github.com/MASolutionExpert/NEXTDESK
 
 features:
   - icon: 🚀

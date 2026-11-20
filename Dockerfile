@@ -1,22 +1,23 @@
 # syntax=docker/dockerfile:1
 
-FROM node:24-bookworm-slim AS client-build
-WORKDIR /app/client
-COPY client/package*.json ./
+FROM node:24-bookworm-slim AS next-build
+WORKDIR /app
+
+COPY package.json ./
 RUN npm config set registry https://registry.npmjs.org/ \
   && npm config set fetch-retries 5 \
   && npm config set fetch-retry-mintimeout 20000 \
   && npm config set fetch-retry-maxtimeout 120000 \
   && npm config set fetch-timeout 300000 \
-  && npm ci --no-audit --no-fund --loglevel=verbose
-COPY client/ ./
+  && npm install --no-audit --no-fund
+
+COPY next.config.mjs postcss.config.mjs jsconfig.json ./
+COPY public/ ./public/
+COPY src/ ./src/
 RUN npm run build
 
 FROM node:24-bookworm-slim AS server-deps
 WORKDIR /app/server
-# python3/make/g++ are required to compile native modules (bufferutil,
-# utf-8-validate via telegram->ws) when no prebuilt binary is available,
-# which happens on the emulated linux/arm64 build.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
@@ -26,7 +27,7 @@ RUN npm config set registry https://registry.npmjs.org/ \
   && npm config set fetch-retry-mintimeout 20000 \
   && npm config set fetch-retry-maxtimeout 120000 \
   && npm config set fetch-timeout 300000 \
-  && npm ci --omit=dev --no-audit --no-fund --loglevel=verbose
+  && npm ci --omit=dev --no-audit --no-fund
 
 FROM node:24-bookworm-slim AS worker-deps
 WORKDIR /app/worker
@@ -36,13 +37,11 @@ RUN npm config set registry https://registry.npmjs.org/ \
   && npm config set fetch-retry-mintimeout 20000 \
   && npm config set fetch-retry-maxtimeout 120000 \
   && npm config set fetch-timeout 300000 \
-  && npm ci --omit=dev --no-audit --no-fund --loglevel=verbose
+  && npm ci --omit=dev --no-audit --no-fund
 
 FROM node:24-bookworm-slim
 WORKDIR /app
 
-# ffmpeg is required for video transcoding and metadata extraction in the media worker
-# postgresql-client (from PGDG apt repo) is required for PostgreSQL maintenance operations (backup, vacuum)
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
   && install -d /etc/apt/keyrings \
@@ -52,31 +51,35 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends ffmpeg postgresql-client \
   && rm -rf /var/lib/apt/lists/*
 
+COPY --from=next-build /app/node_modules ./node_modules
+COPY --from=next-build /app/.next ./.next
+COPY --from=next-build /app/public ./public
+COPY --from=next-build /app/next.config.mjs ./next.config.mjs
 COPY --from=server-deps /app/server/node_modules ./server/node_modules
 COPY server/ ./server/
+COPY server.mjs ./server.mjs
 COPY --from=worker-deps /app/worker/node_modules ./worker/node_modules
 COPY worker/ ./worker/
 COPY scripts/run-data-command.sh ./scripts/run-data-command.sh
 RUN chmod 755 /app/scripts/run-data-command.sh
 COPY scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
 RUN chmod 755 /app/scripts/docker-entrypoint.sh
-COPY --from=client-build /app/client/dist ./client/dist
 
-# Root-level files needed at runtime for version info and changelog
 COPY VERSION ./
 COPY CHANGELOG.md ./
 COPY package.json ./
 
 RUN mkdir -p /app/data /app/data/uploads /app/data/backups
 
+ENV NODE_ENV=production
 ENV APP_ENV=production
 ENV SERVER_PORT=5174
 ENV BIND_ADDRESS=0.0.0.0
+
 EXPOSE 5174
 
-# Health check for container orchestrators
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD node -e "const port = process.env.PORT || process.env.SERVER_PORT || 5174; require('http').get('http://localhost:' + port + '/api/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
 
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
-CMD ["node", "server/index.js"]
+CMD ["node", "server.mjs"]
