@@ -112,6 +112,12 @@ describe("compareVersions", () => {
       expect(compareVersions("v1.0.1", "1.0.0")).toBe(1);
     });
   });
+  it("compares numeric prerelease identifiers numerically (dev.10 > dev.9)", () => {
+    expect(compareVersions("1.1.0-dev.10", "1.1.0-dev.9")).toBe(1);
+    expect(compareVersions("1.1.0-dev.9", "1.1.0-dev.10")).toBe(-1);
+    expect(compareVersions("1.1.0", "1.1.0-dev.10")).toBe(1);
+    expect(compareVersions("1.1.0-dev.10", "1.1.0")).toBe(-1);
+  });
 });
 
 describe("fetchLatestGitHubTag release channels", () => {

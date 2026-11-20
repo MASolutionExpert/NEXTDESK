@@ -110,11 +110,14 @@ function buildPgConnection() {
   if (explicitUrl) {
     return {
       connectionString: explicitUrl,
+      ...(process.env.POSTGRES_SSL === "true"
+        ? { ssl: { rejectUnauthorized: false } }
+        : {}),
       connectionTimeoutMillis: timeouts.connectionTimeoutMs,
       statement_timeout: timeouts.statementTimeoutMs,
       idle_in_transaction_session_timeout: timeouts.idleInTransactionTimeoutMs,
       keepAlive: true,
-      application_name: "chatdesk",
+      application_name: "nextdesk",
     };
   }
 

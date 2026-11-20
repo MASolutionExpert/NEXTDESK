@@ -2,6 +2,14 @@
 
 All notable changes to ChatDesk are documented in this file.
 
+## 1.1.0-dev.11
+
+### Fixed
+- 🔢 SemVer prerelease comparison in both server (`appMeta.js`) and client (`versioning.js`): numeric identifiers now compare numerically (`1.1.0-dev.10 > 1.1.0-dev.9`) and GitHub tag lookup requests up to 100 tags.
+- 🧰 Installer/CLI (`scripts/install.sh`): replaced raw `dpkg --compare-versions` with pure-Bash SemVer 2.0.0 comparator so `1.1.0 > 1.1.0-dev.10 > 1.1.0-dev.9` always holds; fixed `run_in_install_dir_streaming` log permissions under `sudo`; fixed `write_install_config` and `install_global_command_from_remote` to preserve the active branch; added `--finalize-update` self-handoff so new installer logic runs immediately on the first update; added lockfile protection before `git pull`; replaced leftover upstream ASCII banner with NextDesk branding.
+- 🩺 Database layer: made `db:doctor` strictly read-only (no longer triggers migrations on import); fixed `DB_MIGRATION_TIMEOUT_MS=0` to genuinely disable the watchdog; added fail-fast `timeout` + `PGCONNECT_TIMEOUT` to pre-migration `pg_dump`; ensured `migrate.js` cleanly destroys the Knex pool and exits immediately; honored `POSTGRES_SSL=true` in `POSTGRES_URL` mode.
+- 🚀 DevOps pipeline: fixed missing `STABLE_TAG` in `promote-stable.yml`, added `GITHUB_TOKEN` fallback when `RELEASE_TOKEN` secret is unset, fixed duplicate `1.1.0-dev.6` heading in `CHANGELOG.md`, and hardened `verify-release-sync.sh` with duplicate-heading and channel validation.
+
 ## 1.1.0-dev.10
 
 ### New
@@ -49,7 +57,7 @@ All notable changes to ChatDesk are documented in this file.
 
 - 🚦 Two-channel DevOps pipeline end to end: `chatdesk-deploy --status` shows the installed version and channel; the menu banner shows the same; a new **"Switch Test (dev) / Stable (main) channel"** menu action moves an install between channels through the full update pipeline; and a new **"Promote dev to Stable"** GitHub Actions workflow is the single user-triggered path from an approved dev tag to a stable release on `main`. All install/update/channel-switch paths now share one finalization pipeline (dependencies, migrations, client build, CLI sync, systemd, restart, health check).
 
-## 1.1.0-dev.6
+## 1.1.0-dev.5
 
 ### Fixed
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# chatdesk-deploy-version: 1.1.0-dev.10
+# chatdesk-deploy-version: 1.1.0-dev.11
 
 set -uo pipefail
 
@@ -53,7 +53,7 @@ LOG_FILE="/opt/chatdesk/logs/install.log"
 DATA_COMMAND_LAUNCHER="${DATA_COMMAND_LAUNCHER:-${INSTALL_DIR}/scripts/run-data-command.sh}"
 # Repository source. Point REPO_URL / REPO_BRANCH at any fork to install it.
 # Example: REPO_URL=https://github.com/<you>/<repo>.git REPO_BRANCH=dev bash scripts/install.sh
-REPO_URL="${REPO_URL:-https://github.com/MASolutionExpert/chatdesk.git}"
+REPO_URL="${REPO_URL:-https://github.com/MASolutionExpert/NEXTDESK.git}"
 REPO_BRANCH="${REPO_BRANCH:-main}"
 # Install metadata: remembers which repo/branch the server was installed from
 # so later updates keep tracking that branch (dev installs keep updating from dev).
@@ -89,8 +89,8 @@ ACME_WEBROOT="/var/lib/chatdesk/certbot"
 LEGO_STATE_DIR="/var/lib/chatdesk/lego"
 LEGO_BIN="/usr/local/bin/lego"
 GLOBAL_COMMAND_PATH="/usr/local/bin/chatdesk-deploy"
-CHATDESK_SOCIAL_GITHUB="https://github.com/MASolutionExpert/chatdesk"
-CHATDESK_SOCIAL_DOCS="https://github.com/MASolutionExpert/chatdesk/tree/main/docs"
+CHATDESK_SOCIAL_GITHUB="https://github.com/MASolutionExpert/NEXTDESK"
+CHATDESK_SOCIAL_DOCS="https://github.com/MASolutionExpert/NEXTDESK/tree/main/docs"
 
 # Mirror URLs
 MIRROR_NODESOURCE="${MIRROR_NODESOURCE:-}"
@@ -675,12 +675,13 @@ run_in_install_dir_streaming() {
   if [[ -n "$path_prefix" ]]; then
     path_export="export PATH=$(printf '%q' "$path_prefix"):\$PATH; "
   fi
-  if [[ -f "$LOG_FILE" ]]; then
-    printf "[%s] Running: %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG_FILE" 2>/dev/null || true
+  local log_dir=""
+  log_dir="$(dirname "$LOG_FILE")"
+  if [[ -d "$log_dir" ]]; then
+    run_as_root bash -lc "set -o pipefail; printf '[%s] Running: %s\n' \"\$(date '+%Y-%m-%d %H:%M:%S')\" $(printf '%q' "$*") >> $(printf '%q' "$LOG_FILE") 2>/dev/null || true; cd $(printf '%q' "$INSTALL_DIR") && ${path_export}$* 2>&1 | tee -a $(printf '%q' "$LOG_FILE")"
+  else
+    run_as_root bash -lc "cd $(printf '%q' "$INSTALL_DIR") && ${path_export}$*"
   fi
-  run_as_root bash -lc "cd '$INSTALL_DIR' && ${path_export}$*" \
-    > >(tee -a "$LOG_FILE") \
-    2> >(tee -a "$LOG_FILE" >&2)
 }
 
 run_in_install_dir_output() {
@@ -1672,14 +1673,70 @@ get_installed_lego_version() {
   return 1
 }
 
+# Pure SemVer 2.0.0 comparator: prints -1 (v1 < v2), 0 (v1 == v2), or 1 (v1 > v2).
+semver_compare_versions() {
+  local v1="${1#v}"
+  local v2="${2#v}"
+  v1="${v1%%+*}"
+  v2="${v2%%+*}"
+
+  local core1="${v1%%-*}"
+  local core2="${v2%%-*}"
+  local pre1=""
+  local pre2=""
+  [[ "$v1" == *-* ]] && pre1="${v1#*-}"
+  [[ "$v2" == *-* ]] && pre2="${v2#*-}"
+
+  local IFS=.
+  local -a c1=($core1) c2=($core2)
+  local i max_c=${#c1[@]}
+  (( ${#c2[@]} > max_c )) && max_c=${#c2[@]}
+  for ((i = 0; i < max_c; i++)); do
+    local n1="${c1[i]:-0}"
+    local n2="${c2[i]:-0}"
+    n1="${n1//[^0-9]/}"
+    n2="${n2//[^0-9]/}"
+    n1="${n1:-0}"
+    n2="${n2:-0}"
+    if (( 10#$n1 > 10#$n2 )); then printf "1"; return 0; fi
+    if (( 10#$n1 < 10#$n2 )); then printf "%s" "-1"; return 0; fi
+  done
+
+  if [[ -z "$pre1" && -z "$pre2" ]]; then printf "0"; return 0; fi
+  if [[ -z "$pre1" && -n "$pre2" ]]; then printf "1"; return 0; fi
+  if [[ -n "$pre1" && -z "$pre2" ]]; then printf "%s" "-1"; return 0; fi
+
+  local -a p1=($pre1) p2=($pre2)
+  local max_p=${#p1[@]}
+  (( ${#p2[@]} > max_p )) && max_p=${#p2[@]}
+  for ((i = 0; i < max_p; i++)); do
+    if (( i >= ${#p1[@]} )); then printf "%s" "-1"; return 0; fi
+    if (( i >= ${#p2[@]} )); then printf "1"; return 0; fi
+    local a="${p1[i]}"
+    local b="${p2[i]}"
+    [[ "$a" == "$b" ]] && continue
+    if [[ "$a" =~ ^[0-9]+$ && "$b" =~ ^[0-9]+$ ]]; then
+      if (( 10#$a > 10#$b )); then printf "1"; return 0; fi
+      if (( 10#$a < 10#$b )); then printf "%s" "-1"; return 0; fi
+    elif [[ "$a" =~ ^[0-9]+$ ]]; then
+      printf "%s" "-1"; return 0
+    elif [[ "$b" =~ ^[0-9]+$ ]]; then
+      printf "1"; return 0
+    else
+      if [[ "$a" > "$b" ]]; then printf "1"; return 0; fi
+      printf "%s" "-1"; return 0
+    fi
+  done
+  printf "0"
+}
+
+semver_gt() { [[ "$(semver_compare_versions "$1" "$2")" == "1" ]]; }
+semver_lt() { [[ "$(semver_compare_versions "$1" "$2")" == "-1" ]]; }
+semver_eq() { [[ "$(semver_compare_versions "$1" "$2")" == "0" ]]; }
+semver_ge() { local r; r="$(semver_compare_versions "$1" "$2")"; [[ "$r" == "1" || "$r" == "0" ]]; }
+
 lego_version_ge() {
-  local v1="$1"
-  local v2="$2"
-  if have_cmd dpkg; then
-    dpkg --compare-versions "$v1" ge "$v2"
-  else
-    [[ "$v1" == "$v2" || "$(printf '%s\n%s\n' "$v1" "$v2" | sort -V | head -n 1)" == "$v2" ]]
-  fi
+  semver_ge "$1" "$2"
 }
 
 ensure_lego_installed() {
@@ -1764,11 +1821,30 @@ read_install_config_value() {
 
 write_install_config() {
   [[ -d "$INSTALL_DIR" ]] || return 0
+  local branch_to_save="${1:-}"
+  if [[ -z "$branch_to_save" ]]; then
+    branch_to_save="$(detect_install_branch 2>/dev/null || printf "%s" "$REPO_BRANCH")"
+  fi
+  [[ -z "$branch_to_save" ]] && branch_to_save="$REPO_BRANCH"
   run_silent run_as_root tee "$INSTALL_CONFIG_FILE" >/dev/null <<EOF || return 1
 REPO_URL=${REPO_URL}
-REPO_BRANCH=${REPO_BRANCH}
+REPO_BRANCH=${branch_to_save}
 EOF
   run_silent run_as_root chmod 644 "$INSTALL_CONFIG_FILE" || true
+}
+
+run_updated_finalize_pipeline() {
+  local updated_script="${INSTALL_DIR}/scripts/install.sh"
+  if [[ -f "$updated_script" ]] && grep -q -- "--finalize-update" "$updated_script"; then
+    log "Handing off finalization to updated installer script..."
+    REPO_URL="$REPO_URL" REPO_BRANCH="$REPO_BRANCH" bash "$updated_script" --finalize-update
+    return $?
+  fi
+  finalize_chatdesk_source_change
+}
+
+clean_tracked_lockfiles_for_pull() {
+  run_in_install_dir "git checkout -- package-lock.json client/package-lock.json server/package-lock.json worker/package-lock.json 2>/dev/null || true"
 }
 
 # Release channels. ChatDesk ships two completely separate channels so a
@@ -2025,13 +2101,13 @@ compare_offline_source_version() {
   fi
 
   local __cosv_relation=""
-  if dpkg --compare-versions "$__cosv_source_version" gt "$__cosv_install_version"; then
+  if semver_gt "$__cosv_source_version" "$__cosv_install_version"; then
     log "Offline source version ${__cosv_source_version} is newer than installed version ${__cosv_install_version}."
     __cosv_relation="newer"
-  elif dpkg --compare-versions "$__cosv_source_version" lt "$__cosv_install_version"; then
+  elif semver_lt "$__cosv_source_version" "$__cosv_install_version"; then
     log "Offline source version ${__cosv_source_version} is lower than installed version ${__cosv_install_version}."
     __cosv_relation="lower"
-  elif dpkg --compare-versions "$__cosv_source_version" eq "$__cosv_install_version"; then
+  elif semver_eq "$__cosv_source_version" "$__cosv_install_version"; then
     log "Offline source version ${__cosv_source_version} is the same as installed version ${__cosv_install_version}."
     __cosv_relation="same"
   else
@@ -4061,21 +4137,21 @@ update_chatdesk_run() {
     log "Update available. Preparing to update ChatDesk..."
     preserve_backup_and_restore_data
 
+    clean_tracked_lockfiles_for_pull
     # Ensure we're on the tracked branch and pull latest
     if ! run_in_install_dir "git checkout ${active_branch}"; then
       warn "Failed to checkout ${active_branch} branch."
       press_enter_to_continue
       return 1
     fi
-
     if ! run_in_install_dir "git pull --ff-only origin ${active_branch}"; then
       warn "Failed to pull updates. Repository may have non-fast-forward changes."
       press_enter_to_continue
       return 1
     fi
   fi
-
-  finalize_chatdesk_source_change || { press_enter_to_continue; return 1; }
+  REPO_BRANCH="${active_branch}"
+  run_updated_finalize_pipeline || { press_enter_to_continue; return 1; }
 
   show_deployment_success_frame "update"
   press_enter_to_continue
@@ -4141,21 +4217,17 @@ switch_release_channel() {
   fi
 
   preserve_backup_and_restore_data
+  clean_tracked_lockfiles_for_pull
 
-  if ! run_in_install_dir "git checkout ${target_branch}"; then
+  if ! run_in_install_dir "git checkout -B ${target_branch} origin/${target_branch}"; then
     warn "Failed to checkout ${target_branch}."
     restore_chatdesk_service_after_update
     press_enter_to_continue
     return 1
   fi
-  if ! run_in_install_dir "git pull --ff-only origin ${target_branch}"; then
-    warn "Failed to pull ${target_branch}. Repository may have non-fast-forward changes."
-    restore_chatdesk_service_after_update
-    press_enter_to_continue
-    return 1
-  fi
 
-  finalize_chatdesk_source_change || {
+  REPO_BRANCH="${target_branch}"
+  run_updated_finalize_pipeline || {
     warn "Channel switch failed while rebuilding. Check the logs before retrying."
     restore_chatdesk_service_after_update
     press_enter_to_continue
@@ -4513,9 +4585,14 @@ install_global_command_from_remote() {
   local install_version="$SCRIPT_VERSION"
   local temp_target=""
   temp_target="$(mktemp)"
-  if ! curl -fsSL "$SCRIPT_REMOTE_URL" > "$temp_target"; then
+  if ! fetch_remote_installer_script "$temp_target"; then
     rm -f "$temp_target"
     return 1
+  fi
+  local fetched_version=""
+  fetched_version="$(read_script_version_header "$temp_target" 2>/dev/null || true)"
+  if [[ -n "$fetched_version" ]]; then
+    install_version="$fetched_version"
   fi
   if ! sed -i "s|^# chatdesk-deploy-version:.*$|# chatdesk-deploy-version: ${install_version}|" "$temp_target"; then
     rm -f "$temp_target"
@@ -4604,7 +4681,7 @@ update_menu() {
     return 0
   fi
 
-  if dpkg --compare-versions "$remote_version" gt "$SCRIPT_VERSION"; then
+  if semver_gt "$remote_version" "$SCRIPT_VERSION"; then
     log "Newer version available (${remote_version} > ${SCRIPT_VERSION}). Updating menu..."
     if ! run_silent run_as_root install -m 755 "$temp_remote" "$GLOBAL_COMMAND_PATH"; then
       rm -f "$temp_remote"
@@ -4669,7 +4746,7 @@ ensure_global_command_on_first_run() {
     return 0
   fi
 
-  if dpkg --compare-versions "$installed_version" lt "$SCRIPT_VERSION"; then
+  if semver_lt "$installed_version" "$SCRIPT_VERSION"; then
     log "Global command version ${installed_version} is older than script version ${SCRIPT_VERSION}. Updating it automatically..."
     if ! install_global_command_core "$CURRENT_SCRIPT_PATH"; then
       warn "Automatic global command update failed. You can retry from the menu."
@@ -4742,12 +4819,12 @@ show_banner() {
   cat << 'EOF'
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                                                                           ║
-║      ███████╗ ██████╗ ███╗   ██╗ ██████╗ ██████╗ ██╗██████╗ ██████╗       ║
-║      ██╔════╝██╔═══██╗████╗  ██║██╔════╝ ██╔══██╗██║██╔══██╗██╔══██╗      ║
-║      ███████╗██║   ██║██╔██╗ ██║██║  ███╗██████╔╝██║██████╔╝██║  ██║      ║
-║      ╚════██║██║   ██║██║╚██╗██║██║   ██║██╔══██╗██║██╔══██╗██║  ██║      ║
-║      ███████║╚██████╔╝██║ ╚████║╚██████╔╝██████╔╝██║██║  ██║██████╔╝      ║
-║      ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚═╝╚═╝  ╚═╝╚═════╝       ║
+║      ███╗   ██╗███████╗██╗  ██╗████████╗██████╗ ███████╗███████╗██╗  ██╗  ║
+║      ████╗  ██║██╔════╝╚██╗██╔╝╚══██╔══╝██╔══██╗██╔════╝██╔════╝██║ ██╔╝  ║
+║      ██╔██╗ ██║█████╗   ╚███╔╝    ██║   ██║  ██║█████╗  ███████╗█████╔╝   ║
+║      ██║╚██╗██║██╔══╝   ██╔██╗    ██║   ██║  ██║██╔══╝  ╚════██║██╔═██╗   ║
+║      ██║ ╚████║███████╗██╔╝ ██╗   ██║   ██████╔╝███████╗███████║██║  ██╗  ║
+║      ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝  ║
 ║                                                                           ║
 ║                           D E P L O Y   T O O L                           ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
@@ -5764,6 +5841,14 @@ show_db_menu() {
 }
 
 main() {
+  if [[ "${1:-}" == "--finalize-update" ]]; then
+    SKIP_CLEAR_ON_EXIT="1"
+    detect_os
+    ensure_sudo
+    finalize_chatdesk_source_change
+    return $?
+  fi
+
   if [[ "${1:-}" == "--version" || "${1:-}" == "-v" ]]; then
     SKIP_CLEAR_ON_EXIT="1"
     printf "%s\n" "$SCRIPT_VERSION"

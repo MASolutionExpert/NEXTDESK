@@ -42,6 +42,7 @@ jobs:
           STABLE_VERSION="${TAG#v}"
           STABLE_VERSION="${STABLE_VERSION%-dev.*}"
           echo "STABLE_VERSION=$STABLE_VERSION" >> "$GITHUB_ENV"
+          echo "STABLE_TAG=v$STABLE_VERSION" >> "$GITHUB_ENV"
           echo "Promoting $TAG -> stable v$STABLE_VERSION"
 
       - uses: actions/checkout@v7
@@ -50,7 +51,7 @@ jobs:
           fetch-depth: 0
           # A PAT is required so pushed tags are attributed to a real user
           # (same reason release.yml uses RELEASE_TOKEN).
-          token: ${{ secrets.RELEASE_TOKEN }}
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
 
       - name: Verify dev tag exists and is not already promoted
         run: |
@@ -101,7 +102,7 @@ jobs:
           EOF
 
       - name: Verify release-sync gate passes for the stable tree
-        run: bash scripts/verify-release-sync.sh
+        run: bash scripts/verify-release-sync.sh --channel stable
 
       - name: Commit, tag and push stable release
         run: |
@@ -132,7 +133,7 @@ jobs:
 
       - name: Create stable GitHub release
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
         run: |
           gh release create "$STABLE_TAG" \
             --target main \

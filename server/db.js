@@ -260,7 +260,26 @@ function createPostgresPreMigrationBackup(fromVersion, toVersion) {
       }
     }
 
-    const result = spawnSync("pg_dump", args, { env, encoding: "utf8" });
+    const backupTimeoutMs = (() => {
+      const parsed = Number(process.env.DB_BACKUP_TIMEOUT_MS);
+      return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : 60_000;
+    })();
+    env.PGCONNECT_TIMEOUT = String(
+      Math.max(1, Math.ceil(getPostgresTimeouts().connectionTimeoutMs / 1000)),
+    );
+    const result = spawnSync("pg_dump", args, {
+      env,
+      encoding: "utf8",
+      timeout: backupTimeoutMs,
+      killSignal: "SIGTERM",
+    });
+    if (result.error?.code === "ETIMEDOUT" || result.signal === "SIGTERM") {
+      try { fs.unlinkSync(backupPath); } catch {}
+      console.warn(
+        `[db-migrations] Pre-migration pg_dump timed out after ${backupTimeoutMs}ms and was skipped (raise DB_BACKUP_TIMEOUT_MS for very large databases).`,
+      );
+      return null;
+    }
     if (result.status !== 0) {
       try {
         if (fs.existsSync(backupPath)) fs.unlinkSync(backupPath);
@@ -710,9 +729,13 @@ async function ensurePostgresConnectivity() {
 }
 
 export function getMigrationTimeoutMs() {
-  const raw = Number(process.env.DB_MIGRATION_TIMEOUT_MS);
-  if (Number.isFinite(raw) && raw > 0) return raw;
-  return 120_000; // 2 minutes per migration is generous even for big tables
+  const rawValue = process.env.DB_MIGRATION_TIMEOUT_MS;
+  if (rawValue === undefined || rawValue === null || String(rawValue).trim() === "") {
+    return 120_000; // 2 minutes per migration is generous even for big tables
+  }
+  const raw = Number(rawValue);
+  if (Number.isFinite(raw) && raw >= 0) return Math.trunc(raw);
+  return 120_000;
 }
 
 export function withMigrationTimeout(migrationLabel, promise) {

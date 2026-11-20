@@ -4,12 +4,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MASolutionExpert/chatdesk.git"
+    "url": "https://github.com/MASolutionExpert/NEXTDESK.git"
   },
   "bugs": {
-    "url": "https://github.com/MASolutionExpert/chatdesk/issues"
+    "url": "https://github.com/MASolutionExpert/NEXTDESK/issues"
   },
-  "homepage": "https://github.com/MASolutionExpert/chatdesk#readme",
+  "homepage": "https://github.com/MASolutionExpert/NEXTDESK#readme",
   "type": "module",
   "scripts": {
     "dev": "vite",
