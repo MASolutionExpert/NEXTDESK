@@ -2,8 +2,7 @@
 
 All notable changes to ChatDesk are documented in this file.
 
-## 1.1.0-dev.11
-
+## 1.1.0
 ### Fixed
 - 🔢 SemVer prerelease comparison in both server (`appMeta.js`) and client (`versioning.js`): numeric identifiers now compare numerically (`1.1.0-dev.10 > 1.1.0-dev.9`) and GitHub tag lookup requests up to 100 tags.
 - 🧰 Installer/CLI (`scripts/install.sh`): replaced raw `dpkg --compare-versions` with pure-Bash SemVer 2.0.0 comparator so `1.1.0 > 1.1.0-dev.10 > 1.1.0-dev.9` always holds; fixed `run_in_install_dir_streaming` log permissions under `sudo`; fixed `write_install_config` and `install_global_command_from_remote` to preserve the active branch; added `--finalize-update` self-handoff so new installer logic runs immediately on the first update; added lockfile protection before `git pull`; replaced leftover upstream ASCII banner with NextDesk branding.
