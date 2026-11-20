@@ -1,11 +1,12 @@
 import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 import initSqlJs from "sql.js";
 import Database from "better-sqlite3";
-import { dbKnex } from "./db/knex.js";
+import { dbKnex, describePgTarget, getPostgresTimeouts } from "./db/knex.js";
 import { normalizeSqlForPostgres } from "./lib/sqlNormalizer.js";
 import { migrations } from "./migrations/index.js";
 import { setUserColor } from "./settings/colors.js";
@@ -32,7 +33,7 @@ export const isRemoteMessageClientRequestId = (value) =>
 export const isRemoteMessageRow = (row) =>
   isRemoteMessageClientRequestId(row?.client_request_id || row?.clientRequestId);
 
-function isPostgresMode() {
+export function isPostgresMode() {
   const client = (
     process.env.DB_CLIENT ||
     (process.env.POSTGRES_URL || process.env.DATABASE_URL ? "postgres" : "sqlite3")
@@ -186,6 +187,11 @@ export async function restoreDatabase(fileBuffer) {
 }
 
 function createPreMigrationBackup(fromVersion, toVersion) {
+  if (isPostgresMode()) {
+    // Postgres has no local db file to check — always attempt the backup.
+    return createPostgresPreMigrationBackup(fromVersion, toVersion);
+  }
+
   if (!fileExists || !fs.existsSync(dbPath)) return null;
 
   try {
@@ -206,6 +212,74 @@ function createPreMigrationBackup(fromVersion, toVersion) {
         error?.message || error
       }`,
     );
+  }
+}
+
+// Best-effort logical backup (pg_dump) before migrations change the schema in
+// Postgres mode. Never blocks or fails the migration: if pg_dump is not
+// installed or fails, we warn loudly and continue, because a missing backup
+// must not make an already delicate migration worse.
+function createPostgresPreMigrationBackup(fromVersion, toVersion) {
+  try {
+    const probe = spawnSync("pg_dump", ["--version"], { encoding: "utf8" });
+    if (probe.status !== 0 || probe.error) {
+      console.warn(
+        "[db-migrations] Pre-migration backup skipped: pg_dump is not installed on this host. " +
+          "Install the postgresql-client package (matching your server major version) to enable automatic backups.",
+      );
+      return null;
+    }
+
+    const explicitUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+    const target = describePgTarget();
+
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backupPath = path.join(
+      backupDir,
+      `chatdesk-pre-migration-v${fromVersion}-to-v${toVersion}-${stamp}.sql`,
+    );
+
+    const args = ["--file", backupPath, "--no-owner", "--no-privileges"];
+    const env = { ...process.env };
+
+    if (explicitUrl) {
+      args.push("--dbname", explicitUrl);
+    } else {
+      args.push(
+        "--host", String(target.host),
+        "--port", String(target.port),
+        "--username", String(target.user),
+        "--dbname", String(target.database),
+      );
+      env.PGPASSWORD = process.env.POSTGRES_PASSWORD || "postgres";
+      if (process.env.POSTGRES_SSL === "true") {
+        env.PGSSLMODE = "require";
+      }
+    }
+
+    const result = spawnSync("pg_dump", args, { env, encoding: "utf8" });
+    if (result.status !== 0) {
+      try {
+        if (fs.existsSync(backupPath)) fs.unlinkSync(backupPath);
+      } catch {}
+      console.warn(
+        `[db-migrations] Pre-migration backup FAILED (pg_dump exit ${result.status}): ${
+          String(result.stderr || "").trim().slice(0, 500)
+        }. Continuing with migrations WITHOUT a backup — make one manually first if this database matters.`,
+      );
+      return null;
+    }
+
+    console.log(`[db-migrations] Pre-migration backup written: ${backupPath}`);
+    return backupPath;
+  } catch (error) {
+    console.warn(
+      `[db-migrations] Pre-migration backup skipped (unexpected error): ${error?.message || error}`,
+    );
+    return null;
   }
 }
 
@@ -570,7 +644,104 @@ async function missingCriticalTables() {
   return CRITICAL_TABLES.filter((table) => !existing.has(table));
 }
 
+// ---------------------------------------------------------------------------
+// Postgres connectivity preflight + migration watchdog (v1.1.0-dev.10).
+// A tiny database can still hang forever if the DB server is unreachable or a
+// query stalls on a lock — every knob below fails fast with an actionable
+// message instead of freezing the updater at "Running database migrations".
+// ---------------------------------------------------------------------------
+
+function describePostgresConnectivityError(error, target, timeouts) {
+  const code = String(error?.code || "");
+  const message = String(error?.message || error || "");
+  const at = `${target.host}:${target.port} (database: ${target.database})`;
+
+  const causeLines = [];
+  if (/ECONNREFUSED/i.test(code) || /ECONNREFUSED/i.test(message)) {
+    causeLines.push("nothing is listening at " + at + " — is PostgreSQL actually running there?");
+  } else if (/ETIMEDOUT/i.test(code) || /timeout/i.test(message) || /Connection terminated/i.test(message)) {
+    causeLines.push("the connection attempt timed out after " + timeouts.connectionTimeoutMs + "ms — check firewall rules, VPC/VPN routing and SSL settings for " + at);
+  } else if (/ENOTFOUND|EAI_AGAIN/i.test(code + " " + message)) {
+    causeLines.push("the hostname in your Postgres configuration could not be resolved — check DNS");
+  } else if (/28P01/i.test(code) || /password authentication failed/i.test(message)) {
+    causeLines.push("password authentication failed for user '" + target.user + "' — check the credentials in .env");
+  } else if (/3D000/i.test(code) || /does not exist/i.test(message)) {
+    causeLines.push("the database '" + target.database + "' does not exist on " + at);
+  } else if (/42704|role/i.test(code + " " + message)) {
+    causeLines.push("a role or object referenced by the server is missing — check the Postgres logs");
+  } else {
+    causeLines.push("unexpected driver error: " + message.slice(0, 300));
+  }
+
+  return (
+    "[db-migrations] Cannot connect to PostgreSQL at " + at + " after 3 attempts.\n" +
+    "  Cause: " + causeLines.join(" ") + "\n" +
+    "  Configured via: " + (target.mode === "url" ? "POSTGRES_URL/DATABASE_URL in .env" : "POSTGRES_* parts in .env") + "\n" +
+    "  Fail-fast timeouts: connect=" + timeouts.connectionTimeoutMs + "ms, acquire=" + timeouts.acquireTimeoutMs + "ms, statement=" + timeouts.statementTimeoutMs + "ms\n" +
+    "  Nothing was modified. Fix the connection settings, then re-run the update."
+  );
+}
+
+async function ensurePostgresConnectivity() {
+  const target = describePgTarget();
+  const timeouts = getPostgresTimeouts();
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const startedAt = Date.now();
+    try {
+      await dbKnex.raw("SELECT 1");
+      const elapsed = Date.now() - startedAt;
+      console.log(
+        `[db-migrations] Postgres connection OK (${target.host}:${target.port}, database: ${target.database}) in ${elapsed}ms.`,
+      );
+      return;
+    } catch (error) {
+      if (attempt < maxAttempts) {
+        console.warn(
+          `[db-migrations] Postgres connection attempt ${attempt}/${maxAttempts} failed (${String(error?.code || error?.message || error).slice(0, 120)}); retrying...`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      } else {
+        throw new Error(describePostgresConnectivityError(error, target, timeouts));
+      }
+    }
+  }
+}
+
+export function getMigrationTimeoutMs() {
+  const raw = Number(process.env.DB_MIGRATION_TIMEOUT_MS);
+  if (Number.isFinite(raw) && raw > 0) return raw;
+  return 120_000; // 2 minutes per migration is generous even for big tables
+}
+
+export function withMigrationTimeout(migrationLabel, promise) {
+  const timeoutMs = getMigrationTimeoutMs();
+  if (!timeoutMs) return promise; // DB_MIGRATION_TIMEOUT_MS=0 disables the watchdog
+
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(
+      () =>
+        reject(
+          new Error(
+            `[db-migrations] Migration ${migrationLabel} did not finish within ${timeoutMs}ms and was aborted. ` +
+              "A single migration on a small database should take milliseconds — this is a database-layer problem (connectivity, lock wait or storage stall), not a data-size problem. " +
+              "The schema version was NOT advanced for this migration; fix the database issue and re-run. " +
+              "If this migration genuinely needs longer on your dataset, raise DB_MIGRATION_TIMEOUT_MS (or set 0 to disable).",
+          ),
+        ),
+      timeoutMs,
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 async function runDatabaseMigrations() {
+  if (isPostgresMode()) {
+    await ensurePostgresConnectivity();
+  }
+
   const tablesSet = new Set();
   const columnsSet = new Set();
 
@@ -672,7 +843,9 @@ async function runDatabaseMigrations() {
     : 0;
   const startingVersion = await getSchemaVersion();
 
-  if (startingVersion < latestVersion && !isPostgresMode()) {
+  if (startingVersion < latestVersion) {
+    // createPreMigrationBackup handles both SQLite (file copy) and Postgres
+    // (best-effort pg_dump) internally.
     createPreMigrationBackup(startingVersion, latestVersion);
   }
 
@@ -685,8 +858,13 @@ async function runDatabaseMigrations() {
     const migrationLabel = String(migration.version).padStart(3, "0");
     const migrationStart = Date.now();
     console.log(`[db-migrations] Applying migration ${migrationLabel} ...`);
-    await migration.up(migrationContext);
-    await migrationPromiseChain;
+    await withMigrationTimeout(
+      migrationLabel,
+      Promise.resolve().then(async () => {
+        await migration.up(migrationContext);
+        await migrationPromiseChain;
+      }),
+    );
     await setSchemaVersion(migration.version);
     appliedMigration = true;
     console.log(
@@ -705,8 +883,14 @@ async function runDatabaseMigrations() {
       `[db-migrations] Self-heal: missing tables (${missingTables.join(", ")}); re-applying idempotent migrations...`,
     );
     for (const migration of orderedMigrations) {
-      await migration.up(migrationContext);
-      await migrationPromiseChain;
+      const healLabel = `heal/${String(migration.version).padStart(3, "0")}`;
+      await withMigrationTimeout(
+        healLabel,
+        Promise.resolve().then(async () => {
+          await migration.up(migrationContext);
+          await migrationPromiseChain;
+        }),
+      );
     }
     const stillMissing = await missingCriticalTables();
     if (stillMissing.length > 0) {

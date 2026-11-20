@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# chatdesk-deploy-version: 1.1.0-dev.9
+# chatdesk-deploy-version: 1.1.0-dev.10
 
 set -uo pipefail
 
@@ -662,6 +662,25 @@ run_in_install_dir() {
     path_export="export PATH=$(printf '%q' "$path_prefix"):\$PATH; "
   fi
   run_silent run_as_root bash -lc "cd '$INSTALL_DIR' && ${path_export}$*"
+}
+
+# Like run_in_install_dir, but streams the child output LIVE to the terminal
+# (also appended to the log file) while preserving the child's exit code.
+# Used for long-running steps — e.g. database migrations — where capture-and-
+# show-later output looks exactly like a frozen update.
+run_in_install_dir_streaming() {
+  local path_prefix=""
+  local path_export=""
+  path_prefix="$(node_tools_path_prefix)"
+  if [[ -n "$path_prefix" ]]; then
+    path_export="export PATH=$(printf '%q' "$path_prefix"):\$PATH; "
+  fi
+  if [[ -f "$LOG_FILE" ]]; then
+    printf "[%s] Running: %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG_FILE" 2>/dev/null || true
+  fi
+  run_as_root bash -lc "cd '$INSTALL_DIR' && ${path_export}$*" \
+    > >(tee -a "$LOG_FILE") \
+    2> >(tee -a "$LOG_FILE" >&2)
 }
 
 run_in_install_dir_output() {
@@ -3618,9 +3637,35 @@ run_migrations() {
     return 0
   fi
   log "Running database migrations..."
-  warn "On large databases this step can take several minutes. Do NOT press Ctrl+C here:"
-  warn "interrupting a migration can corrupt the schema and leave the site down (HTTP 502)."
-  run_in_install_dir "npm --prefix server run db:migrate" || return 1
+  warn "Migration output below is LIVE: every migration prints its number and elapsed time."
+  warn "Do NOT press Ctrl+C here: interrupting a migration can corrupt the schema and leave the site down (HTTP 502)."
+
+  # Hard ceiling (last-resort watchdog): the DB layer itself fails fast
+  # (connection/statement timeouts + per-migration watchdog), but if something
+  # outside those knobs stalls, force-stop instead of hanging forever.
+  # Override with DB_MIGRATION_MAX_SECONDS for very large datasets.
+  local migration_max_seconds="${DB_MIGRATION_MAX_SECONDS:-900}"
+  local migrate_cmd="npm --prefix server run db:migrate"
+  if have_cmd timeout; then
+    migrate_cmd="timeout --kill-after=15 ${migration_max_seconds} ${migrate_cmd}"
+  else
+    warn "Coreutils 'timeout' not found — the ${migration_max_seconds}s migration ceiling cannot be enforced."
+  fi
+
+  local migration_rc=0
+  run_in_install_dir_streaming "$migrate_cmd" || migration_rc=$?
+
+  if [[ "$migration_rc" -eq 124 || "$migration_rc" -eq 137 ]]; then
+    warn "Database migrations were force-stopped after ${migration_max_seconds}s (hard ceiling)."
+    warn "A migration on a small database finishes in milliseconds — this is a database-layer problem, not a data-size problem."
+    warn "Diagnostics: cd ${INSTALL_DIR}/server && npm run db:doctor"
+    return 1
+  elif [[ "$migration_rc" -ne 0 ]]; then
+    warn "Database migrations FAILED with exit code ${migration_rc}. See the output above for the exact error."
+    warn "Diagnostics: cd ${INSTALL_DIR}/server && npm run db:doctor"
+    return 1
+  fi
+  return 0
 }
 
 chatdesk_service_is_running() {
@@ -5048,6 +5093,19 @@ db_restore() {
   press_enter_to_continue
 }
 
+db_doctor() {
+  if [[ ! -d "$INSTALL_DIR/server" ]]; then
+    warn "Server directory not found."
+    press_enter_to_continue
+    return 0
+  fi
+  log "Running database diagnostics (db:doctor)..."
+  if ! run_db_command npm --prefix server run db:doctor; then
+    warn "The doctor reported failures — see the [FAIL] lines above for the exact cause and fix."
+  fi
+  press_enter_to_continue
+}
+
 db_inspect() {
   local kind="$1"
   local limit=""
@@ -5667,11 +5725,12 @@ show_db_menu() {
     printf "│                                              │\n"
     printf "│  23) ❔  Show help                           │\n"
     printf "│  24) ↩️  Go back                             │\n"
+    printf "│  25) 🩺  Database diagnostics (db:doctor)    │\n"
     printf "│  0) 🚪  Exit                                 │\n"
     printf "│                                              │\n"
     printf "└──────────────────────────────────────────────┘\n\n"
 
-    prompt_read "Choose an option [0-24]: " choice
+    prompt_read "Choose an option [0-25]: " choice
     case "$choice" in
       1) db_inspect "all" ;;
       2) db_inspect "chat" ;;
@@ -5697,8 +5756,9 @@ show_db_menu() {
       22) db_file_delete ;;
       23) db_help ;;
       24) return ;;
+      25) db_doctor ;;
       0) exit 0 ;;
-      *) printf "Invalid choice. Select a number from 0 to 24.\n" ;;
+      *) printf "Invalid choice. Select a number from 0 to 25.\n" ;;
     esac
   done
 }

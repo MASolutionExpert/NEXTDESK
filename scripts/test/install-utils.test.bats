@@ -2114,18 +2114,52 @@ setup_test_git_repo() {
 # Migration step safety (v1.1.0-dev.9): interrupt recovery + duration warning
 # ---------------------------------------------------------------------------
 
-@test "run_migrations: warns the operator not to press Ctrl+C during migrations" {
+@test "run_migrations: warns the operator not to press Ctrl+C and streams output live" {
   INSTALL_DIR="$TEST_DIR/install"
   mkdir -p "$INSTALL_DIR/server"
 
   # Stub the real migration runner so nothing external is executed.
-  run_in_install_dir() { return 0; }
-  export -f run_in_install_dir
+  run_in_install_dir_streaming() { return 0; }
+  export -f run_in_install_dir_streaming
 
   run run_migrations
   [ "$status" -eq 0 ]
   [[ "$output" == *"Running database migrations..."* ]]
   [[ "$output" == *"Do NOT press Ctrl+C"* ]]
+  [[ "$output" == *"LIVE"* ]]
+}
+
+@test "run_migrations: wraps the migrate command in a hard timeout ceiling" {
+  INSTALL_DIR="$TEST_DIR/install"
+  mkdir -p "$INSTALL_DIR/server"
+
+  # run_migrations executes via `run` (a subshell), so persist the captured
+  # command through a file instead of a shell variable.
+  local captured_file="$TEST_DIR/captured-migrate-cmd"
+  run_in_install_dir_streaming() { printf '%s' "$1" > "$CAPTURED_FILE"; return 0; }
+  CAPTURED_FILE="$captured_file"
+  export CAPTURED_FILE
+  export -f run_in_install_dir_streaming
+
+  run run_migrations
+  [ "$status" -eq 0 ]
+  local captured_cmd
+  captured_cmd="$(cat "$captured_file")"
+  [[ "$captured_cmd" == *"timeout --kill-after=15"* ]]
+  [[ "$captured_cmd" == *"npm --prefix server run db:migrate"* ]]
+}
+
+@test "run_migrations: maps timeout exit codes to a diagnostics hint" {
+  INSTALL_DIR="$TEST_DIR/install"
+  mkdir -p "$INSTALL_DIR/server"
+
+  run_in_install_dir_streaming() { return 124; }
+  export -f run_in_install_dir_streaming
+
+  run run_migrations
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"force-stopped"* ]]
+  [[ "$output" == *"db:doctor"* ]]
 }
 
 @test "run_migrations: skips with a warning when the server directory is missing" {
@@ -2154,4 +2188,11 @@ setup_test_git_repo() {
   local interrupt_body
   interrupt_body="$(sed -n '/^handle_interrupt()/,/^}/p' "$INSTALL_SCRIPT")"
   [[ "$interrupt_body" == *"declare -F restore_chatdesk_service_after_update"* ]]
+}
+
+@test "db menu offers Database diagnostics (db:doctor) as option 25" {
+  local menu_body
+  menu_body="$(sed -n '/^show_db_menu()/,/^}/p' "$INSTALL_SCRIPT")"
+  [[ "$menu_body" == *"Database diagnostics (db:doctor)"* ]]
+  [[ "$menu_body" == *"25) db_doctor"* ]]
 }

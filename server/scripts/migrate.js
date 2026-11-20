@@ -12,10 +12,18 @@ if (running) {
 
 console.log('[db-migrations] Checking database schema...')
 
-const { getCurrentSchemaVersion } = await import('../db.js')
+try {
+  const { getCurrentSchemaVersion } = await import('../db.js')
 
-const schemaVersion = await getCurrentSchemaVersion()
+  const schemaVersion = await getCurrentSchemaVersion()
 
-console.log(
-  `Migrations complete in ${((Date.now() - startedAt) / 1000).toFixed(1)}s. Current schema version: ${schemaVersion}`,
-)
+  console.log(
+    `Migrations complete in ${((Date.now() - startedAt) / 1000).toFixed(1)}s. Current schema version: ${schemaVersion}`,
+  )
+} catch (error) {
+  // Fail-fast errors (connectivity preflight, migration watchdog) carry a
+  // full actionable message — print it cleanly instead of a stack trace.
+  console.error(String(error?.message || error))
+  console.error('[db-migrations] Migration FAILED. Nothing beyond the failed migration was changed.')
+  process.exit(1)
+}
