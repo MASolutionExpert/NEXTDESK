@@ -276,12 +276,12 @@ if (typeof debugSummaryTimer.unref === "function") debugSummaryTimer.unref();
 
 app.set("trust proxy", 1);
 
-app.use(express.json({ limit: "1mb" }));
+app.use("/api", express.json({ limit: "1mb" }));
 app.use(
   compression({
     threshold: 1024,
     filter(req, res) {
-      if (req.path === "/api/events") return false;
+      if (req.path === "/api/events" || req.path.startsWith("/_next/")) return false;
       const contentType = String(res.getHeader("Content-Type") || "").toLowerCase();
       if (contentType.includes("text/event-stream")) return false;
       return compression.filter(req, res);
@@ -1492,7 +1492,7 @@ if (REMOTE_CHANNEL) {
 }
 
 const server = app.listen(port, bindAddress, () => {
-  console.log(`NextDesk (Full-Stack Next.js) server running on http://${bindAddress}:${port}`);
+  console.log(`NextDesk (Full-Stack Next.js 16) server running on http://${bindAddress}:${port}`);
   console.log(
     `[server] Media worker webhook callback URL: ${apiDeps.webhookCallbackUrl}`,
   );

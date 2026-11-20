@@ -83,9 +83,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   env: exposedEnv,
   async headers() {
     return [

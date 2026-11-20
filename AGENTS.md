@@ -1,13 +1,13 @@
 # Repository Guidelines: NextDesk (Full-Stack Next.js)
 
-NextDesk is a self-hosted real-time organizational communication and helpdesk platform built as a unified **Full-Stack Next.js 15** application (App Router + Custom Realtime HTTP/Express/SSE/WebSocket Server + PostgreSQL/SQLite + optional FFmpeg Media Worker).
+NextDesk is a self-hosted real-time organizational communication and helpdesk platform built as a unified **Full-Stack Next.js 16** application (App Router + Custom Realtime HTTP/Express/SSE/WebSocket Server + PostgreSQL/SQLite + optional FFmpeg Media Worker).
 
 ## MANDATORY Agent Rules (read first, always)
 
 Every agent (and any AI/human contributor) working on this project MUST follow these rules. Read this section BEFORE doing anything else, on every session:
 
 1. **Read the rules first**: Always read `AGENTS.md` and `DESIGN.md` before making any change.
-2. **Use only the project's native stack**: Work exclusively with the project's existing stack (**Next.js 15 App Router + React 19 + Tailwind CSS 4** frontend in `src/`, **unified custom Next.js server** `server.mjs` + **Express 5 + Knex** API/realtime engine in `server/`, PostgreSQL/SQLite, optional `worker/`). Never introduce competing frameworks or side solutions.
+2. **Use only the project's native stack**: Work exclusively with the project's existing stack (**Next.js 16 App Router + React 19 + Tailwind CSS 4** frontend in `src/`, **unified custom Next.js server** `server.mjs` + **Express 5 + Knex** API/realtime engine in `server/`, PostgreSQL/SQLite, optional `worker/`). Never introduce competing frameworks or side solutions.
 3. **Absolutely NOTHING fake**: Never fabricate, mock, stub, hardcode, or simulate data or behavior. Every feature must work end-to-end, full-stack: real database reads/writes, real API endpoints, real SSE/WebSocket events.
 4. **No demo/display-only features**: Nothing decorative or display-only. Every screen must be backed by real, persistent, secure server-side functionality.
 5. **Security is the absolute top priority**: Authentication, authorization (role checks on every endpoint), input validation, parameterized SQL queries only, XSS prevention, and safe secrets handling on every change.
@@ -51,7 +51,7 @@ Every change MUST ship together with the installer and CLI (`nextdesk-deploy` / 
 
 ## Full-Stack Next.js Architecture
 
-- **`src/app/`**: Next.js 15 App Router entrypoints (`layout.jsx`, `globals.css`, `/`, `/login`, `/signup`, `/chat`, `/admin`, `/departments`, `/invite/[token]`, `/[...slug]`).
+- **`src/app/`**: Next.js 16 App Router entrypoints (`layout.jsx`, `globals.css`, `/`, `/login`, `/signup`, `/chat`, `/admin`, `/departments`, `/invite/[token]`, `/[...slug]`).
 - **`src/components/`**, **`src/views/`**, **`src/hooks/`**, **`src/api/`**, **`src/i18n/`**, **`src/icons/`**, **`src/settings/`**, **`src/utils/`**: Client React 19 UI, hooks, bilingual i18n (FA/EN), IndexedDB cache, WebRTC calls, and API boundary (`apiFetch`).
 - **`public/`**: Static PWA assets (`sw.js`, `manifest.webmanifest`, `icons/`, `sounds/`, `fonts/`, logos).
 - **`server.mjs` & `server/`**: Unified Full-Stack Next.js Custom Server booting Next.js App Router together with Express 5 API routes (`server/api/`), Knex + PostgreSQL/SQLite (`server/db.js`, `server/db/knex.js`, 43 migrations), SSE realtime hub (`server/lib/sse.js`), WebSocket gateway (`/ws`), BullMQ media queue, Helpdesk routing, Remote Channels, and DB maintenance CLI (`server/scripts/`).
