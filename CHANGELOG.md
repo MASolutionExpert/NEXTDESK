@@ -2,6 +2,13 @@
 
 All notable changes to ChatDesk are documented in this file.
 
+## 1.1.0-dev.5
+
+### Fixed
+
+- 🛠️ Helpdesk: admin panel department endpoints crashed with an internal error (`ReferenceError`) because the helpdesk database helpers were never wired into the admin panel module — the Helpdesk tab showed "Could not load helpdesk data", department creation failed, and the support picker could not list departments. All department and support-report endpoints now work end to end.
+- ➕ The "+" menu in the sidebar now lists "Contact support" first (then private message, group, channel) to match the support-first workflow.
+
 ## 1.0.0
 
 First independent release of ChatDesk.

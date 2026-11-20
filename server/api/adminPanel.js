@@ -90,6 +90,16 @@ function registerAdminPanelRoutes(app, deps) {
     adminBanUser,
     adminDeleteUser,
     adminDeleteChat,
+    adminGetAll,
+    // helpdesk — departments & support reports
+    listDepartments,
+    getDepartmentById,
+    createDepartment,
+    updateDepartment,
+    deleteDepartment,
+    listOperatorsForDepartment,
+    setUserDepartment,
+    getSupportOverview,
     removeStoredFileNames,
     setUserRole,
     // user creation / editing

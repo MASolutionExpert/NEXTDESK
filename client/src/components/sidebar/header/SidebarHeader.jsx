@@ -260,20 +260,6 @@ export default function SidebarHeader({
                         type="button"
                         onClick={() => {
                           setShowCreateMenu(false);
-                          onNewChat?.();
-                        }}
-                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
-                      >
-                        <Chat
-                          size={16}
-                          className="text-emerald-500 icon-anim-bob"
-                        />
-                        {t("sidebar.header.newDm")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowCreateMenu(false);
                           onNewSupport?.();
                         }}
                         className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
@@ -283,6 +269,20 @@ export default function SidebarHeader({
                           className="text-emerald-500 icon-anim-bob"
                         />
                         {t("sidebar.header.contactSupport")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCreateMenu(false);
+                          onNewChat?.();
+                        }}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                      >
+                        <Chat
+                          size={16}
+                          className="text-emerald-500 icon-anim-bob"
+                        />
+                        {t("sidebar.header.newDm")}
                       </button>
                       <button
                         type="button"
