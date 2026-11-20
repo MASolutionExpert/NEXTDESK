@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# chatdesk-deploy-version: 1.0.0
+# chatdesk-deploy-version: 1.1.0-dev.2
 
 set -uo pipefail
 
@@ -48,6 +48,9 @@ DATA_COMMAND_LAUNCHER="${DATA_COMMAND_LAUNCHER:-${INSTALL_DIR}/scripts/run-data-
 # Example: REPO_URL=https://github.com/<you>/<repo>.git REPO_BRANCH=dev bash scripts/install.sh
 REPO_URL="${REPO_URL:-https://github.com/MASolutionExpert/chatdesk.git}"
 REPO_BRANCH="${REPO_BRANCH:-main}"
+# Install metadata: remembers which repo/branch the server was installed from
+# so later updates keep tracking that branch (dev installs keep updating from dev).
+INSTALL_CONFIG_FILE="${INSTALL_DIR}/.chatdesk-install.conf"
 SERVICE_USER="chatdesk"
 SERVICE_GROUP="chatdesk"
 SERVICE_NAME="chatdesk"
@@ -1725,6 +1728,40 @@ ensure_lego_installed() {
   fi
 }
 
+read_install_config_value() {
+  local key="$1"
+  grep -E "^${key}=" "$INSTALL_CONFIG_FILE" 2>/dev/null \
+    | head -n 1 \
+    | cut -d '=' -f 2- \
+    | tr -d '\r\n' || true
+}
+
+write_install_config() {
+  [[ -d "$INSTALL_DIR" ]] || return 0
+  run_silent run_as_root tee "$INSTALL_CONFIG_FILE" >/dev/null <<EOF || return 1
+REPO_URL=${REPO_URL}
+REPO_BRANCH=${REPO_BRANCH}
+EOF
+  run_silent run_as_root chmod 644 "$INSTALL_CONFIG_FILE" || true
+}
+
+# Detect which branch an existing install tracks. Priority:
+# 1. The branch currently checked out in the install dir (what the app runs)
+# 2. The persisted install config (written at install/update time)
+# 3. The REPO_BRANCH value (env override or default)
+detect_install_branch() {
+  local branch=""
+  if [[ -d "$INSTALL_DIR/.git" ]]; then
+    branch="$(run_in_install_dir_output "git rev-parse --abbrev-ref HEAD" 2>/dev/null | tr -d '\r\n' || true)"
+    [[ "$branch" == "HEAD" ]] && branch=""
+  fi
+  if [[ -z "$branch" && -f "$INSTALL_CONFIG_FILE" ]]; then
+    branch="$(read_install_config_value "REPO_BRANCH")"
+  fi
+  [[ -z "$branch" ]] && branch="$REPO_BRANCH"
+  printf "%s" "$branch"
+}
+
 clone_repo() {
   run_silent run_as_root mkdir -p "$INSTALL_DIR" || return 1
 
@@ -1733,6 +1770,7 @@ clone_repo() {
     run_in_install_dir "git fetch --all --prune" || return 1
     run_in_install_dir "git checkout ${REPO_BRANCH}" || return 1
     run_in_install_dir "git pull --ff-only origin ${REPO_BRANCH}" || return 1
+    write_install_config || true
     return 0
   fi
 
@@ -1747,6 +1785,7 @@ clone_repo() {
 
   log "Cloning ChatDesk repository..."
   run_silent run_as_root git clone --branch "$REPO_BRANCH" "$REPO_URL" "$INSTALL_DIR" || return 1
+  write_install_config || true
 }
 
 prepare_install_dir_for_offline() {
@@ -3787,10 +3826,18 @@ update_chatdesk() {
     return 1
   fi
 
+  # Track the branch this install came from (dev installs keep updating from dev)
+  local active_branch=""
+  active_branch="$(detect_install_branch)"
+  if [[ -z "$active_branch" ]]; then
+    active_branch="main"
+  fi
+  log "Tracking branch: ${active_branch}"
+
   # Get local and remote commit hashes
   local local_commit remote_commit
   local_commit="$(run_in_install_dir_output "git rev-parse HEAD" | tr -d '\r\n')"
-  remote_commit="$(run_in_install_dir_output "git rev-parse origin/main" | tr -d '\r\n')"
+  remote_commit="$(run_in_install_dir_output "git rev-parse origin/${active_branch}" | tr -d '\r\n')"
 
   if [[ -z "$local_commit" || -z "$remote_commit" ]]; then
     warn "Failed to determine current version. Check git repository status."
@@ -3799,7 +3846,7 @@ update_chatdesk() {
   fi
 
   local is_downgrade="no"
-  local target_ref="main"
+  local target_ref="${active_branch}"
   local target_version=""
 
   # Check if update is available
@@ -3846,14 +3893,14 @@ update_chatdesk() {
     log "Update available. Preparing to update ChatDesk..."
     preserve_backup_and_restore_data
 
-    # Ensure we're on main branch and pull latest
-    if ! run_in_install_dir "git checkout main"; then
-      warn "Failed to checkout main branch."
+    # Ensure we're on the tracked branch and pull latest
+    if ! run_in_install_dir "git checkout ${active_branch}"; then
+      warn "Failed to checkout ${active_branch} branch."
       press_enter_to_continue
       return 1
     fi
 
-    if ! run_in_install_dir "git pull --ff-only origin main"; then
+    if ! run_in_install_dir "git pull --ff-only origin ${active_branch}"; then
       warn "Failed to pull updates. Repository may have non-fast-forward changes."
       press_enter_to_continue
       return 1
@@ -3887,6 +3934,8 @@ update_chatdesk() {
     run_as_root systemctl restart chatdesk-worker.service || true
   fi
   run_as_root systemctl reload nginx || return 1
+
+  write_install_config || true
 
   show_deployment_success_frame "update"
   press_enter_to_continue
@@ -4162,6 +4211,7 @@ install_chatdesk() {
       return 1
     }
   fi
+  write_install_config || true
   ensure_log_dir || return 1
   write_full_env_with_defaults || return 1
   ensure_local_postgres_setup || return 1
@@ -4265,7 +4315,17 @@ fetch_remote_installer_script() {
   if ! have_cmd curl; then
     return 1
   fi
-  curl -fsSL --connect-timeout 10 --max-time 30 "$SCRIPT_REMOTE_URL" > "$target_file" || return 1
+  # Follow the branch the installed app tracks so the menu always updates
+  # from the same channel (dev menu updates from dev, main from main).
+  local installed_branch=""
+  installed_branch="$(detect_install_branch 2>/dev/null || true)"
+  local remote_url="$SCRIPT_REMOTE_URL"
+  if [[ -n "$installed_branch" && "$installed_branch" != "$REPO_BRANCH" ]]; then
+    local repo_path="${REPO_URL#*github.com/}"
+    repo_path="${repo_path%.git}"
+    remote_url="https://raw.githubusercontent.com/${repo_path}/${installed_branch}/scripts/install.sh"
+  fi
+  curl -fsSL --connect-timeout 10 --max-time 30 "$remote_url" > "$target_file" || return 1
   [[ -s "$target_file" ]] || return 1
 }
 

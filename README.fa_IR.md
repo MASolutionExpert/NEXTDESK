@@ -60,7 +60,7 @@ chatdesk-deploy
 نصب نسخه فعلی dev روی یک سرور تست:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/dev/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/dev/scripts/install.sh | REPO_BRANCH=dev bash
 ```
 
 نصب‌کننده برنچ مبدا را به خاطر می‌سپارد؛ پس به‌روزرسانی‌ها با `chatdesk-deploy`

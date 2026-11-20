@@ -60,7 +60,7 @@ The `dev` branch carries work-in-progress releases before they land on `main`.
 To install the current dev build on a test server:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/dev/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/chatdesk/dev/scripts/install.sh | REPO_BRANCH=dev bash
 ```
 
 The installer remembers which branch it came from, so updates pulled with
