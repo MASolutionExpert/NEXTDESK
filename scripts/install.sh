@@ -3641,6 +3641,80 @@ ensure_chatdesk_stopped_for_update() {
   return 0
 }
 
+# Restores the ChatDesk service when an update stopped it but never reached
+# its restart step (failed dependency install, failed build, failed migration,
+# aborted prompt, "already up to date" exit, ...). Without this the site stays
+# down behind nginx (HTTP 502) after any interrupted update.
+restore_chatdesk_service_after_update() {
+  if ! have_cmd systemctl || ! systemctl list-unit-files 2>/dev/null | grep -q "^chatdesk.service"; then
+    return 0
+  fi
+  if chatdesk_service_is_running; then
+    return 0
+  fi
+  warn "ChatDesk service is stopped after an interrupted update. Restoring it..."
+  if ! run_as_root systemctl restart chatdesk.service; then
+    warn "Automatic restart failed. Start it manually: systemctl restart chatdesk.service"
+    warn "Then check the logs: journalctl -u chatdesk --no-pager -n 50"
+    return 0
+  fi
+  if have_cmd systemctl && systemctl list-unit-files 2>/dev/null | grep -q "^chatdesk-worker.service"; then
+    run_as_root systemctl restart chatdesk-worker.service || true
+  fi
+  run_as_root systemctl reload nginx || true
+
+  local port=""
+  port="$(get_existing_env_value_with_fallback "SERVER_PORT" "PORT" "$DEFAULT_SERVER_PORT")"
+  port="$(sanitize_input_value "$port")"
+  if [[ ! "$port" =~ ^[0-9]+$ ]]; then
+    port="$DEFAULT_SERVER_PORT"
+  fi
+  local restored="no"
+  for _ in $(seq 1 20); do
+    if chatdesk_healthcheck_responds "$port"; then
+      restored="yes"
+      break
+    fi
+    sleep 1
+  done
+  if [[ "$restored" == "yes" ]]; then
+    log "ChatDesk service restored and responding on port ${port}."
+  else
+    warn "ChatDesk service did not respond on port ${port} after restore."
+    warn "Check the logs: journalctl -u chatdesk --no-pager -n 50"
+  fi
+}
+
+# Post-restart health verification for the successful update path. Warning
+# only: a failed health check does not fail the update, but the operator gets
+# actionable output instead of a silent 502 later.
+verify_chatdesk_service_health() {
+  if ! have_cmd systemctl || ! systemctl list-unit-files 2>/dev/null | grep -q "^chatdesk.service"; then
+    return 0
+  fi
+  local port=""
+  port="$(get_existing_env_value_with_fallback "SERVER_PORT" "PORT" "$DEFAULT_SERVER_PORT")"
+  port="$(sanitize_input_value "$port")"
+  if [[ ! "$port" =~ ^[0-9]+$ ]]; then
+    port="$DEFAULT_SERVER_PORT"
+  fi
+  local healthy="no"
+  for _ in $(seq 1 15); do
+    if chatdesk_healthcheck_responds "$port"; then
+      healthy="yes"
+      break
+    fi
+    sleep 1
+  done
+  if [[ "$healthy" == "yes" ]]; then
+    log "ChatDesk is up and responding on port ${port}."
+    return 0
+  fi
+  warn "ChatDesk service did not respond on port ${port} within 15s — the site may be unreachable."
+  warn "Check the logs: journalctl -u chatdesk --no-pager -n 50"
+  return 1
+}
+
 update_nginx_runtime_values() {
   if [[ ! -f "$NGINX_SITE_FILE" ]]; then
     warn "Nginx site config not found at ${NGINX_SITE_FILE}. Skipping nginx update."
@@ -3698,7 +3772,19 @@ rebuild_and_restart_after_settings_change() {
   fi
 }
 
+# Update entry point.
+#
+# update_chatdesk_run stops the service first and has many failure / early-exit
+# paths; this wrapper guarantees the service is restored afterwards on every
+# path, so an interrupted update can never leave the site down (nginx 502).
 update_chatdesk() {
+  update_chatdesk_run
+  local update_rc=$?
+  restore_chatdesk_service_after_update
+  return "$update_rc"
+}
+
+update_chatdesk_run() {
   if [[ ! -d "$INSTALL_DIR" ]]; then
     warn "No ChatDesk install found at ${INSTALL_DIR}."
     press_enter_to_continue
@@ -3804,6 +3890,7 @@ update_chatdesk() {
       run_as_root systemctl restart chatdesk-worker.service || true
     fi
     run_as_root systemctl reload nginx || return 1
+    verify_chatdesk_service_health || true
 
     show_deployment_success_frame "update"
     press_enter_to_continue
@@ -3934,6 +4021,7 @@ update_chatdesk() {
     run_as_root systemctl restart chatdesk-worker.service || true
   fi
   run_as_root systemctl reload nginx || return 1
+  verify_chatdesk_service_health || true
 
   write_install_config || true
 
