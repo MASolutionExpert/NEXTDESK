@@ -147,9 +147,17 @@ function readAppMeta({ fs, path, projectRootDir }) {
   const changelogSections = parseChangelogSections(changelog);
   const currentVersionSection = findChangelogVersionSection(changelog, version);
 
+  // Release channel derived from the VERSION file. Dev installs carry a
+  // prerelease suffix (X.Y.Z-dev.N) and run the Test channel; plain X.Y.Z
+  // runs the Stable channel. The client uses this so the update check only
+  // ever offers tags from the SAME channel (a stable install is never told
+  // to update to a -dev prerelease and vice versa).
+  const channel = /-dev(?:\.\d+)?$/i.test(version) ? "dev" : "stable";
+
   return {
     version,
     normalizedVersion: normalizeVersion(version),
+    channel,
     changelog,
     changelogSections,
     currentChangelog:

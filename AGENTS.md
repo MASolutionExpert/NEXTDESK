@@ -48,6 +48,20 @@ ChatDesk has EXACTLY TWO spaces on GitHub — `dev` and `main`. Their install co
 
 User reports a bug from dev testing → fix ONLY that bug (root cause, no patch-work, nothing else broken) → push to `dev` + register a new dev version → user re-tests. When everything is confirmed, the user triggers the stable release on `main`.
 
+### Installer/CLI release-sync law (MANDATORY — every change, no exceptions)
+
+Every change MUST ship together with the installer and CLI that deliver it. Before registering ANY release (dev or stable), run `bash scripts/verify-release-sync.sh` and it must pass. The script (plus a CI gate on every push and the `scripts/test/version-sync.test.bats` tests) enforces:
+
+1. Root `VERSION` file == `# chatdesk-deploy-version:` header in `scripts/install.sh`. The CLI (`chatdesk-deploy`) self-updates by comparing this header — a stale header freezes every installed CLI at an old version forever.
+2. `CHANGELOG.md` contains a `## {VERSION}` section for the released version.
+3. All channel-pipeline functions (`switch_release_channel`, `finalize_chatdesk_source_change`, ...) exist and every `run_menu_action` target is defined.
+
+If a change touches install/update behavior, add it to `finalize_chatdesk_source_change()` (the single shared tail used by update, offline update AND channel switch) — never to one code path only. Remember: the user's server only gets a change through install/update, so a change without installer coverage is not delivered at all.
+
+### Promotion to Stable (user-triggered, automated)
+
+When the user approves a dev version, they (or the agent, only after that explicit approval) run the **"Promote dev to Stable"** GitHub Actions workflow (`.github/workflows/promote-stable.yml`) with the approved tag (e.g. `v1.1.0-dev.6`). The workflow merges the tag into `main`, rewrites VERSION/installer header/CHANGELOG to the stable form, verifies the release-sync gate, tags `vX.Y.Z` and publishes the stable release. This is the ONLY path from dev to main.
+
 ## Sandbox / Environment Workflow (IMPORTANT)
 
 The development sandbox used for coding is EPHEMERAL and UNSTABLE — it resets and loses local state. Therefore:

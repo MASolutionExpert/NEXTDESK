@@ -36,7 +36,7 @@ export function compareVersions(left, right) {
   return a.prerelease.localeCompare(b.prerelease);
 }
 
-export async function fetchLatestGitHubTag({ owner, repo }) {
+export async function fetchLatestGitHubTag({ owner, repo, channel } = {}) {
   if (!owner || !repo) {
     throw new Error("GitHub repository information is not configured.");
   }
@@ -56,6 +56,7 @@ export async function fetchLatestGitHubTag({ owner, repo }) {
 
   const tags = await response.json();
   const tagList = Array.isArray(tags) ? tags : [];
+  const isDevChannel = String(channel || "").trim().toLowerCase() === "dev";
   const semverTags = tagList
     .map((tag) => {
       const rawTag = String(tag?.name || "").trim();
@@ -64,7 +65,13 @@ export async function fetchLatestGitHubTag({ owner, repo }) {
         ? { rawTag, normalizedTag }
         : null;
     })
-    .filter(Boolean);
+    .filter(Boolean)
+    // Release channels must stay separate: a Stable-channel install is only
+    // offered stable tags (no -dev prereleases), while a Test-channel install
+    // may follow prereleases.
+    .filter(
+      (entry) => isDevChannel || !parseVersion(entry.normalizedTag)?.prerelease,
+    );
 
   if (!semverTags.length) {
     throw new Error("No version tags were found on GitHub.");

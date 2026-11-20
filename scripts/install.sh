@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# chatdesk-deploy-version: 1.1.0-dev.2
+# chatdesk-deploy-version: 1.1.0-dev.7
 
 set -uo pipefail
 
@@ -1745,6 +1745,20 @@ EOF
   run_silent run_as_root chmod 644 "$INSTALL_CONFIG_FILE" || true
 }
 
+# Release channels. ChatDesk ships two completely separate channels so a
+# test install never receives production releases and a production install
+# never receives test builds:
+#   dev branch  -> Test channel    (prereleases vX.Y.Z-dev.N)
+#   main branch -> Stable channel  (production releases vX.Y.Z)
+channel_label_for_branch() {
+  case "$1" in
+    dev) printf "Test channel (dev)" ;;
+    main) printf "Stable channel (main)" ;;
+    "") printf "unknown channel" ;;
+    *) printf "unknown channel ($1)" ;;
+  esac
+}
+
 # Detect which branch an existing install tracks. Priority:
 # 1. The branch currently checked out in the install dir (what the app runs)
 # 2. The persisted install config (written at install/update time)
@@ -1760,6 +1774,46 @@ detect_install_branch() {
   fi
   [[ -z "$branch" ]] && branch="$REPO_BRANCH"
   printf "%s" "$branch"
+}
+
+# Shared tail of every code path that changes the installed source
+# (update via git, offline zip update, channel switch). Keeping this in ONE
+# function is a release-engineering rule: whenever the pipeline gains a step
+# it is added here once, so an install made through any path always applies
+# the complete change set (dependencies, migrations, client build, CLI sync,
+# systemd units, service restart and health verification).
+finalize_chatdesk_source_change() {
+  log "Installing dependencies..."
+  install_chatdesk_dependencies || return 1
+  ensure_vapid_keys || return 1
+
+  log "Synchronizing database schema with latest version..."
+  run_migrations || return 1
+
+  ensure_service_user_exists || return 1
+  apply_ownership || return 1
+  if install_global_command_from_path "$INSTALL_DIR/scripts/install.sh"; then
+    log "Global command synchronized from updated install script."
+  else
+    warn "Failed to synchronize global command after update."
+  fi
+
+  # Unit files are fully generated: refresh them on every update.
+  if have_cmd systemctl && [[ -f "$SERVICE_FILE" ]]; then
+    log "Refreshing systemd services..."
+    configure_systemd_service || true
+  fi
+
+  log "Restarting ChatDesk service..."
+  run_as_root systemctl restart chatdesk.service || return 1
+  if have_cmd systemctl && systemctl list-unit-files | grep -q "^chatdesk-worker.service"; then
+    run_as_root systemctl restart chatdesk-worker.service || true
+  fi
+  run_as_root systemctl reload nginx || return 1
+  verify_chatdesk_service_health || true
+
+  write_install_config || true
+  return 0
 }
 
 clone_repo() {
@@ -3863,34 +3917,7 @@ update_chatdesk_run() {
     preserve_backup_and_restore_data
     update_source_from_zip "$offline_zip_path" || return 1
 
-    log "Installing dependencies..."
-    install_chatdesk_dependencies || return 1
-    ensure_vapid_keys || return 1
-
-    log "Synchronizing database schema with latest version..."
-    run_migrations || return 1
-
-    ensure_service_user_exists || return 1
-    apply_ownership || return 1
-    if install_global_command_from_path "$INSTALL_DIR/scripts/install.sh"; then
-      log "Global command synchronized from updated install script."
-    else
-      warn "Failed to synchronize global command after update."
-    fi
-
-    # Unit files are fully generated: refresh them on every update.
-    if have_cmd systemctl && [[ -f "$SERVICE_FILE" ]]; then
-      log "Refreshing systemd services..."
-      configure_systemd_service || true
-    fi
-
-    log "Restarting ChatDesk service..."
-    run_as_root systemctl restart chatdesk.service || return 1
-    if have_cmd systemctl && systemctl list-unit-files | grep -q "^chatdesk-worker.service"; then
-      run_as_root systemctl restart chatdesk-worker.service || true
-    fi
-    run_as_root systemctl reload nginx || return 1
-    verify_chatdesk_service_health || true
+    finalize_chatdesk_source_change || { press_enter_to_continue; return 1; }
 
     show_deployment_success_frame "update"
     press_enter_to_continue
@@ -3994,39 +4021,101 @@ update_chatdesk_run() {
     fi
   fi
 
-  log "Installing dependencies..."
-  install_chatdesk_dependencies || return 1
-  ensure_vapid_keys || return 1
-  
-  log "Synchronizing database schema with latest version..."
-  run_migrations || return 1
-
-  ensure_service_user_exists || return 1
-  apply_ownership || return 1
-  if install_global_command_from_path "$INSTALL_DIR/scripts/install.sh"; then
-    log "Global command synchronized from updated install script."
-  else
-    warn "Failed to synchronize global command after update."
-  fi
-
-  # Unit files are fully generated: refresh them on every update.
-  if have_cmd systemctl && [[ -f "$SERVICE_FILE" ]]; then
-    log "Refreshing systemd services..."
-    configure_systemd_service || true
-  fi
-
-  log "Restarting ChatDesk service..."
-  run_as_root systemctl restart chatdesk.service || return 1
-  if have_cmd systemctl && systemctl list-unit-files | grep -q "^chatdesk-worker.service"; then
-    run_as_root systemctl restart chatdesk-worker.service || true
-  fi
-  run_as_root systemctl reload nginx || return 1
-  verify_chatdesk_service_health || true
-
-  write_install_config || true
+  finalize_chatdesk_source_change || { press_enter_to_continue; return 1; }
 
   show_deployment_success_frame "update"
   press_enter_to_continue
+  return 0
+}
+
+# Switch an existing GitHub install between the two release channels
+# (Test channel on dev <-> Stable channel on main). Updates always keep
+# tracking the channel the install came from, so this is the only entry
+# point needed to move an install across channels. Runs the exact same
+# finalization pipeline as a normal update (see finalize_chatdesk_source_change).
+switch_release_channel() {
+  if [[ ! -d "$INSTALL_DIR" ]]; then
+    warn "No ChatDesk install found at ${INSTALL_DIR}."
+    press_enter_to_continue
+    return 0
+  fi
+  if [[ ! -d "$INSTALL_DIR/.git" ]]; then
+    warn "Channel switch requires a GitHub install (offline/zip installs cannot switch)."
+    press_enter_to_continue
+    return 0
+  fi
+
+  local current_branch=""
+  current_branch="$(detect_install_branch)"
+  local target_branch=""
+  case "$current_branch" in
+    dev) target_branch="main" ;;
+    main) target_branch="dev" ;;
+    *)
+      warn "Install is on unexpected branch '${current_branch}'. Expected 'dev' or 'main'."
+      press_enter_to_continue
+      return 1
+      ;;
+  esac
+
+  local current_channel target_channel installed_version=""
+  current_channel="$(channel_label_for_branch "$current_branch")"
+  target_channel="$(channel_label_for_branch "$target_branch")"
+  installed_version="$(read_version_file_value "$INSTALL_DIR/VERSION" 2>/dev/null || true)"
+
+  printf "\n"
+  log "Current: ${current_channel}, version ${installed_version:-unknown}"
+  log "Target:  ${target_channel}"
+
+  if [[ "$(prompt_yes_no "Switch ChatDesk from ${current_channel} to ${target_channel}?" "no")" != "yes" ]]; then
+    log "Channel switch canceled."
+    press_enter_to_continue
+    return 0
+  fi
+
+  ensure_chatdesk_stopped_for_update || return 1
+
+  if [[ "$(prompt_yes_no "Create a database backup before switching?" "no")" == "yes" ]]; then
+    backup_database || return 1
+  fi
+
+  if ! run_in_install_dir "git fetch --all --prune --tags"; then
+    warn "Failed to fetch from remote. Check your network and credentials."
+    restore_chatdesk_service_after_update
+    press_enter_to_continue
+    return 1
+  fi
+
+  preserve_backup_and_restore_data
+
+  if ! run_in_install_dir "git checkout ${target_branch}"; then
+    warn "Failed to checkout ${target_branch}."
+    restore_chatdesk_service_after_update
+    press_enter_to_continue
+    return 1
+  fi
+  if ! run_in_install_dir "git pull --ff-only origin ${target_branch}"; then
+    warn "Failed to pull ${target_branch}. Repository may have non-fast-forward changes."
+    restore_chatdesk_service_after_update
+    press_enter_to_continue
+    return 1
+  fi
+
+  finalize_chatdesk_source_change || {
+    warn "Channel switch failed while rebuilding. Check the logs before retrying."
+    restore_chatdesk_service_after_update
+    press_enter_to_continue
+    return 1
+  }
+
+  restore_chatdesk_service_after_update
+
+  local new_version=""
+  new_version="$(read_version_file_value "$INSTALL_DIR/VERSION" 2>/dev/null || true)"
+  log "Channel switched. ChatDesk is now on ${target_channel} (version ${new_version:-unknown})."
+  show_deployment_success_frame "update"
+  press_enter_to_continue
+  return 0
 }
 
 restart_chatdesk() {
@@ -4351,7 +4440,7 @@ install_global_command_from_path() {
     return 1
   }
 
-  if ! sed -i "1s|^# chatdesk-deploy-version:.*$|# chatdesk-deploy-version: ${install_version}|" "$temp_target"; then
+  if ! sed -i "s|^# chatdesk-deploy-version:.*$|# chatdesk-deploy-version: ${install_version}|" "$temp_target"; then
     rm -f "$temp_target"
     return 1
   fi
@@ -4374,7 +4463,7 @@ install_global_command_from_remote() {
     rm -f "$temp_target"
     return 1
   fi
-  if ! sed -i "1s|^# chatdesk-deploy-version:.*$|# chatdesk-deploy-version: ${install_version}|" "$temp_target"; then
+  if ! sed -i "s|^# chatdesk-deploy-version:.*$|# chatdesk-deploy-version: ${install_version}|" "$temp_target"; then
     rm -f "$temp_target"
     return 1
   fi
@@ -4609,7 +4698,18 @@ show_banner() {
 ║                           D E P L O Y   T O O L                           ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 EOF
+  printf '\033[0m'
   printf 'Script Version: %s\n' "$SCRIPT_VERSION"
+  # Show what is actually installed (channel-aware) so operators can always
+  # tell a Test-channel (dev) install from a Stable-channel (main) one.
+  local installed_version="" installed_branch=""
+  installed_version="$(read_version_file_value "$INSTALL_DIR/VERSION" 2>/dev/null || true)"
+  installed_branch="$(detect_install_branch 2>/dev/null || true)"
+  if [[ -n "$installed_version" ]]; then
+    printf 'Installed ChatDesk: %s — %s\n' "$installed_version" "$(channel_label_for_branch "$installed_branch")"
+  else
+    printf 'Installed ChatDesk: not installed\n'
+  fi
   printf '\033[0m'      # reset
 }
 
@@ -4620,14 +4720,15 @@ show_menu() {
   printf "\n"
   printf "ChatDesk Deploy Menu\n"
   printf $'1) 📥  Install ChatDesk\n'
-  printf $'2) 🔄️  Update ChatDesk\n'
+  printf $'2) 🔄️  Update ChatDesk (stays on current channel)\n'
   printf $'3) ♻️  Restart ChatDesk\n'
-  printf $'4) ⚙️  Edit Settings (.env)\n'
-  printf $'5) 🗃️  Manage Database\n'
-  printf $'6) 🗑️  Remove ChatDesk\n'
-  printf $'7) 🔄️  Update menu\n'
-  printf $'8) 🌐  Configure mirrors\n'
-  printf $'9) 📋  View Logs\n'
+  printf $'4) 🔀  Switch Test (dev) / Stable (main) channel\n'
+  printf $'5) ⚙️  Edit Settings (.env)\n'
+  printf $'6) 🗃️  Manage Database\n'
+  printf $'7) 🗑️  Remove ChatDesk\n'
+  printf $'8) 🔄️  Update menu\n'
+  printf $'9) 🌐  Configure mirrors\n'
+  printf $'l) 📋  View Logs\n'
   printf $'0) 🚪  Exit\n\n'
 }
 
@@ -5600,6 +5701,22 @@ main() {
     return 0
   fi
 
+  # Non-interactive status for scripts and quick checks: chatdesk-deploy --status
+  if [[ "${1:-}" == "--status" ]]; then
+    SKIP_CLEAR_ON_EXIT="1"
+    local status_version="" status_branch=""
+    status_version="$(read_version_file_value "$INSTALL_DIR/VERSION" 2>/dev/null || true)"
+    status_branch="$(detect_install_branch 2>/dev/null || true)"
+    printf "Installer/CLI version: %s\n" "$SCRIPT_VERSION"
+    if [[ -n "$status_version" ]]; then
+      printf "Installed ChatDesk: %s\n" "$status_version"
+      printf "Release channel:    %s\n" "$(channel_label_for_branch "$status_branch")"
+    else
+      printf "Installed ChatDesk: not installed\n"
+    fi
+    return 0
+  fi
+
   init_prompt_io
   detect_os
   ensure_sudo
@@ -5611,19 +5728,20 @@ main() {
   local choice=""
   while true; do
     show_menu
-    prompt_read "Choose an option [0-9]: " choice
+    prompt_read "Choose an option [0-9, l]: " choice
     case "$choice" in
       1) run_menu_action install_chatdesk ;;
       2) run_menu_action update_chatdesk ;;
       3) run_menu_action restart_chatdesk ;;
-      4) run_menu_action edit_settings ;;
-      5) run_menu_action show_db_menu ;;
-      6) run_menu_action remove_chatdesk ;;
-      7) run_menu_action update_menu ;;
-      8) run_menu_action configure_mirrors_menu ;;
-      9) run_menu_action show_logs_menu ;;
+      4) run_menu_action switch_release_channel ;;
+      5) run_menu_action edit_settings ;;
+      6) run_menu_action show_db_menu ;;
+      7) run_menu_action remove_chatdesk ;;
+      8) run_menu_action update_menu ;;
+      9) run_menu_action configure_mirrors_menu ;;
+      l|L) run_menu_action show_logs_menu ;;
       0) break ;;
-      *) printf "Invalid choice. Select a number from 0 to 9.\n" ;;
+      *) printf "Invalid choice. Select a number from 0 to 9, or l.\n" ;;
     esac
   done
 }
