@@ -198,8 +198,8 @@ export function MessageComposer({
   const resolvedReplyHtml = renderMarkdownInlinePlain(resolvedReplyText);
   const editMessageLabel = t("chat.composer.editMessage");
   const replyWithName =
-    replyTarget.displayName ||
-    replyTarget.username ||
+    replyTarget?.displayName ||
+    replyTarget?.username ||
     t("chat.composer.replyFallbackName");
 
   const hasText = Boolean(String(messageValue || "").trim());
