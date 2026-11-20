@@ -3838,6 +3838,32 @@ export function setUserRole(userId, role) {
   return run(dbKnex("users").where({ id: userId }).update({ role }));
 }
 
+// ─── Per-user interface language ─────────────────────────────────────────────
+// Supported UI languages. 'fa' (Persian) is the system default; each account
+// can switch from Settings and the choice follows the user across devices.
+export const UI_LANGUAGES = ["fa", "en"];
+export const DEFAULT_UI_LANGUAGE = "fa";
+
+export function normalizeUiLanguage(value) {
+  const lang = String(value || "").trim().toLowerCase();
+  return UI_LANGUAGES.includes(lang) ? lang : null;
+}
+
+export async function getUserLanguage(userId) {
+  const row = await getRow(
+    dbKnex("users").where({ id: userId }).select("language").first(),
+  );
+  return normalizeUiLanguage(row?.language) || DEFAULT_UI_LANGUAGE;
+}
+
+export function updateUserLanguage(userId, language) {
+  const lang = normalizeUiLanguage(language);
+  if (!userId || !lang) return isPostgresMode() ? Promise.resolve(false) : false;
+  const res = run(dbKnex("users").where({ id: userId }).update({ language: lang }));
+  if (res && typeof res.then === "function") return res.then(() => true);
+  return true;
+}
+
 export async function getUserRole(userId) {
   const row = await getRow(dbKnex("users").where({ id: userId }).select("role").first());
   return row?.role || "user";
@@ -3952,7 +3978,7 @@ export function adminListUsers({ limit = 200, offset = 0, search = "", sortBy = 
   const safeSortDir = sortDir === "ASC" ? "ASC" : "DESC";
 
   let qb = dbKnex("users").select(
-    "id", "username", "nickname", "avatar_url", "color", "status", "role", "banned", "verified", "created_at", "last_seen",
+    "id", "username", "nickname", "avatar_url", "color", "status", "role", "banned", "verified", "created_at", "last_seen", "department_id",
     dbKnex.raw("CASE WHEN status = 'online' THEN 1 ELSE 0 END AS online"),
     dbKnex.raw("COUNT(*) OVER() AS _total")
   );
@@ -4103,11 +4129,18 @@ export function adminListChats({
   const safeSortBy  = ["id", "name", "type", "group_visibility", "created_at", "member_count", "message_count"].includes(sortBy) ? sortBy : "id";
   const safeSortDir = sortDir === "ASC" ? "ASC" : "DESC";
 
+  // DM chats have no meaningful name of their own; expose the member
+  // usernames so the admin panel can label and search direct conversations.
+  const participantsExpr = isPostgresMode()
+    ? dbKnex.raw("(SELECT string_agg(pu.username, ', ' ORDER BY pu.username) FROM chat_members pcm JOIN users pu ON pu.id = pcm.user_id WHERE pcm.chat_id = c.id) AS participants")
+    : dbKnex.raw("(SELECT GROUP_CONCAT(pu.username, ', ') FROM chat_members pcm JOIN users pu ON pu.id = pcm.user_id WHERE pcm.chat_id = c.id) AS participants");
+
   let qb = dbKnex("chats as c")
     .leftJoin("users as owner", "owner.id", dbKnex.raw("(SELECT user_id FROM chat_members WHERE chat_id = c.id AND role = 'owner' LIMIT 1)"))
     .leftJoin("remote_channel_sources as rcs", "rcs.chat_id", "c.id")
     .select(
       "c.id", "c.name", "c.type", "c.group_username", "c.group_visibility", "c.group_color", "c.group_avatar_url", "c.created_at", "c.verified", "c.auto_add_new_users",
+      participantsExpr,
       dbKnex.raw("(SELECT COUNT(*) FROM chat_members WHERE chat_id = c.id) AS member_count"),
       dbKnex.raw("(SELECT COUNT(*) FROM chat_messages WHERE chat_id = c.id) AS message_count"),
       "owner.id as owner_id", "owner.username as owner_username", "owner.nickname as owner_nickname",
@@ -4116,16 +4149,19 @@ export function adminListChats({
       "rcs.enabled as remote_enabled", "rcs.paused as remote_paused",
       dbKnex.raw("COUNT(*) OVER() AS _total")
     )
-    .whereIn("c.type", ["group", "channel"]);
+    .whereIn("c.type", ["group", "channel", "dm"]);
 
   if (search) {
     const like = `%${escapeLikePattern(search)}%`;
     qb = qb.where((builder) => {
       builder.whereRaw("c.name LIKE ? ESCAPE '\\'", [like])
-        .orWhereRaw("c.group_username LIKE ? ESCAPE '\\'", [like]);
+        .orWhereRaw("c.group_username LIKE ? ESCAPE '\\'", [like])
+        // Direct chats carry the generic name "dm"; match their members too
+        // so admins can find a conversation by participant username/nickname.
+        .orWhereRaw("EXISTS (SELECT 1 FROM chat_members scm JOIN users su ON su.id = scm.user_id WHERE scm.chat_id = c.id AND (su.username LIKE ? ESCAPE '\\' OR su.nickname LIKE ? ESCAPE '\\'))", [like, like]);
     });
   }
-  if (typeFilter === "group" || typeFilter === "channel") {
+  if (typeFilter === "group" || typeFilter === "channel" || typeFilter === "dm") {
     qb = qb.where("c.type", typeFilter);
   }
   if (visibilityFilter === "public" || visibilityFilter === "private") {
@@ -4190,16 +4226,17 @@ export function adminCountChats({
   let qb = dbKnex("chats as c")
     .leftJoin("remote_channel_sources as rcs", "rcs.chat_id", "c.id")
     .count({ count: "*" })
-    .whereIn("c.type", ["group", "channel"]);
+    .whereIn("c.type", ["group", "channel", "dm"]);
 
   if (search) {
     const like = `%${escapeLikePattern(search)}%`;
     qb = qb.where((builder) => {
       builder.whereRaw("c.name LIKE ? ESCAPE '\\'", [like])
-        .orWhereRaw("c.group_username LIKE ? ESCAPE '\\'", [like]);
+        .orWhereRaw("c.group_username LIKE ? ESCAPE '\\'", [like])
+        .orWhereRaw("EXISTS (SELECT 1 FROM chat_members scm JOIN users su ON su.id = scm.user_id WHERE scm.chat_id = c.id AND (su.username LIKE ? ESCAPE '\\' OR su.nickname LIKE ? ESCAPE '\\'))", [like, like]);
     });
   }
-  if (typeFilter === "group" || typeFilter === "channel") {
+  if (typeFilter === "group" || typeFilter === "channel" || typeFilter === "dm") {
     qb = qb.where("c.type", typeFilter);
   }
   if (visibilityFilter === "public" || visibilityFilter === "private") {
