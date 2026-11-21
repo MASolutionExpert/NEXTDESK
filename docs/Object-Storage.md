@@ -1,10 +1,10 @@
 # Object Storage
 
-ChatDesk supports a pluggable storage architecture that allows you to choose between local disk storage and S3-compatible remote object storage. When combined with the unified **ChatDesk Media Worker**, ChatDesk provides high-performance, asynchronous video transcoding, thumbnail extraction, and media optimization across single-server or distributed cloud environments.
+NextDesk supports a pluggable storage architecture that allows you to choose between local disk storage and S3-compatible remote object storage. When combined with the unified **NextDesk Media Worker**, NextDesk provides high-performance, asynchronous video transcoding, thumbnail extraction, and media optimization across single-server or distributed cloud environments.
 
 ## Storage Drivers
 
-ChatDesk uses the `STORAGE_DRIVER` environment variable to determine where uploaded chat files, media attachments, and avatars are stored.
+NextDesk uses the `STORAGE_DRIVER` environment variable to determine where uploaded chat files, media attachments, and avatars are stored.
 
 | Driver | `STORAGE_DRIVER` | Description |
 |---|---|---|
@@ -18,13 +18,13 @@ STORAGE_DRIVER=remote
 
 ## Direct-to-Storage Presigned Upload Architecture
 
-When `STORAGE_DRIVER=remote` is active, ChatDesk uses a direct client-to-bucket presigned upload workflow. File content is streamed directly from the user's browser to Cloudflare R2 or AWS S3, completely bypassing the ChatDesk Node.js application server.
+When `STORAGE_DRIVER=remote` is active, NextDesk uses a direct client-to-bucket presigned upload workflow. File content is streamed directly from the user's browser to Cloudflare R2 or AWS S3, completely bypassing the NextDesk Node.js application server.
 
 ```
 +--------+            1. POST /api/uploads/presign            +-----------------+
 |        | -------------------------------------------------> |                 |
 |        | <------------------------------------------------- |                 |
-|        |         2. Return presigned PUT upload URL         |  ChatDesk App   |
+|        |         2. Return presigned PUT upload URL         |  NextDesk App   |
 |        |                                                    |     Server      |
 | Client |            4. POST /api/uploads/complete           | (Node.js / API) |
 | Browser| -------------------------------------------------> |                 |
@@ -40,14 +40,14 @@ When `STORAGE_DRIVER=remote` is active, ChatDesk uses a direct client-to-bucket 
 ### Direct Upload Flow
 
 1. **Presign Request**:
-   - The client browser sends file metadata to the ChatDesk backend.
+   - The client browser sends file metadata to the NextDesk backend.
    - The server validates authentication, checks file size limits, generates a unique storage key, and generates a temporary S3 presigned `PUT` URL.
    - The server records a pending upload record in the `pending_presigned_uploads` database table.
 2. **Direct Browser Upload**:
    - The client browser uploads the file payload directly to the Cloudflare R2 / S3 storage endpoint using the presigned URL.
 3. **Upload Completion**:
-   - Once the upload succeeds, the client notifies ChatDesk or attaches the file to a message request.
-   - ChatDesk links the `storageKey` to the message file database (`chat_message_files`) and calls `removePendingPresignedUploads` to clean up the pending tracking record.
+   - Once the upload succeeds, the client notifies NextDesk or attaches the file to a message request.
+   - NextDesk links the `storageKey` to the message file database (`chat_message_files`) and calls `removePendingPresignedUploads` to clean up the pending tracking record.
 
 ### Advantages of Direct Presigned Uploads
 
@@ -60,12 +60,12 @@ When `STORAGE_DRIVER=remote` is active, ChatDesk uses a direct client-to-bucket 
 For file downloads and media streaming:
 
 - **`GET /api/uploads/presign-download`**: Generates a temporary presigned `GET` URL for private objects when queried.
-- **`STORAGE_PUBLIC_URL` configured**: If a public CDN or custom domain is specified (e.g. `STORAGE_PUBLIC_URL=https://media.example.com`), ChatDesk generates direct public CDN URLs (`https://media.example.com/uploads/...`) instead of signing individual GET requests.
-- **`STORAGE_PUBLIC_URL` unset**: ChatDesk generates signed S3 GET URLs that expire after `STORAGE_EXPIRES_IN` seconds (default: 3600s / 1 hour).
+- **`STORAGE_PUBLIC_URL` configured**: If a public CDN or custom domain is specified (e.g. `STORAGE_PUBLIC_URL=https://media.example.com`), NextDesk generates direct public CDN URLs (`https://media.example.com/uploads/...`) instead of signing individual GET requests.
+- **`STORAGE_PUBLIC_URL` unset**: NextDesk generates signed S3 GET URLs that expire after `STORAGE_EXPIRES_IN` seconds (default: 3600s / 1 hour).
 
 ## Remote Object Storage Configuration
 
-When `STORAGE_DRIVER=remote` is enabled, configure the following environment variables to connect ChatDesk to your object storage bucket:
+When `STORAGE_DRIVER=remote` is enabled, configure the following environment variables to connect NextDesk to your object storage bucket:
 
 | Variable | Type | Default | Description |
 |---|---|---:|---|
@@ -118,7 +118,7 @@ Replace `https://chat.example.com` with your domain (or use `*` during initial t
 
 ### Railway Bucket CORS Setup
 
-ChatDesk configures the bucket CORS policy itself. It checks on boot and, more importantly, re-checks on every presigned-upload request using that request's own origin — so even a domain attached *after* the first deploy starts working on the very next upload with no redeploy. Rules are merged into the existing policy without touching your other rules, and the server logs `Bucket CORS policy applied` when it changes anything. Auto-configuration is opt-in via `STORAGE_AUTO_CORS=true` (pre-configured in `.railway/railway.ts`).
+NextDesk configures the bucket CORS policy itself. It checks on boot and, more importantly, re-checks on every presigned-upload request using that request's own origin — so even a domain attached *after* the first deploy starts working on the very next upload with no redeploy. Rules are merged into the existing policy without touching your other rules, and the server logs `Bucket CORS policy applied` when it changes anything. Auto-configuration is opt-in via `STORAGE_AUTO_CORS=true` (pre-configured in `.railway/railway.ts`).
 
 If the server logs a CORS auto-configuration warning instead (e.g. your bucket credentials lack the `s3:PutBucketCORS` permission), apply the policy manually once from any machine with network access using the credentials from your bucket's **Credentials** tab (`BUCKET` is the hashed S3 API name, not the display name):
 
@@ -163,7 +163,7 @@ AWS_SECRET_ACCESS_KEY=<SECRET_ACCESS_KEY> \
 
 ## Cloudflare R2 Setup Guide
 
-Cloudflare R2 is an S3-compatible object storage service with zero egress fees, making it an ideal choice for hosting ChatDesk media attachments and avatars.
+Cloudflare R2 is an S3-compatible object storage service with zero egress fees, making it an ideal choice for hosting NextDesk media attachments and avatars.
 
 ### Step 1: Create an R2 Bucket
 
@@ -190,7 +190,7 @@ Cloudflare R2 is an S3-compatible object storage service with zero egress fees, 
 2. Scroll to **CORS Policy** and click **Edit CORS Policy**.
 3. Paste the [CORS JSON configuration](#mandatory-cors-json-configuration) above and click **Save**.
 
-### Step 4: Configure ChatDesk `.env` Variables
+### Step 4: Configure NextDesk `.env` Variables
 
 Add the following configuration to your `.env` file:
 
@@ -207,7 +207,7 @@ STORAGE_EXPIRES_IN=3600
 
 ### Step 5: (Optional) Custom Public Domain or R2 Public URL
 
-By default, ChatDesk generates secure presigned URLs for downloading files. If you enable **Public Access** or connect a **Custom Domain** (e.g., `media.example.com`) to your R2 bucket in Cloudflare Settings, configure `STORAGE_PUBLIC_URL`:
+By default, NextDesk generates secure presigned URLs for downloading files. If you enable **Public Access** or connect a **Custom Domain** (e.g., `media.example.com`) to your R2 bucket in Cloudflare Settings, configure `STORAGE_PUBLIC_URL`:
 
 ```txt
 STORAGE_PUBLIC_URL=https://media.example.com
@@ -266,12 +266,12 @@ STORAGE_FORCE_PATH_STYLE=true
 
 ## Pending Upload Tracking & Orphan File Cleanup
 
-To ensure abandoned uploads do not accumulate in remote storage buckets, ChatDesk includes built-in tracking and automatic periodic pruning:
+To ensure abandoned uploads do not accumulate in remote storage buckets, NextDesk includes built-in tracking and automatic periodic pruning:
 
 ### Pending Upload Tracking
 
 - When a client requests a presigned URL (`POST /api/uploads/presign`), the server records an entry in the `pending_presigned_uploads` table containing the `storage_key`, `user_id`, and creation timestamp.
-- When the upload completes successfully and the file is saved (or attached to a chat message), ChatDesk executes `removePendingPresignedUploads` to remove the pending record.
+- When the upload completes successfully and the file is saved (or attached to a chat message), NextDesk executes `removePendingPresignedUploads` to remove the pending record.
 
 ### Periodic Background Pruning
 
@@ -282,7 +282,7 @@ To ensure abandoned uploads do not accumulate in remote storage buckets, ChatDes
 
 ## Unified Media Worker Architecture
 
-ChatDesk features a dedicated, stateless HTTP push **Media Worker** (`worker/`) designed to offload video transcoding, thumbnail extraction, and media probing from the primary chat server.
+NextDesk features a dedicated, stateless HTTP push **Media Worker** (`worker/`) designed to offload video transcoding, thumbnail extraction, and media probing from the primary chat server.
 
 :::tip Dedicated Media Worker Guide
 For comprehensive instructions on standalone deployment, cloud platform setup (Render, Railway, Fly.io), concurrency tuning, and API reference, see the dedicated [Media Worker](./Media-Worker.md) guide.
@@ -290,7 +290,7 @@ For comprehensive instructions on standalone deployment, cloud platform setup (R
 
 ## Remote Encryption Modes (`STORAGE_ENCRYPTION_MODE`)
 
-ChatDesk offers two encryption strategies when using remote object storage:
+NextDesk offers two encryption strategies when using remote object storage:
 
 | Mode | `STORAGE_ENCRYPTION_MODE` | Description |
 |---|---|---|
@@ -307,17 +307,17 @@ STORAGE_ENCRYPTION_MODE=local
 
 ## Redis & Background Jobs (BullMQ)
 
-ChatDesk uses **BullMQ** for managing background jobs, such as media processing, video transcoding, and cleanup timers.
+NextDesk uses **BullMQ** for managing background jobs, such as media processing, video transcoding, and cleanup timers.
 
 ### BullMQ Operation Modes
 
 1. **Redis Enabled (`REDIS_HOST` or `REDIS_URL` configured):**
-   - ChatDesk connects to Redis and initializes persistent BullMQ queues (`media-processing` queue) and background workers.
+   - NextDesk connects to Redis and initializes persistent BullMQ queues (`media-processing` queue) and background workers.
    - Tasks are distributed safely across multi-process server clusters or dedicated background worker nodes.
    - Enables Redis session storage and pub/sub event distribution across multiple server instances.
 
 2. **In-Process Queue Fallback (Redis NOT configured):**
-   - When no Redis host or URL is provided, ChatDesk seamlessly switches to an in-process, in-memory job queue with timer fallbacks.
+   - When no Redis host or URL is provided, NextDesk seamlessly switches to an in-process, in-memory job queue with timer fallbacks.
    - Single-instance deployments run completely self-contained without requiring external Redis software or extra setup.
 
 ```txt

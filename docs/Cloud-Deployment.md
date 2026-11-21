@@ -1,16 +1,16 @@
 # Cloud Deployment
 
-This guide covers deploying ChatDesk on managed cloud infrastructure, including **Platform as a Service (PaaS)**, **Container as a Service (CaaS)**, and container orchestration platforms.
+This guide covers deploying NextDesk on managed cloud infrastructure, including **Platform as a Service (PaaS)**, **Container as a Service (CaaS)**, and container orchestration platforms.
 
 :::tip Looking for Self-Hosted VPS Deployment?
-If you are deploying ChatDesk on a single Virtual Private Server (VPS) using Docker Compose or systemd, refer to the [Install via Docker](./Installation-Docker.md) or [Deployment Script](./Deployment-Script.md) guides.
+If you are deploying NextDesk on a single Virtual Private Server (VPS) using Docker Compose or systemd, refer to the [Install via Docker](./Installation-Docker.md) or [Deployment Script](./Deployment-Script.md) guides.
 :::
 
 ## Architecture Overview
 
-ChatDesk can be deployed across various cloud paradigms depending on your operational and scaling requirements:
+NextDesk can be deployed across various cloud paradigms depending on your operational and scaling requirements:
 
-| Paradigm | Description | Suitable Platforms | ChatDesk Support |
+| Paradigm | Description | Suitable Platforms | NextDesk Support |
 |---|---|---|---|
 | **IaaS** *(Infrastructure as a Service)* | Self-managed Virtual Machines running Docker or systemd | AWS EC2, DigitalOcean Droplets, Hetzner | Fully Supported |
 | **PaaS** *(Platform as a Service)* | Deploy directly from source code repository | Render, Railway, Heroku, Fly.io | Fully Supported |
@@ -18,7 +18,7 @@ ChatDesk can be deployed across various cloud paradigms depending on your operat
 
 ## 1. Deploying on PaaS
 
-PaaS providers let you deploy ChatDesk directly from your Git repository without managing server infrastructure.
+PaaS providers let you deploy NextDesk directly from your Git repository without managing server infrastructure.
 
 ### Build and Start Settings
 
@@ -38,7 +38,7 @@ Configure your PaaS deployment with the following runtime commands:
 
 PaaS instances are **ephemeral** by default — any files saved to local disk (such as SQLite databases or file uploads) will be erased whenever the application restarts or redeploys.
 
-To run ChatDesk on PaaS, choose one of two storage strategies:
+To run NextDesk on PaaS, choose one of two storage strategies:
 
 #### Strategy A: Single-Instance with Persistent Volume
 If deploying a single app instance on platforms supporting volume mounts (e.g. Railway or Fly.io):
@@ -89,11 +89,11 @@ For stateless, zero-downtime PaaS deployments:
 
 ### Railway (Infrastructure as Code)
 
-ChatDesk includes an automated **Infrastructure as Code (IaC)** configuration at `.railway/railway.ts` for one-click, reproducible multi-service deployment on [Railway](https://railway.com).
+NextDesk includes an automated **Infrastructure as Code (IaC)** configuration at `.railway/railway.ts` for one-click, reproducible multi-service deployment on [Railway](https://railway.com).
 
 #### Architecture & Resources Provisioned
 
-The Railway IaC configuration programmatically creates and interconnects a full-stack ChatDesk topology under a single `"chatdesk"` project group:
+The Railway IaC configuration programmatically creates and interconnects a full-stack NextDesk topology under a single `"chatdesk"` project group:
 
 ```txt
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -102,7 +102,7 @@ The Railway IaC configuration programmatically creates and interconnects a full-
 │   ┌─────────────────────────── "chatdesk" Group ──────────────────┐    │
 │   │                                                               │    │
 │   │   ┌──────────────────┐               ┌────────────────────┐   │    │
-│   │   │  PostgreSQL      │◀──────────────│  ChatDesk App      │   │    │
+│   │   │  PostgreSQL      │◀──────────────│  NextDesk App      │   │    │
 │   │   │  (Managed DB)    │  DATABASE_URL │  (Web & API)       │   │    │
 │   │   └──────────────────┘               └────────┬───────────┘   │    │
 │   │                                               │               │    │
@@ -110,7 +110,7 @@ The Railway IaC configuration programmatically creates and interconnects a full-
 │   │                                       Network │ Worker URL    │    │
 │   │                                               │               │    │
 │   │   ┌──────────────────┐               ┌────────▼───────────┐   │    │
-│   │   │  Uploads Bucket  │◀──────────────│  ChatDesk Worker   │   │    │
+│   │   │  Uploads Bucket  │◀──────────────│  NextDesk Worker   │   │    │
 │   │   │  (S3 Storage)    │  S3 Driver    │  (Media Transcoder)│   │    │
 │   │   └────────▲─────────┘               └────────────────────┘   │    │
 │   │            │                                  │               │    │
@@ -126,7 +126,7 @@ The Railway IaC configuration programmatically creates and interconnects a full-
 
 #### Step-by-Step Deployment Guide
 
-Follow these steps to deploy ChatDesk on Railway using the Railway CLI:
+Follow these steps to deploy NextDesk on Railway using the Railway CLI:
 
 ##### Step 1: Install Railway CLI
 
@@ -144,7 +144,7 @@ railway login
 
 ##### Step 3: Initialize or Link the Project
 
-Navigate to your local clone of the ChatDesk repository and initialize a new project or link to an existing one:
+Navigate to your local clone of the NextDesk repository and initialize a new project or link to an existing one:
 
 ```bash
 railway init
@@ -160,9 +160,9 @@ Deploy the code. Railway automatically recognizes `.railway/railway.ts` and prov
 railway up
 ```
 
-##### Step 5: Expose Public Domain for ChatDesk App
+##### Step 5: Expose Public Domain for NextDesk App
 
-By default, Railway services run within private networking. To make ChatDesk accessible to users:
+By default, Railway services run within private networking. To make NextDesk accessible to users:
 
 1. In the [Railway Dashboard](https://railway.com/dashboard), click on the **chatdesk-server** service.
 
@@ -178,7 +178,7 @@ railway domain --service chatdesk-server
 
 ### Render (Blueprint)
 
-ChatDesk ships a [Render Blueprint](https://render.com/docs/blueprints) at `render.yaml`: a single Docker web service (`chatdesk`) backed by managed PostgreSQL. Unlike the Railway topology there is no separate worker service — the container entrypoint auto-starts an in-container Media Worker (`WORKER_PORT=8080`) next to the app, which itself listens on Render's `PORT`, so the two never collide.
+NextDesk ships a [Render Blueprint](https://render.com/docs/blueprints) at `render.yaml`: a single Docker web service (`chatdesk`) backed by managed PostgreSQL. Unlike the Railway topology there is no separate worker service — the container entrypoint auto-starts an in-container Media Worker (`WORKER_PORT=8080`) next to the app, which itself listens on Render's `PORT`, so the two never collide.
 
 #### What Gets Provisioned
 
@@ -207,7 +207,7 @@ Remote Channel continuous polling prevents the app from sleeping and burns the m
 
 ## 2. Deploying on CaaS & Kubernetes
 
-You can run ChatDesk in containerized environments using the official pre-built Docker images from Docker Hub:
+You can run NextDesk in containerized environments using the official pre-built Docker images from Docker Hub:
 
 - **Main Application (Frontend + Backend):** `MASolutionExpert/NEXTDESK:latest`
 - **Standalone Media Worker (FFmpeg Transcoder):** `MASolutionExpert/NEXTDESK-worker:latest`
@@ -229,7 +229,7 @@ To enable **multi-instance horizontal scaling**, configure the following trio of
 └──────────────┬──────────────────────────────┬───────────────┘
                │                              │
         ┌──────▼──────┐                ┌──────▼──────┐
-        │  ChatDesk   │                │  ChatDesk   │
+        │  NextDesk   │                │  NextDesk   │
         │ Instance 1  │                │ Instance 2  │
         └──────┬──────┘                └──────┬──────┘
                │                              │
@@ -264,11 +264,11 @@ STORAGE_REGION=us-east-1
 ```
 
 :::tip Media Transcoding with Remote Storage
-ChatDesk offloads video transcoding and thumbnail extraction to the standalone HTTP push **Media Worker** (`worker/`), which can be deployed as an independent container service or alongside backend nodes. See [Media Worker](./Media-Worker.md) and [Object Storage](./Object-Storage.md) for architecture and deployment details.
+NextDesk offloads video transcoding and thumbnail extraction to the standalone HTTP push **Media Worker** (`worker/`), which can be deployed as an independent container service or alongside backend nodes. See [Media Worker](./Media-Worker.md) and [Object Storage](./Object-Storage.md) for architecture and deployment details.
 :::
 
 #### 3. Redis Event Synchronization (Pub/Sub)
-Configure `REDIS_URL` or `REDIS_HOST`. When Redis is enabled, ChatDesk automatically uses Redis Pub/Sub (channel `chatdesk:events`) to synchronize real-time WebSocket and SSE events across all container nodes:
+Configure `REDIS_URL` or `REDIS_HOST`. When Redis is enabled, NextDesk automatically uses Redis Pub/Sub (channel `chatdesk:events`) to synchronize real-time WebSocket and SSE events across all container nodes:
 ```txt
 REDIS_URL=redis://:password@redis.internal:6379
 ```
@@ -279,14 +279,14 @@ For optimal WebSocket connectivity through load balancers, enable **Sticky Sessi
 
 ## 3. Serverless Compatibility
 
-Understanding how ChatDesk interacts with serverless execution models is critical before deploying to serverless platforms.
+Understanding how NextDesk interacts with serverless execution models is critical before deploying to serverless platforms.
 
 ### Function as a Service (FaaS) — Anti-Pattern
 
 Platforms like **AWS Lambda**, **Vercel Serverless Functions**, or **Netlify Functions** execute code in response to individual HTTP requests and terminate execution contexts immediately after.
 
 :::danger FaaS Runtimes Are Not Supported
-Deploying ChatDesk as a FaaS application (e.g., on Vercel Functions or AWS Lambda) is **not supported**. FaaS is an architectural anti-pattern for real-time chat platforms like ChatDesk.
+Deploying NextDesk as a FaaS application (e.g., on Vercel Functions or AWS Lambda) is **not supported**. FaaS is an architectural anti-pattern for real-time chat platforms like NextDesk.
 :::
 
 ### Serverless Containers — Fully Supported
@@ -295,4 +295,4 @@ Do not confuse **Function as a Service (FaaS)** with **Serverless Containers**:
 
 - **Serverless Containers** (such as **Google Cloud Run**, **AWS Fargate**, or **Azure Container Apps**) run full Docker containers without requiring you to manage underlying virtual machines.
 - Unlike FaaS, Serverless Containers provide persistent execution, full WebSocket/SSE support, long-running processes, and background workers.
-- ChatDesk is **fully compatible** with Serverless Container platforms.
+- NextDesk is **fully compatible** with Serverless Container platforms.

@@ -1,5 +1,5 @@
 ---
-# ChatDesk for the Doprax App Market (installMethod: repo_playbook).
+# NextDesk for the Doprax App Market (installMethod: repo_playbook).
 #
 # What it does on the target VM (Ubuntu, hosts: all, become: yes):
 #   1. Installs Docker Engine + compose plugin, git and openssl.
@@ -18,7 +18,7 @@
 # Local test (Ubuntu VM, Ansible installed):
 #   ansible-playbook -i <host>, -u root playbook.yaml
 #   curl -sk https://<host>/api/health
-- name: Deploy ChatDesk chat platform with Docker Compose
+- name: Deploy NextDesk chat platform with Docker Compose
   hosts: all
   become: true
   vars:
@@ -71,7 +71,7 @@
         state: started
         enabled: yes
 
-    - name: Resolve latest ChatDesk release
+    - name: Resolve latest NextDesk release
       ansible.builtin.uri:
         url: https://api.github.com/repos/MASolutionExpert/NEXTDESK/releases/latest
         return_content: yes
@@ -79,17 +79,17 @@
       failed_when: false
       when: chatdesk_version == 'latest'
 
-    - name: Pin ChatDesk version to latest release (or fallback)
+    - name: Pin NextDesk version to latest release (or fallback)
       ansible.builtin.set_fact:
         chatdesk_resolved_version: "{{ chatdesk_release.json.tag_name | default(chatdesk_version_fallback, true) }}"
       when: chatdesk_version == 'latest'
 
-    - name: Use explicit ChatDesk version
+    - name: Use explicit NextDesk version
       ansible.builtin.set_fact:
         chatdesk_resolved_version: "{{ chatdesk_version }}"
       when: chatdesk_version != 'latest'
 
-    - name: Clone ChatDesk at resolved version
+    - name: Clone NextDesk at resolved version
       ansible.builtin.git:
         repo: "{{ chatdesk_repo }}"
         dest: "{{ chatdesk_src }}"
@@ -140,7 +140,7 @@
       register: chatdesk_port_wait
       failed_when: false
 
-    - name: Wait for ChatDesk health endpoint
+    - name: Wait for NextDesk health endpoint
       ansible.builtin.uri:
         url: "https://127.0.0.1/api/health"
         validate_certs: no
@@ -159,7 +159,7 @@
     - name: Print deployment summary
       ansible.builtin.debug:
         msg:
-          - "ChatDesk {{ chatdesk_resolved_version }} deployment {{ 'succeeded' if chatdesk_success else ('may be incomplete — check logs in ' + chatdesk_src) }}."
+          - "NextDesk {{ chatdesk_resolved_version }} deployment {{ 'succeeded' if chatdesk_success else ('may be incomplete — check logs in ' + chatdesk_src) }}."
           - "Access URL: {{ chatdesk_access_url }} (self-signed cert until you replace certs/cert.pem + certs/key.pem)."
           - "First steps: create the owner account, then set SIGN_UP=false in {{ chatdesk_src }}/.env if the instance is public."
           - "Notes: SQLite persists in the chatdesk-data volume; the container mounts /var/run/docker.sock for the admin panel's service controls."

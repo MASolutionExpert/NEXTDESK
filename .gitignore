@@ -4,16 +4,8 @@ coverage/
 **/coverage/
 **/.vitest/
 
-# Client build
-client/dist/
-
-# Server build / data
-server/node_modules/
 data/
 *.sqlite
-
-# Vite cache
-.vite/
 
 # VitePress
 docs/.vitepress/cache/

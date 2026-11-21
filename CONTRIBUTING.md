@@ -1,4 +1,4 @@
-# Contributing to ChatDesk
+# Contributing to NextDesk
 
 Thanks for your interest in contributing!
 
@@ -26,7 +26,7 @@ Adjust configuration in `.env` if needed.
 
 ## 🌿 Branching Strategy
 
-ChatDesk uses a two-channel release pipeline — contributions must never go
+NextDesk uses a two-channel release pipeline — contributions must never go
 straight to the stable channel:
 
 * Create branches from `dev` and submit Pull Requests into `dev`
@@ -78,4 +78,4 @@ All contributors and participants are expected to adhere to our [Code of Conduct
 
 ## ♿ Accessibility
 
-We strive to make ChatDesk accessible to everyone. Please consult our [Accessibility Statement](ACCESSIBILITY.md) for guidelines, conformance targets, and how to report barriers.
+We strive to make NextDesk accessible to everyone. Please consult our [Accessibility Statement](ACCESSIBILITY.md) for guidelines, conformance targets, and how to report barriers.

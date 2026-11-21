@@ -2,7 +2,7 @@
 
 import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-const logo = '/chatdesk-logo.svg'
+const logo = '/nextdesk-logo.svg'
 import { APP_CONFIG, setMessageMaxChars } from '../settings/appConfig.ts'
 import { fetchAppInfo } from '../api/appMetaApi.ts'
 import { setNameLimits } from '../utils/nameLimits.ts'

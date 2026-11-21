@@ -2,12 +2,12 @@
 layout: home
 
 hero:
-  name: ChatDesk
+  name: NextDesk
   text: پیام‌رسان شخصی
   tagline: یک پلتفرم پیام‌رسان سبک و امن که با هدف حمایت از آزادی دیجیتال در سراسر جهان ساخته شده است.
   image:
-    src: /chatdesk-hero.svg
-    alt: ChatDesk
+    src: /nextdesk-hero.svg
+    alt: NextDesk
   actions:
     - theme: brand
       text: شروع کنید
@@ -39,7 +39,7 @@ features:
     link: /fa/Object-Storage
   - icon: 📡
     title: Remote Channel
-    details: کانال‌های Telegram یا کانال‌های ChatDesk دیگر را داخل کانال‌های خودتان mirror کنید.
+    details: کانال‌های Telegram یا کانال‌های NextDesk دیگر را داخل کانال‌های خودتان mirror کنید.
     link: /fa/Remote-Channel-Setup
   - icon: 📞
     title: تماس صوتی و تصویری

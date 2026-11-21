@@ -1,6 +1,6 @@
 # Deployment Script
 
-The deployment script (`chatdesk-deploy`) is the recommended way to install and manage ChatDesk. It is an interactive, menu-driven tool that handles dependencies, builds, Nginx, SSL certificates, environment configuration, database management, and updates, so you do not have to run those steps by hand.
+The deployment script (`chatdesk-deploy`) is the recommended way to install and manage NextDesk. It is an interactive, menu-driven tool that handles dependencies, builds, Nginx, SSL certificates, environment configuration, database management, and updates, so you do not have to run those steps by hand.
 
 :::info
 
@@ -26,13 +26,13 @@ chatdesk-deploy
 
 | Option | Action | Description |
 |---|---|---|
-| 1 | 📥 Install ChatDesk | Full guided install: dependencies, build, Nginx, SSL, and `.env`. |
-| 2 | 🔄 Update ChatDesk | Update inside the current channel, or downgrade to a specific version, rebuild, and restart (optional pre-update backup). |
-| 3 | ♻️ Restart ChatDesk | Restart the `chatdesk.service`. |
+| 1 | 📥 Install NextDesk | Full guided install: dependencies, build, Nginx, SSL, and `.env`. |
+| 2 | 🔄 Update NextDesk | Update inside the current channel, or downgrade to a specific version, rebuild, and restart (optional pre-update backup). |
+| 3 | ♻️ Restart NextDesk | Restart the `chatdesk.service`. |
 | 4 | 🔀 Switch Test / Stable channel | Move the installation between the Test (dev) and Stable (main) channels through the full update pipeline. |
 | 5 | ⚙️ Edit Settings (.env) | Change ports, uploads, retention, sign-up, and other env values, then rebuild/apply. |
 | 6 | 🗃️ Manage Database | Open the database submenu (see below). |
-| 7 | 🗑️ Remove ChatDesk | Uninstall ChatDesk, optionally removing the global command. |
+| 7 | 🗑️ Remove NextDesk | Uninstall NextDesk, optionally removing the global command. |
 | 8 | 🔄 Update menu | Check GitHub for newer script versions and update the global command (or reinstall current). |
 | 9 | 🌐 Configure mirrors | Set NodeSource, apt, and npm registry mirrors for restricted networks. |
 | l | 📋 View Logs | Open the logs submenu (script, service, Nginx access/error). |
@@ -40,7 +40,7 @@ chatdesk-deploy
 
 ## Release channels (Test vs Stable)
 
-ChatDesk has two fully separated release channels — a test install never
+NextDesk has two fully separated release channels — a test install never
 receives production releases and a production install never receives test
 builds:
 
@@ -69,8 +69,8 @@ When you choose **Install**, the script walks you through a series of prompts:
 
 | Mode | Description |
 |---|---|
-| Domain | Serve ChatDesk on a domain name (e.g. `example.com`). |
-| IP | Serve ChatDesk directly on the server's public IP. |
+| Domain | Serve NextDesk on a domain name (e.g. `example.com`). |
+| IP | Serve NextDesk directly on the server's public IP. |
 
 ### 3. Certificate mode
 
@@ -109,7 +109,7 @@ Encryption and push keys (`STORAGE_ENCRYPTION_KEY`, `VAPID_*`) are generated aut
 
 ### 6. Coturn TURN/STUN relay (Optional)
 
-ChatDesk supports audio and video calls via WebRTC. When users are behind symmetric NATs or restrictive firewalls, a TURN/STUN relay server is necessary to establish peer-to-peer media connections.
+NextDesk supports audio and video calls via WebRTC. When users are behind symmetric NATs or restrictive firewalls, a TURN/STUN relay server is necessary to establish peer-to-peer media connections.
 
 The deployment script can automatically install and configure a dedicated [Coturn](https://github.com/coturn/coturn) relay server on the host.
 
@@ -132,7 +132,7 @@ Option **5** opens a full database manager that wraps the [database commands](./
 
 ## Updating and downgrading
 
-Choose **Update ChatDesk** (Option 2) from the menu to update or downgrade your installation:
+Choose **Update NextDesk** (Option 2) from the menu to update or downgrade your installation:
 
 1. **Database backup**: The script offers to create a timestamped backup before touching application files.
 2. **GitHub mode**:

@@ -2,12 +2,12 @@
 layout: home
 
 hero:
-  name: ChatDesk
+  name: NextDesk
   text: Self-hosted chat
   tagline: A secure, lightweight chat platform designed to empower digital freedom worldwide.
   image:
-    src: /chatdesk-hero.svg
-    alt: ChatDesk
+    src: /nextdesk-hero.svg
+    alt: NextDesk
   actions:
     - theme: brand
       text: Get Started
@@ -39,7 +39,7 @@ features:
     link: /Object-Storage
   - icon: 📡
     title: Remote Channels
-    details: Mirror Telegram channels or other ChatDesk channels into your own channels.
+    details: Mirror Telegram channels or other NextDesk channels into your own channels.
     link: /Remote-Channel-Setup
   - icon: 📞
     title: Voice & Video Calls

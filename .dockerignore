@@ -2,7 +2,7 @@
 .github
 node_modules
 **/node_modules
-client/dist
+.next
 data
 logs
 certs

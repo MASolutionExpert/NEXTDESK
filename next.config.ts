@@ -51,6 +51,21 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: { unoptimized: true },
   typescript: { ignoreBuildErrors: false },
+  serverExternalPackages: [
+    "better-sqlite3",
+    "sql.js",
+    "pg",
+    "knex",
+    "ws",
+    "bullmq",
+    "ioredis",
+    "telegram",
+    "web-push",
+    "multer",
+    "compression",
+    "bcryptjs",
+    "dotenv",
+  ],
   env: exposedEnv,
   async headers() {
     return [

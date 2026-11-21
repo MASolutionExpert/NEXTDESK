@@ -27,8 +27,8 @@ fi
 if [[ -n "$CHANNEL" && -n "$version" ]]; then
   case "$CHANNEL" in
     dev)
-      if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev\.[0-9]+$ ]]; then
-        fail_reason "Dev channel version ($version) must match X.Y.Z-dev.N."
+      if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev\.[0-9]{10}$ ]]; then
+        fail_reason "Dev channel version ($version) must match X.Y.Z-dev.YYYYMMDDNN (e.g. 2.0.0-dev.2026112101)."
       fi
       ;;
     stable|main)

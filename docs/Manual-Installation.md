@@ -78,7 +78,7 @@ Create `/etc/systemd/system/chatdesk.service` with the following:
 
 ```ini
 [Unit]
-Description=ChatDesk server
+Description=NextDesk server
 After=network.target
 
 [Service]
@@ -142,7 +142,7 @@ git config --global --add safe.directory /opt/chatdesk
 
 ```bash
 sudo tee /etc/sudoers.d/chatdesk > /dev/null <<'EOF'
-# ChatDesk — allow the service user to control its own unit
+# NextDesk — allow the service user to control its own unit
 # and read privileged logs without a password.
 chatdesk ALL=(root) NOPASSWD: /usr/bin/systemctl restart chatdesk.service
 chatdesk ALL=(root) NOPASSWD: /usr/bin/systemctl stop chatdesk.service

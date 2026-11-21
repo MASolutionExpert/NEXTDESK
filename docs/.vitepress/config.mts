@@ -82,8 +82,8 @@ const faSidebar = [
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: 'ChatDesk Docs',
-  description: 'Documentation of ChatDesk, a secure, lightweight, self-hosted chat platform.',
+  title: 'NextDesk Docs',
+  description: 'Documentation of NextDesk, a secure, lightweight, self-hosted chat platform.',
 
   // Served from a custom domain at the site root.
   base: '/',
@@ -98,7 +98,7 @@ export default defineConfig({
 
   themeConfig: {
     // Shared across locales
-    logo: '/chatdesk-logo.svg',
+    logo: '/nextdesk-logo.svg',
 
     socialLinks: [
       {icon: 'docker', link: 'https://hub.docker.com/r/MASolutionExpert/NEXTDESK'},
@@ -128,7 +128,7 @@ export default defineConfig({
         },
         footer: {
           message: 'Released under the MIT License.',
-          copyright: 'Copyright © 2026 ChatDesk',
+          copyright: 'Copyright © 2026 NextDesk',
         },
       },
     },
@@ -150,7 +150,7 @@ export default defineConfig({
         },
         footer: {
           message: 'تحت لایسنس MIT منتشر شده است.',
-          copyright: 'کپی‌رایت © ۲۰۲۶ ChatDesk',
+          copyright: 'کپی‌رایت © ۲۰۲۶ NextDesk',
         },
         docFooter: {
           prev: 'صفحه قبل',

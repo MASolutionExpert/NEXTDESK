@@ -15,7 +15,7 @@ export default defineRailway(() => {
     region: "ams",
   });
 
-  const worker = service("chatdesk-worker", {
+  const worker = service("nextdesk-worker", {
     rootDirectory: "worker",
     region: "ams",
     build: {
@@ -39,7 +39,7 @@ export default defineRailway(() => {
     },
   });
 
-  const app = service("chatdesk-server", {
+  const app = service("nextdesk-server", {
     region: "ams",
     build: {
       builder: "DOCKERFILE",
@@ -55,7 +55,7 @@ export default defineRailway(() => {
       POSTGRES_URL: db.env.DATABASE_URL,
       POSTGRES_SSL: "false",
       STORAGE_PROCESSING_MODE: "remote",
-      WORKER_URL: "http://${{chatdesk-worker.RAILWAY_PRIVATE_DOMAIN}}:8080",
+      WORKER_URL: "http://${{nextdesk-worker.RAILWAY_PRIVATE_DOMAIN}}:8080",
       WEBHOOK_SECRET: preserve(),
       STORAGE_DRIVER: "remote",
       STORAGE_AUTO_CORS: "true",
@@ -68,9 +68,9 @@ export default defineRailway(() => {
     },
   });
 
-  const chatdeskGroup = group("chatdesk", [app, worker, db, uploads]);
+  const chatdeskGroup = group("nextdesk", [app, worker, db, uploads]);
 
-  return project("chatdesk", {
+  return project("nextdesk", {
     resources: [chatdeskGroup],
   });
 });

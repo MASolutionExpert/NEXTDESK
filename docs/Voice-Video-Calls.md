@@ -1,6 +1,6 @@
 # 📞 Voice & Video Calls
 
-ChatDesk supports real-time peer-to-peer 1-on-1 voice and video calling in direct messages using WebRTC with low-latency WebSocket signaling.
+NextDesk supports real-time peer-to-peer 1-on-1 voice and video calling in direct messages using WebRTC with low-latency WebSocket signaling.
 
 ## Architecture Overview
 
@@ -166,9 +166,9 @@ Verify the listening socket:
 sudo ss -ulpn | grep 3478
 ```
 
-### 5. ChatDesk Integration
+### 5. NextDesk Integration
 
-Set the environment variables in your ChatDesk `.env`:
+Set the environment variables in your NextDesk `.env`:
 
 ```txt
 TURN_STUN_URL="stun:your-domain.com:3478"
@@ -177,11 +177,11 @@ TURN_USERNAME="chatdesk"
 TURN_CREDENTIAL="YourSecurePassword123"
 ```
 
-Restart your ChatDesk server to apply changes.
+Restart your NextDesk server to apply changes.
 
 ### 6. Verification
 
-- **ChatDesk Admin Panel:** Open **Admin Panel** → **Services** to test connectivity, reachability, and latency against your TURN relay.
+- **NextDesk Admin Panel:** Open **Admin Panel** → **Services** to test connectivity, reachability, and latency against your TURN relay.
 - **External ICE Test:** Test candidates via the [WebRTC Trickle ICE test](https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/). A successful connection will output a candidate with type `relay`.
 
 

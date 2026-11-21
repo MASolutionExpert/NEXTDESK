@@ -1,10 +1,10 @@
 # به‌روزرسانی
 
-نحوه به‌روزرسانی یا دانگرید (بازگشت به نسخه قبل) به این بستگی دارد که ChatDesk را چگونه نصب کرده اید.
+نحوه به‌روزرسانی یا دانگرید (بازگشت به نسخه قبل) به این بستگی دارد که NextDesk را چگونه نصب کرده اید.
 
 | روش نصب | مسیر به‌روزرسانی / دانگرید |
 |---|---|
-| اسکریپت نصب | `chatdesk-deploy` را اجرا کنید و **Update ChatDesk** را انتخاب کنید (پشتیبان گیری از پایگاه داده، pull یا checkout در Git، بازسازی، مهاجرت ها و راه اندازی مجدد سرویس). |
+| اسکریپت نصب | `chatdesk-deploy` را اجرا کنید و **Update NextDesk** را انتخاب کنید (پشتیبان گیری از پایگاه داده، pull یا checkout در Git، بازسازی، مهاجرت ها و راه اندازی مجدد سرویس). |
 | Docker | دریافت یا checkout تگ یا کامیت مورد نظر در Git و اجرای `docker compose up -d --build`. |
 | دستی (systemd) | دریافت یا checkout تگ یا کامیت مورد نظر در Git، بازسازی کلاینت/سرور و راه اندازی مجدد سرویس. |
 
@@ -29,7 +29,7 @@ docker compose exec chatdesk npm --prefix /app/server run db:backup
 
 ## اسکریپت نصب (chatdesk-deploy)
 
-اسکریپت تعاملی نصب، ساده ترین راه برای به‌روزرسانی یا دانگرید نمونه ChatDesk شما است.
+اسکریپت تعاملی نصب، ساده ترین راه برای به‌روزرسانی یا دانگرید نمونه NextDesk شما است.
 
 ابزار را اجرا کنید:
 
@@ -37,7 +37,7 @@ docker compose exec chatdesk npm --prefix /app/server run db:backup
 chatdesk-deploy
 ```
 
-گزینه **2** (**Update ChatDesk**) را انتخاب کنید.
+گزینه **2** (**Update NextDesk**) را انتخاب کنید.
 
 ### ۱. پشتیبان گیری پیش از به‌روزرسانی
 
@@ -70,7 +70,7 @@ Create a database backup before updating? [y/N]
 اگر نمونه محلی شما از قبل با `origin/main` به روز باشد، اسکریپت به شما اطلاع میدهد:
 
 ```txt
-ChatDesk is already up to date.
+NextDesk is already up to date.
 Do you want to downgrade? [y/N]
 ```
 

@@ -6,7 +6,7 @@ We provide security updates and patches for the current release branch.
 
 ## Reporting a Vulnerability
 
-The ChatDesk team takes security seriously. If you discover a vulnerability or potential security flaw, please report it responsibly so we can address it before public disclosure.
+The NextDesk team takes security seriously. If you discover a vulnerability or potential security flaw, please report it responsibly so we can address it before public disclosure.
 
 **Please do not report security vulnerabilities via public GitHub issues, discussions, or pull requests.**
 
@@ -14,7 +14,7 @@ The ChatDesk team takes security seriously. If you discover a vulnerability or p
 
 You can privately report a vulnerability directly on GitHub:
 
-1. Go to the [Security Advisories](https://github.com/MASolutionExpert/chatdesk/security/advisories/new) page.
+1. Go to the [Security Advisories](https://github.com/MASolutionExpert/NEXTDESK/security/advisories/new) page.
 2. Click **Report a vulnerability**.
 3. Fill out the report form with full reproduction details.
 

@@ -47,7 +47,7 @@ The [Deployment Script](./Deployment-Script.md) (`chatdesk-deploy`) can configur
 
 ## Option D: Self-signed certificate (not recommended for production)
 
-ChatDesk ships a helper script that generates a self-signed certificate:
+NextDesk ships a helper script that generates a self-signed certificate:
 
 ```bash
 bash scripts/gen-certs.sh

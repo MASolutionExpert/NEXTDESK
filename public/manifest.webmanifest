@@ -1,7 +1,7 @@
 {
   "name": "NextDesk",
   "short_name": "NextDesk",
-  "description": "ChatDesk chat",
+  "description": "NextDesk real-time messenger and helpdesk",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

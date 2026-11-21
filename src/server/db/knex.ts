@@ -135,7 +135,7 @@ function buildPgConnection() {
     statement_timeout: timeouts.statementTimeoutMs,
     idle_in_transaction_session_timeout: timeouts.idleInTransactionTimeoutMs,
     keepAlive: true,
-    application_name: "chatdesk",
+    application_name: "nextdesk",
   };
 }
 
@@ -181,4 +181,8 @@ export function createKnexInstance() {
   });
 }
 
-export const dbKnex = createKnexInstance();
+const globalForDb = globalThis as typeof globalThis & {
+  __nextdeskDbKnex?: ReturnType<typeof createKnexInstance>;
+};
+
+export const dbKnex = (globalForDb.__nextdeskDbKnex ??= createKnexInstance());

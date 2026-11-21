@@ -72,7 +72,7 @@ nano .env
 ```
 
 :::info استفاده از PostgreSQL در Docker
-پایگاه داده پیشفرض ChatDesk بر پایه SQLite است (`DB_CLIENT=sqlite3`). برای استفاده از PostgreSQL، فایل `.env` را ویرایش کرده و `DB_CLIENT=postgres` را به همراه متغیرهای `POSTGRES_*` تنظیم کنید، یا سرویس و volume اختیاری `postgres` را در `docker-compose.yaml` از حالت کامنت خارج کنید.
+پایگاه داده پیشفرض NextDesk بر پایه SQLite است (`DB_CLIENT=sqlite3`). برای استفاده از PostgreSQL، فایل `.env` را ویرایش کرده و `DB_CLIENT=postgres` را به همراه متغیرهای `POSTGRES_*` تنظیم کنید، یا سرویس و volume اختیاری `postgres` را در `docker-compose.yaml` از حالت کامنت خارج کنید.
 :::
 
 :::info کانتینر Media Worker
@@ -120,7 +120,7 @@ docker compose restart nginx
 
 ## کاربر runtime و داده پایدار
 
-استقرارهای Docker از `chatdesk.service` استفاده نمیکنند. ChatDesk با کاربر پیکربندی شده برای container اجرا میشود (در image فعلی root است، مگر آنکه `user:` در Compose آن را override کند) و دستورهای پایگاه داده با همان UID/GID ‏container اجرا میشوند:
+استقرارهای Docker از `chatdesk.service` استفاده نمیکنند. NextDesk با کاربر پیکربندی شده برای container اجرا میشود (در image فعلی root است، مگر آنکه `user:` در Compose آن را override کند) و دستورهای پایگاه داده با همان UID/GID ‏container اجرا میشوند:
 
 ```bash
 docker compose exec chatdesk npm --prefix /app/server run db:inspect
@@ -134,7 +134,7 @@ services:
     user: "chatdesk:chatdesk"
 ```
 
-اگر به جای named volume پیشفرض از bind mount استفاده میکنید، پیش از راه اندازی ChatDesk، پوشه host را برای همان UID:GID قابل نوشتن کنید. ChatDesk مالکیت bind mount روی host را به صورت خودکار تغییر نمیدهد:
+اگر به جای named volume پیشفرض از bind mount استفاده میکنید، پیش از راه اندازی NextDesk، پوشه host را برای همان UID:GID قابل نوشتن کنید. NextDesk مالکیت bind mount روی host را به صورت خودکار تغییر نمیدهد:
 
 ```bash
 mkdir -p ./data

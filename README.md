@@ -10,14 +10,14 @@
 - 📞 **Voice & Video Calls**: WebRTC 1:1 audio/video calls with TURN diagnostics and screen sharing.
 - 📎 **Media & Object Storage**: Local or S3/Cloudflare R2 encrypted storage, voice waveforms, and FFmpeg video transcoding worker.
 - 🌐 **Bilingual (Persian & English)**: Full RTL/LTR support with Vazirmatn & DM Sans fonts and per-user language preference.
-- 🛡️ **Hardened Database Layer**: PostgreSQL (default in production) & SQLite with 43 idempotent migrations, fail-fast timeouts, pre-migration backups, and read-only `db:doctor`.
+- 🛡️ **Hardened Database Layer**: PostgreSQL (default in production) & SQLite with 27 idempotent migrations, fail-fast timeouts, pre-migration backups, and read-only `db:doctor`.
 
 ## Quick Install (Ubuntu 22.04+)
 
 | Channel | Branch | Versions | Install command |
 |---------|--------|----------|-----------------|
 | **Stable** (production) | `main` | `vX.Y.Z` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/main/scripts/install.sh \| bash` |
-| **Test** (pre-release) | `dev` | `vX.Y.Z-dev.N` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/dev/scripts/install.sh \| REPO_BRANCH=dev bash` |
+| **Test** (pre-release) | `dev` | `vX.Y.Z-dev.YYYYMMDDNN` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/dev/scripts/install.sh \| REPO_BRANCH=dev bash` |
 
 Manage your installation anytime from anywhere with `nextdesk-deploy` (or `chatdesk-deploy`):
 - `nextdesk-deploy --status` — inspect installed version and release channel.
@@ -28,7 +28,6 @@ Manage your installation anytime from anywhere with `nextdesk-deploy` (or `chatd
 
 ```bash
 # Install dependencies (Node >= 24)
-npm install
 npm install
 npm install --prefix worker
 

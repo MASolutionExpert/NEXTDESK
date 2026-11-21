@@ -33,9 +33,12 @@ should_start_local_worker() {
   esac
 }
 
+DATA_DIR="${DATA_DIR:-/app/data}"
+mkdir -p "${DATA_DIR}/uploads/messages" "${DATA_DIR}/uploads/avatars" "${DATA_DIR}/backups" 2>/dev/null || true
+
 if should_start_local_worker; then
-  echo "[entrypoint] Starting local ChatDesk Media Worker on port ${WORKER_PORT}..."
-  WORKER_PORT="${WORKER_PORT}" PORT="${WORKER_PORT}" DATA_DIR="${DATA_DIR:-/app/data}" node /app/worker/index.ts &
+  echo "[entrypoint] Starting local NextDesk Media Worker on port ${WORKER_PORT}..."
+  WORKER_PORT="${WORKER_PORT}" PORT="${WORKER_PORT}" DATA_DIR="${DATA_DIR}" node /app/worker/index.ts &
 fi
 
 exec "$@"

@@ -164,7 +164,7 @@ export async function ensureLocalWorkerRunning(options: any = {}) {
     process.once("SIGTERM", cleanup);
 
     console.log(
-      `[localWorkerManager] Auto-started local ChatDesk Media Worker on port ${workerPort} (PID: ${child.pid}, mode: ${storageProcessingMode})`,
+      `[localWorkerManager] Auto-started local NextDesk Media Worker on port ${workerPort} (PID: ${child.pid}, mode: ${storageProcessingMode})`,
     );
 
     return {

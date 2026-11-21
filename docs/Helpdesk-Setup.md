@@ -1,6 +1,6 @@
 # Helpdesk (Departments & Operators)
 
-ChatDesk can run as a **chat-first helpdesk**: customers experience it like a
+NextDesk can run as a **chat-first helpdesk**: customers experience it like a
 regular messenger, while every support conversation is routed behind the
 scenes to the right team.
 

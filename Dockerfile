@@ -45,11 +45,13 @@ RUN chmod 755 /app/scripts/docker-entrypoint.sh
 COPY VERSION ./
 COPY CHANGELOG.md ./
 COPY package.json ./
-RUN mkdir -p /app/data /app/data/uploads /app/data/backups
+RUN mkdir -p /app/data /app/data/uploads/messages /app/data/uploads/avatars /app/data/backups
 ENV NODE_ENV=production
 ENV APP_ENV=production
+ENV DATA_DIR=/app/data
 ENV SERVER_PORT=5174
 ENV BIND_ADDRESS=0.0.0.0
+VOLUME ["/app/data"]
 EXPOSE 5174
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD node -e "const port = process.env.PORT || process.env.SERVER_PORT || 5174; require('http').get('http://localhost:' + port + '/api/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"

@@ -1,6 +1,6 @@
 # پیکربندی Nginx
 
-ChatDesk هم فرانت‌اند ساخته‌شده و هم API را از سرور Node ارائه می‌دهد، بنابراین Nginx تنها باید یک upstream را پراکسی کند: `http://127.0.0.1:SERVER_PORT`.
+NextDesk هم فرانت‌اند ساخته‌شده و هم API را از سرور Node ارائه می‌دهد، بنابراین Nginx تنها باید یک upstream را پراکسی کند: `http://127.0.0.1:SERVER_PORT`.
 
 فایل `/etc/nginx/sites-available/chatdesk` را ایجاد کنید:
 

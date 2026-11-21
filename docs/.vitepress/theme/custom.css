@@ -1,11 +1,11 @@
 /**
- * ChatDesk brand theming for VitePress.
+ * NextDesk brand theming for VitePress.
  * Overrides the default theme CSS variables.
  * Brand green: #2ABA82
  */
 
 /* ---------------------------------------------------------------------------
- * Fonts — same as the ChatDesk app: DM Sans (Latin) + Vazirmatn (Persian).
+ * Fonts — same as the NextDesk app: DM Sans (Latin) + Vazirmatn (Persian).
  * ------------------------------------------------------------------------- */
 @font-face {
   font-family: 'DM Sans';

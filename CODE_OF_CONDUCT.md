@@ -60,7 +60,7 @@ representative at an online or offline event.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement through
-[GitHub Private Vulnerability Reporting](https://github.com/MASolutionExpert/chatdesk/security/advisories/new)
+[GitHub Private Vulnerability Reporting](https://github.com/MASolutionExpert/NEXTDESK/security/advisories/new)
 or by contacting the maintainers privately via
 [GitHub](https://github.com/MASolutionExpert).
 All complaints will be reviewed and investigated promptly and fairly.

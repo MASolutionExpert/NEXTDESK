@@ -72,11 +72,11 @@ nano .env
 ```
 
 :::info Using PostgreSQL with Docker
-ChatDesk defaults to SQLite (`DB_CLIENT=sqlite3`). To use PostgreSQL instead, edit `.env` to set `DB_CLIENT=postgres` along with your `POSTGRES_*` environment variables, or uncomment the optional `postgres` service and `postgres-data` volume block in `docker-compose.yaml`.
+NextDesk defaults to SQLite (`DB_CLIENT=sqlite3`). To use PostgreSQL instead, edit `.env` to set `DB_CLIENT=postgres` along with your `POSTGRES_*` environment variables, or uncomment the optional `postgres` service and `postgres-data` volume block in `docker-compose.yaml`.
 :::
 
 :::info Media Worker Container
-ChatDesk automatically spawns and manages a local Media Worker child process inside the all-in-one container (`MASolutionExpert/NEXTDESK:latest`) by default. For distributed or high-load setups, you can offload media processing to the dedicated standalone image (`MASolutionExpert/NEXTDESK-worker:latest`) or uncomment the optional `media-worker` service in `docker-compose.yaml`. See [Media Worker](./Media-Worker.md) for details.
+NextDesk automatically spawns and manages a local Media Worker child process inside the all-in-one container (`MASolutionExpert/NEXTDESK:latest`) by default. For distributed or high-load setups, you can offload media processing to the dedicated standalone image (`MASolutionExpert/NEXTDESK-worker:latest`) or uncomment the optional `media-worker` service in `docker-compose.yaml`. See [Media Worker](./Media-Worker.md) for details.
 :::
 
 ## 4. Set up TLS certificates
@@ -120,7 +120,7 @@ docker compose restart nginx
 
 ## Runtime User and Persistent Data
 
-Docker deployments do not use `chatdesk.service`. ChatDesk runs as the user configured for the container (root in the current image unless Compose `user:` overrides it), and database commands run as that same container UID/GID:
+Docker deployments do not use `chatdesk.service`. NextDesk runs as the user configured for the container (root in the current image unless Compose `user:` overrides it), and database commands run as that same container UID/GID:
 
 ```bash
 docker compose exec chatdesk npm --prefix /app/server run db:inspect
@@ -134,7 +134,7 @@ services:
     user: "chatdesk:chatdesk"
 ```
 
-When using a bind mount instead of the default named volume, make the host directory writable by that same UID:GID before starting ChatDesk. ChatDesk does not change host bind-mount ownership automatically:
+When using a bind mount instead of the default named volume, make the host directory writable by that same UID:GID before starting NextDesk. NextDesk does not change host bind-mount ownership automatically:
 
 ```bash
 mkdir -p ./data

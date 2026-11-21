@@ -8,7 +8,7 @@ const NextDeskApp = dynamic(() => import('./NextDeskApp.tsx'), {
   loading: () => (
     <div className="fixed inset-0 flex min-h-screen w-full items-center justify-center bg-white dark:bg-slate-950">
       <div className="flex flex-col items-center gap-3 text-center text-emerald-700 dark:text-emerald-300">
-        <img src="/chatdesk-logo.svg" alt="NextDesk" className="h-10 w-10 animate-pulse" />
+        <img src="/nextdesk-logo.svg" alt="NextDesk" className="h-10 w-10 animate-pulse" />
       </div>
     </div>
   ),

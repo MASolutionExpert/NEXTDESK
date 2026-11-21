@@ -24,7 +24,7 @@ NextDesk (`MASolutionExpert/NEXTDESK`) has EXACTLY TWO spaces on GitHub — `dev
 
 ### Space 1 — `dev` (development & testing)
 - EVERY completed change is IMMEDIATELY pushed to `dev` and registered as a NEW dev version:
-  1. Bump root `VERSION` (`X.Y.Z-dev.N`, increment `N`) and `# chatdesk-deploy-version:` header in `scripts/install.sh` (can use `bash scripts/release-dev.sh X.Y.Z-dev.N`).
+  1. Bump root `VERSION` (`X.Y.Z-dev.YYYYMMDDNN`, YYYYMMDD + 2-digit daily sequence `01..99`) and `# chatdesk-deploy-version:` header in `scripts/install.sh` (can use `bash scripts/release-dev.sh X.Y.Z-dev.YYYYMMDDNN`).
   2. Add a `## {VERSION}` section to `CHANGELOG.md`.
   3. Pass `bash scripts/verify-release-sync.sh --channel dev` and `bash -n scripts/install.sh`.
   4. Commit, create an annotated git tag `v{VERSION}`, push `dev` + tag, and publish a bilingual (EN + FA) GitHub **prerelease**.
@@ -54,7 +54,7 @@ Every change MUST ship together with the installer and CLI (`nextdesk-deploy` / 
 - **`src/app/`**: Next.js 16 App Router entrypoints (`layout.tsx`, `globals.css`, `/`, `/login`, `/signup`, `/chat`, `/admin`, `/departments`, `/invite/[token]`, `/[...slug]`).
 - **`src/components/`**, **`src/views/`**, **`src/hooks/`**, **`src/api/`**, **`src/i18n/`**, **`src/icons/`**, **`src/settings/`**, **`src/utils/`**: Client React 19 UI, hooks, bilingual i18n (FA/EN), IndexedDB cache, WebRTC calls, and API boundary (`apiFetch`).
 - **`public/`**: Static PWA assets (`sw.js`, `manifest.webmanifest`, `icons/`, `sounds/`, `fonts/`, logos).
-- **`server.ts` & `server/`**: Unified Full-Stack Next.js Custom Server booting Next.js App Router together with Express 5 API routes (`src/server/api/`), Knex + PostgreSQL/SQLite (`src/server/db.ts`, `server/db/knex.js`, 43 migrations), SSE realtime hub (`src/server/lib/sse.js`), WebSocket gateway (`/ws`), BullMQ media queue, Helpdesk routing, Remote Channels, and DB maintenance CLI (`src/server/scripts/`).
+- **`server.ts` & `src/server/`**: Unified 100% TypeScript Full-Stack Next.js 16 Custom Server (`node server.ts`) booting Next.js App Router together with Express 5 API routes (`src/server/api/`), dual-driver Knex + PostgreSQL/SQLite (`src/server/db.ts`, `src/server/db/knex.ts`, 27 SQL migrations), SSE realtime hub (`src/server/lib/sse.ts`), WebSocket gateway (`/ws`), BullMQ media queue, Helpdesk routing, Remote Channels, and DB maintenance CLI (`src/server/scripts/`).
 - **`worker/`**: Optional standalone FFmpeg video transcoding & media worker.
 - **`test/`**: Frontend unit & Playwright browser component tests (Vitest).
 - **`docs/`**: Dual-language VitePress documentation (English `docs/*.md` & Persian `docs/fa/*.md` — mirrored).

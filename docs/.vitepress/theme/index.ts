@@ -1,4 +1,4 @@
-// Custom VitePress theme: default theme + ChatDesk brand styling.
+// Custom VitePress theme: default theme + NextDesk brand styling.
 import DefaultTheme from 'vitepress/theme';
 import './custom.css';
 

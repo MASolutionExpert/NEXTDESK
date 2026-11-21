@@ -2,12 +2,12 @@ name: Promote dev to Stable
 
 # DevOps two-space pipeline — the ONLY way code reaches the Stable channel (main).
 #
-#   Test channel (dev branch):  every dev push produces a prerelease vX.Y.Z-dev.N
+#   Test channel (dev branch):  every dev push produces a prerelease vX.Y.Z-dev.YYYYMMDDNN
 #                               installed/updated by the Test install command.
 #   Stable channel (main):      frozen until YOU promote an approved dev tag.
 #
 # Run this workflow from the GitHub "Actions" tab after you have tested and
-# approved a dev version (e.g. v1.1.0-dev.6). It merges that tag into main,
+# approved a dev version (e.g. v2.0.0-dev.2026112101). It merges that tag into main,
 # rewrites VERSION / installer header / CHANGELOG to the stable form (X.Y.Z),
 # tags vX.Y.Z on main and publishes the stable release. Stable-channel
 # installs (installed from main) then receive it through CLI Update.
@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       dev_tag:
-        description: "Dev tag to promote (e.g. v1.1.0-dev.6)"
+        description: "Dev tag to promote (e.g. v2.0.0-dev.2026112101)"
         required: true
         type: string
 
@@ -35,7 +35,7 @@ jobs:
         run: |
           TAG="${{ inputs.dev_tag }}"
           if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dev\.[0-9]+$ ]]; then
-            echo "::error::dev_tag must look like v1.1.0-dev.6 (got: $TAG)"
+            echo "::error::dev_tag must look like v2.0.0-dev.2026112101 (got: $TAG)"
             exit 1
           fi
           echo "DEV_TAG=$TAG" >> "$GITHUB_ENV"
@@ -67,7 +67,7 @@ jobs:
 
       - name: Merge dev tag into main
         run: |
-          git config user.name "chatdesk-release-bot"
+          git config user.name "nextdesk-release-bot"
           git config user.email "noreply@github.com"
           # main is frozen between promotions, so any conflict can only be in
           # files dev owns (VERSION/CHANGELOG/installer header) — prefer dev,

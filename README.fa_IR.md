@@ -10,14 +10,14 @@
 - 📞 **تماس صوتی و تصویری**: تماس WebRTC همراه با اشتراک‌گذاری صفحه و ابزار بررسی TURN.
 - 📎 **مدیریت فایل و استوریج ابری**: پشتیبانی از حافظه محلی و S3 / Cloudflare R2 با رمزنگاری، ویس و تبدیل ویدئو با FFmpeg.
 - 🌐 **دوزبانه بومی (فارسی و انگلیسی)**: پشتیبانی کامل RTL/LTR با فونت‌های Vazirmatn و DM Sans و انتخاب زبان برای هر کاربر.
-- 🛡️ **لایه دیتابیس سخت‌سازی‌شده**: PostgreSQL (پیش‌فرض در سرور) و SQLite با ۴۳ مایگریشن idempotent، تایم‌اوت‌های Fail-Fast، بکاپ خودکار پیش از مایگریشن و ابزار تشخیصی صرفاً خواندنی `db:doctor`.
+- 🛡️ **لایه دیتابیس سخت‌سازی‌شده**: PostgreSQL (پیش‌فرض در سرور) و SQLite با ۲۷ مایگریشن idempotent، تایم‌اوت‌های Fail-Fast، بکاپ خودکار پیش از مایگریشن و ابزار تشخیصی صرفاً خواندنی `db:doctor`.
 
 ## نصب سریع روی سرور (Ubuntu 22.04 به بالا)
 
 | کانال | برنچ | نسخه‌ها | دستور نصب |
 |-------|------|---------|-----------|
 | **اصلی / Stable** (پروداکشن) | `main` | `vX.Y.Z` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/main/scripts/install.sh \| bash` |
-| **تست / Test** (پیش‌انتشار) | `dev` | `vX.Y.Z-dev.N` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/dev/scripts/install.sh \| REPO_BRANCH=dev bash` |
+| **تست / Test** (پیش‌انتشار) | `dev` | `vX.Y.Z-dev.YYYYMMDDNN` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/dev/scripts/install.sh \| REPO_BRANCH=dev bash` |
 
 مدیریت کامل سرور با ابزار `nextdesk-deploy` (و معادل سازگار `chatdesk-deploy`):
 - `nextdesk-deploy --status` — مشاهده نسخه نصب‌شده و کانال فعال (`dev` یا `main`).
@@ -28,7 +28,6 @@
 
 ```bash
 # نصب وابستگی‌ها (Node >= 24)
-npm install
 npm install
 npm install --prefix worker
 

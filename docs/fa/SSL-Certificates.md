@@ -47,7 +47,7 @@ ssl_certificate_key /path/to/privkey.pem;
 
 ## گزینه D: گواهی‌نامه self-signed (توصیه‌نشده برای محیط تولید)
 
-ChatDesk یک اسکریپت کمکی برای تولید گواهی‌نامه self-signed دارد:
+NextDesk یک اسکریپت کمکی برای تولید گواهی‌نامه self-signed دارد:
 
 ```bash
 bash scripts/gen-certs.sh

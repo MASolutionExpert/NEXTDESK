@@ -19,8 +19,8 @@ This document defines the design language, UI patterns, color system, typography
 - **Framework**: Full-Stack Next.js 16 + TypeScript Monolith (App Router, React 19.3, 100% TypeScript / TSX).
 - **Routing**: Next.js 16 App Router routes under `src/app/` paired with persistent shell state in `src/components/NextDeskApp.tsx` so active chat/SSE/WebRTC sessions survive navigation between `/chat` and `/admin`.
 - **Styling**: Tailwind CSS 4 with custom `@theme` variables and custom utilities in `src/app/globals.css`.
-- **Icons**: Centralized re-exports from Lucide Icons in `src/icons/lucide.js` and brand SVGs in `src/icons/BrandIcons.jsx`. *Always import icons from `src/icons/lucide.js` or `BrandIcons.jsx`, never directly from `lucide-react`*.
-- **API Boundary**: All HTTP requests **must** use `apiFetch` in `src/api/chatApi.js` (`credentials: "include"`). *Do not call native `fetch` directly inside components*.
+- **Icons**: Centralized re-exports from Lucide Icons in `src/icons/lucide.ts` and brand SVGs in `src/icons/BrandIcons.tsx`. *Always import icons from `src/icons/lucide.ts` or `BrandIcons.tsx`, never directly from `lucide-react`*.
+- **API Boundary**: All HTTP requests **must** use `apiFetch` in `src/api/chatApi.ts` (`credentials: "include"`). *Do not call native `fetch` directly inside components*.
 
 ---
 
@@ -32,7 +32,7 @@ This document defines the design language, UI patterns, color system, typography
 - **Persian / Arabic Font**: `'Vazirmatn', 'DM Sans', system-ui, sans-serif` (`--font-fa`).
 
 ### Text & Language Rules
-- Use `hasPersian()` from `src/utils/fontUtils.js` to dynamically apply the `.font-fa` utility when user-generated content (messages, user names, avatar initials) contains Persian characters.
+- Use `hasPersian()` from `src/utils/fontUtils.ts` to dynamically apply the `.font-fa` utility when user-generated content (messages, user names, avatar initials) contains Persian characters.
 - Global CSS applies `:lang(fa)` and `[lang="fa"]` rules automatically to enforce Vazirmatn.
 - Standard form inputs (`input`, `textarea`, `select`) must enforce `font-size: 16px !important;` to prevent unwanted iOS Safari auto-zooming on focus.
 
@@ -99,6 +99,6 @@ This document defines the design language, UI patterns, color system, typography
 
 1. **Component Design**: Functional components only, utilizing standard React hooks (`useState`, `useRef`, `useMemo`, `useCallback`, `useEffect`).
 2. **Exports**: Use `export default` for React UI components, and named exports for utility modules/helpers.
-3. **No Inline SQL / Direct Fetch**: Do not fetch endpoints with `window.fetch` or `axios`; use `apiFetch` from `src/api/chatApi.js`.
+3. **No Inline SQL / Direct Fetch**: Do not fetch endpoints with `window.fetch` or `axios`; use `apiFetch` from `src/api/chatApi.ts`.
 4. **Tailwind Class Ordering**: Group utility classes logically: layout/positioning (`flex items-center justify-between`), sizing/spacing (`w-full p-4 mt-2`), visuals (`rounded-2xl bg-white border border-slate-200`), dark variants (`dark:bg-slate-950 dark:border-slate-800`), typography (`text-sm font-semibold text-slate-800 dark:text-slate-100`), states (`transition hover:bg-slate-50`).
 5. **RTL & Bilingual Awareness**: Never hardcode text alignment without checking if dynamic Persian script support (`font-fa` / `dir="rtl"`) is affected.

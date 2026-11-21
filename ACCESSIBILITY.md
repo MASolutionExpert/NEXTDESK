@@ -1,6 +1,6 @@
 # Accessibility Statement
 
-ChatDesk is committed to providing a real-time communication platform that is accessible, inclusive, and usable by everyone, including people with visual, auditory, motor, or cognitive disabilities.
+NextDesk is committed to providing a real-time communication platform that is accessible, inclusive, and usable by everyone, including people with visual, auditory, motor, or cognitive disabilities.
 
 ## Conformance Target
 
@@ -48,8 +48,8 @@ While we strive for comprehensive coverage, some areas are actively being enhanc
 
 ## Feedback & Reporting Barriers
 
-We welcome feedback on the accessibility of ChatDesk. If you encounter an accessibility barrier or have suggestions for improvement, please let us know:
+We welcome feedback on the accessibility of NextDesk. If you encounter an accessibility barrier or have suggestions for improvement, please let us know:
 
-* **GitHub Issues:** Submit a report via [GitHub Issues](https://github.com/MASolutionExpert/chatdesk/issues) with the tag `accessibility`.
+* **GitHub Issues:** Submit a report via [GitHub Issues](https://github.com/MASolutionExpert/NEXTDESK/issues) with the tag `accessibility`.
 
 We aim to acknowledge feedback within 48 to 72 hours and work toward addressing identified issues in upcoming releases.

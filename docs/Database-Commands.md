@@ -1,6 +1,6 @@
 # Database Commands
 
-ChatDesk supports both SQLite (default) and PostgreSQL database engines, and ships a set of `npm` scripts for managing the database, users, chats, files, and backups from the command line. Run them from the `server/` directory:
+NextDesk supports both SQLite (default) and PostgreSQL database engines, and ships a set of `npm` scripts for managing the database, users, chats, files, and backups from the command line. Run them from the `server/` directory:
 
 ```bash
 cd /opt/chatdesk/server
@@ -26,7 +26,7 @@ A few rules apply across all commands:
 
 ### Data directory ownership
 
-Supported database commands use a pre-Node launcher and follow ChatDesk's runtime account:
+Supported database commands use a pre-Node launcher and follow NextDesk's runtime account:
 
 - **Docker:** The command runs as the container's current UID/GID. Docker does not use `chatdesk.service`.
 - **systemd:** The command follows the effective `User=` and `Group=` of `chatdesk.service`, including systemd overrides. A missing `Group=` uses the service user's primary group. When root invokes a command for a non-root service account, the launcher repairs only this installation's `data/` directory and then switches to that configured account.
@@ -34,7 +34,7 @@ Supported database commands use a pre-Node launcher and follow ChatDesk's runtim
 
 If `User=` is missing or `User=root`, the systemd command remains root: it does not run `chown` or change users. An explicit `Group=` is still preserved, so `User=root` and `Group=appgroup` executes as `root:appgroup`. For safety, the root/non-root-systemd repair path accepts only the deployed instance's own `data/` directory next to the launcher (`/opt/chatdesk/data` in the standard installation); it rejects an overridden `DATA_DIR` rather than recursively changing an arbitrary path.
 
-`DATA_DIR` contains ChatDesk-managed SQLite data, uploads, and backups. PostgreSQL server data is managed externally by PostgreSQL and is not stored in, or changed by, this directory.
+`DATA_DIR` contains NextDesk-managed SQLite data, uploads, and backups. PostgreSQL server data is managed externally by PostgreSQL and is not stored in, or changed by, this directory.
 
 :::warning
 
@@ -112,7 +112,7 @@ npm run db:restore -- -y --file /path/to/chatdesk-backup.dump
 
 :::warning PostgreSQL must be offline
 
-Stop ChatDesk before running PostgreSQL `db:restore`. Native `pg_restore --clean` replaces database objects and cannot safely run through the live ChatDesk process. Start or restart ChatDesk only after the command succeeds.
+Stop NextDesk before running PostgreSQL `db:restore`. Native `pg_restore --clean` replaces database objects and cannot safely run through the live NextDesk process. Start or restart NextDesk only after the command succeeds.
 
 :::
 
@@ -198,7 +198,7 @@ npm run db:reset -- -y --no-recreate
 
 :::info Online vs. Offline behavior
 
-When ChatDesk is running, the command delegates to the authenticated local server and performs an schema-preserving reset. When ChatDesk is stopped, SQLite removes its database file and PostgreSQL drops the database; either engine can then be recreated and migrated.
+When NextDesk is running, the command delegates to the authenticated local server and performs an schema-preserving reset. When NextDesk is stopped, SQLite removes its database file and PostgreSQL drops the database; either engine can then be recreated and migrated.
 
 :::
 
@@ -216,7 +216,7 @@ npm run db:delete -- -y
 
 :::warning PostgreSQL must be offline
 
-Stop ChatDesk before PostgreSQL `db:delete`; `dropdb --force` terminates active PostgreSQL connections. Local message uploads are also removed, but remote object storage must be cleaned separately if configured.
+Stop NextDesk before PostgreSQL `db:delete`; `dropdb --force` terminates active PostgreSQL connections. Local message uploads are also removed, but remote object storage must be cleaned separately if configured.
 
 :::
 
@@ -254,10 +254,10 @@ Creates a single user. Accepts named flags or three positional arguments (`nickn
 | `--role <owner\|admin\|user>` | 4th | No | User role. |
 
 ```bash
-npm run db:user:create -- --nickname "ChatDesk Sage" --username chatdesk.sage --password "12345678"
+npm run db:user:create -- --nickname "NextDesk Sage" --username chatdesk.sage --password "12345678"
 
 # positional form:
-npm run db:user:create -- "ChatDesk Sage" chatdesk.sage "12345678"
+npm run db:user:create -- "NextDesk Sage" chatdesk.sage "12345678"
 ```
 
 ### `db:user:generate`
@@ -291,7 +291,7 @@ Edits a user profile. The first positional argument is the user selector (id or 
 | `--role <owner\|admin\|user>` | No | User role. |
 
 ```bash
-npm run db:user:edit -- chatdesk.sage --nickname "ChatDesk Sage" --color "#ff6b6b"
+npm run db:user:edit -- chatdesk.sage --nickname "NextDesk Sage" --color "#ff6b6b"
 npm run db:user:edit -- 1 --username chatdesk.admin --status invisible
 ```
 
@@ -356,7 +356,7 @@ Creates a group or channel. Channels can optionally be configured as a Remote Ch
 | `--users <a,b,c>` | No | Comma-separated initial members. |
 | `--remote-channel <source>` | No | Telegram source (`@name`, `t.me` link, or numeric id). Channels only; requires `REMOTE_CHANNEL=true`. |
 | `--sync-metadata` | No | Copy the source's title/avatar into the channel. |
-| `--stream-media` | No | Download source media into ChatDesk uploads. |
+| `--stream-media` | No | Download source media into NextDesk uploads. |
 
 ```bash
 npm run db:chat:create -- --type group --name "Core Team" --owner chatdesk.sage --username core.team --visibility private --users chatdesk.sage2,chatdesk.sage3
@@ -527,7 +527,7 @@ npm run storage:migrate
 ```
 
 :::warning Concurrency Guard
-`storage:migrate` refuses to run if the ChatDesk server process is actively running, preventing race conditions with live uploads. Stop the server before executing.
+`storage:migrate` refuses to run if the NextDesk server process is actively running, preventing race conditions with live uploads. Stop the server before executing.
 :::
 
 ## Running commands via Docker
