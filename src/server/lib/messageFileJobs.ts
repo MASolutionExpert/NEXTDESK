@@ -269,8 +269,7 @@ export function createMessageFileJobs({
           .select("thumb_storage_key")
           .whereIn("thumb_storage_key", Array.from(thumbKeys)),
       );
-      if (rawRemaining && typeof rawRemaining.then === "function") {
-      } else {
+      if (!(rawRemaining && typeof rawRemaining.then === "function")) {
         (rawRemaining || []).forEach((row) => {
           const key = String(row?.thumb_storage_key || "").trim();
           if (key) stillReferenced.add(key);

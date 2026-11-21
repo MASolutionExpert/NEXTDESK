@@ -1452,7 +1452,7 @@ function registerMessageRoutes(app, deps) {
                 encryptionType:
                   file.encryptionType ||
                   file.encryption_type ||
-                  (Boolean(deps.storageEncryption?.hasKey?.())
+                  (deps.storageEncryption?.hasKey?.()
                     ? "local"
                     : "none"),
                 fetchImpl: deps.fetchImpl || globalThis.fetch,
