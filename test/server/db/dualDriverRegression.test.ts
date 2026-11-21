@@ -265,13 +265,13 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
 
     test("deleteChatById resolves Promise without throwing fileRows.map is not a function under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql: any) => {
         if (sql.includes("SELECT cmf.stored_name")) {
           return { rows: [{ stored_name: "file1.png" }] };
         }
         return { rows: [], rowCount: 1 };
       });
-      vi.spyOn(dbKnex as any, "transaction").mockImplementation(async (cb) => {
+      vi.spyOn(dbKnex as any, "transaction").mockImplementation(async (cb: any) => {
         const trx = (table) => {
           const qb: any = dbKnex(table);
           qb.then = function (resolve, reject) {
@@ -299,7 +299,7 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
 
     test("getUserRole, isUserAdmin, isUserOwner, getOwnerUser resolve properly under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql, params) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql: any, params: any) => {
         const query: any = String(sql?.sql || sql || "").toLowerCase();
         const bindings = Array.isArray(params) ? params : (sql?.bindings || []);
         if (query.includes("role = 'owner'") || query.includes('"role" =') || query.includes("`role` =") || (bindings && (bindings[0] === "owner" || bindings[0] === "'owner'"))) {

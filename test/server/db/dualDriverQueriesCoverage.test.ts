@@ -346,7 +346,7 @@ describe("Dual Driver Complete DB Functions Coverage", () => {
         rows: [{ stored_name: "f1.png" }],
         rowCount: 1,
       });
-      vi.spyOn(dbKnex as any, "transaction").mockImplementation(async (cb) => {
+      vi.spyOn(dbKnex as any, "transaction").mockImplementation(async (cb: any) => {
         const trx = (table) => {
           const qb = dbKnex(table);
           qb.then = function (resolve, reject) {

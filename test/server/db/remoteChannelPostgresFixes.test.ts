@@ -29,8 +29,8 @@ describe("remote channel Postgres fixes (NULL params, UUID done-marker)", () => 
     // `($3 IS NOT NULL ...)` aborts with "could not determine data type of
     // parameter $3" — the exact error from the production screenshot.
     const raw = vi
-      .spyOn(dbKnex, "raw")
-      .mockImplementation(async (sql, params) => {
+      .spyOn(dbKnex as any, "raw")
+      .mockImplementation(async (sql: any, params: any) => {
         const lower = String(sql || "").toLowerCase();
         if (lower.startsWith("insert")) {
           return { rows: [], rowCount: 1 };

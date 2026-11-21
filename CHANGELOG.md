@@ -2,6 +2,10 @@
 
 All notable changes to ChatDesk are documented in this file.
 
+## 2.0.0-dev.8
+
+- Completed remaining Knex spy callback parameter annotations in `dualDriverQueriesCoverage.test.ts`, `dualDriverRegression.test.ts`, and `remoteChannelPostgresFixes.test.ts` so `tsc --noEmit` passes with 0 errors across the entire 530-file TypeScript monolith.
+
 ## 2.0.0-dev.7
 
 - Fixed shadowed `globalThis.File` bug in `src/components/chat/messages/MessageComposer.tsx` (previously shadowed by `File` icon import from `lucide.ts`) caught by full TypeScript `tsc --noEmit` verification.
