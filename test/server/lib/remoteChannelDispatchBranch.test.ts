@@ -79,7 +79,7 @@ describe("streamTelegramMediaFiles dispatch branch", () => {
     );
     expect(attached).toBe(1);
     expect(dispatchMirrorMedia).toHaveBeenCalledTimes(1);
-    const args = dispatchMirrorMedia.mock.calls[0][0];
+    const args: any = (dispatchMirrorMedia.mock.calls as any[])[0][0];
     expect(args.messageId).toBe(42);
     expect(args.chatId).toBe("c1");
     expect(args.storedName).toBeTruthy();

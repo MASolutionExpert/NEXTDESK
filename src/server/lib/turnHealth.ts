@@ -97,7 +97,7 @@ export function parseTurnEndpoint(raw) {
  * Probes TURN configuration. Never throws: always resolves a status object.
  * { configured: false } means no relay is set up (STUN fallback only).
  */
-export async function checkTurnHealth(env = process.env, fetchImpl: any = null) {
+export async function checkTurnHealth(env: Record<string, string | undefined> = process.env, fetchImpl: any = null) {
   if (env.TURN_TOKEN_ID && env.TURN_API_TOKEN) {
     const started = Date.now();
     try {

@@ -22,7 +22,7 @@ describe("UserRoleBadge", () => {
 
     test("uses the default 15px size", async () => {
       render(<UserRoleBadge role="owner" />);
-      const svg = page.getByLabelText("Server Owner").locator("svg");
+      const svg = (page.getByLabelText("Server Owner") as any).locator("svg");
       await expect.element(svg).toHaveAttribute("width", "15");
       await expect.element(svg).toHaveAttribute("height", "15");
     });

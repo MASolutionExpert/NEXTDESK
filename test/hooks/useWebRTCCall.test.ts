@@ -53,8 +53,8 @@ describe("useWebRTCCall state machine and helper logic", () => {
   });
 
   it("prefers websocket sender over http fallback when available", async () => {
-    const wsSend = vi.fn(() => true);
-    const httpSend = vi.fn(async () => ({ ok: true }));
+    const wsSend = vi.fn<(...args: any[]) => boolean>(() => true);
+    const httpSend = vi.fn<(...args: any[]) => Promise<{ ok: boolean }>>(async () => ({ ok: true }));
 
     const realtimeSenderRef = { current: wsSend };
 

@@ -69,7 +69,7 @@ describe("chatApi.uploadFile", () => {
       return { ok: false, status: 404 };
     });
 
-    globalThis.fetch = fetchMock;
+    (globalThis as any).fetch = fetchMock;
 
     const result = await uploadFile(file);
 
@@ -117,7 +117,7 @@ describe("chatApi.uploadFile", () => {
       return { ok: false, status: 404 };
     });
 
-    globalThis.fetch = fetchMock;
+    (globalThis as any).fetch = fetchMock;
 
     const result = await uploadFile(file);
 
@@ -157,7 +157,7 @@ describe("chatApi.uploadFile", () => {
       return { ok: false, status: 404 };
     });
 
-    globalThis.fetch = fetchMock;
+    (globalThis as any).fetch = fetchMock;
 
     const result = await uploadFile(file);
 
@@ -174,7 +174,7 @@ describe("chatApi.getChatPreview", () => {
 
   test("adds allowMissing for background preview lookups", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
-    globalThis.fetch = fetchMock;
+    (globalThis as any).fetch = fetchMock;
 
     await getChatPreview({
       chatId: 19,
@@ -190,7 +190,7 @@ describe("chatApi.getChatPreview", () => {
 
   test("does not add allowMissing for interactive previews", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
-    globalThis.fetch = fetchMock;
+    (globalThis as any).fetch = fetchMock;
 
     await getChatPreview({ chatId: 19, username: "blackbull" });
 
@@ -212,7 +212,7 @@ describe("chatApi.claimAdminPrivileges", () => {
       ok: true,
       json: async () => ({ ok: true, role: "owner" }),
     });
-    globalThis.fetch = fetchMock;
+    (globalThis as any).fetch = fetchMock;
 
     const result = await claimAdminPrivileges("secret-token");
 
@@ -253,7 +253,7 @@ describe("chatApi.presignUploadFile", () => {
         storageKey: "uploads/avatar.png",
       }),
     });
-    globalThis.fetch = fetchMock;
+    (globalThis as any).fetch = fetchMock;
 
     const result = await presignUploadFile(file);
 
@@ -284,7 +284,7 @@ describe("chatApi.presignUploadFile", () => {
       status: 400,
       json: async () => ({ error: "File size exceeds limit." }),
     });
-    globalThis.fetch = fetchMock;
+    (globalThis as any).fetch = fetchMock;
 
     await expect(presignUploadFile(file)).rejects.toThrow("File size exceeds limit.");
   });
@@ -300,7 +300,7 @@ describe("chatApi.uploadFileToPresignedUrl", () => {
     const file = new File(["binary content"], "file.bin", { type: "application/octet-stream" });
     const uploadUrl = "https://s3.amazonaws.com/bucket/file.bin?sig=abc";
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
-    globalThis.fetch = fetchMock;
+    (globalThis as any).fetch = fetchMock;
 
     const result = await uploadFileToPresignedUrl(uploadUrl, file);
 
@@ -316,7 +316,7 @@ describe("chatApi.uploadFileToPresignedUrl", () => {
     const file = new File(["data"], "test.jpg", { type: "image/jpeg" });
     const uploadUrl = "https://s3.amazonaws.com/bucket/test.jpg?sig=bad";
     const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 403 });
-    globalThis.fetch = fetchMock;
+    (globalThis as any).fetch = fetchMock;
 
     await expect(uploadFileToPresignedUrl(uploadUrl, file)).rejects.toThrow("S3 upload failed with status 403");
   });
@@ -372,7 +372,7 @@ describe("chatApi.prepareFilesForMessage", () => {
       return { ok: false, status: 404 };
     });
 
-    globalThis.fetch = fetchMock;
+    (globalThis as any).fetch = fetchMock;
 
     const result = await prepareFilesForMessage([file1, file2]);
 
@@ -409,7 +409,7 @@ describe("chatApi.fetchIncomingCall", () => {
       expect(url).toBe("/api/calls/incoming");
       return { ok: true, json: async () => incomingPayload };
     });
-    globalThis.fetch = fetchMock;
+    (globalThis as any).fetch = fetchMock;
 
     const { fetchIncomingCall } = await import("../../src/api/chatApi.ts");
     const result = await fetchIncomingCall();
@@ -419,7 +419,7 @@ describe("chatApi.fetchIncomingCall", () => {
   });
 
   test("returns null when the request fails", async () => {
-    globalThis.fetch = vi.fn(async () => ({ ok: false, status: 401 }));
+    (globalThis as any).fetch = vi.fn(async () => ({ ok: false, status: 401 }));
 
     const { fetchIncomingCall } = await import("../../src/api/chatApi.ts");
     const result = await fetchIncomingCall();

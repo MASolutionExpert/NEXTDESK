@@ -120,7 +120,7 @@ describe("dispatchMediaWorkerJob", () => {
 
     expect(res).toBe(false);
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch.mock.calls[0][0]).toBe("https://remote-worker.example.com/transcode");
+    expect((mockFetch.mock.calls as any[])[0][0]).toBe("https://remote-worker.example.com/transcode");
   });
 
   test("in local mode, calls only the local worker and ignores remote mediaWorkerUrl", async () => {

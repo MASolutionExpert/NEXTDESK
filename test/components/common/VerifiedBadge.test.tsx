@@ -20,20 +20,20 @@ describe("VerifiedBadge", () => {
     const badge = page.getByLabelText("Verified");
     await expect.element(badge).toBeInTheDocument();
     // The wrapper span contains an SVG
-    const svg = badge.locator("svg");
+    const svg = (badge as any).locator("svg");
     await expect.element(svg).toBeInTheDocument();
   });
 
   test("applies custom size to the SVG", async () => {
     render(<VerifiedBadge size={20} />);
-    const svg = page.getByLabelText("Verified").locator("svg");
+    const svg = (page.getByLabelText("Verified") as any).locator("svg");
     await expect.element(svg).toHaveAttribute("width", "20");
     await expect.element(svg).toHaveAttribute("height", "20");
   });
 
   test("uses default size of 15 when not specified", async () => {
     render(<VerifiedBadge />);
-    const svg = page.getByLabelText("Verified").locator("svg");
+    const svg = (page.getByLabelText("Verified") as any).locator("svg");
     await expect.element(svg).toHaveAttribute("width", "15");
     await expect.element(svg).toHaveAttribute("height", "15");
   });

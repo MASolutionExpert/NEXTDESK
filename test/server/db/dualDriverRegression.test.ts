@@ -84,7 +84,7 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
     test("createMessage generates UUID and returns it directly without RETURNING in PostgreSQL mode", async () => {
       process.env.DB_CLIENT = "postgres";
       let capturedSql: any = null;
-      const raw: any = vi.spyOn(dbKnex, "raw").mockImplementation(async (sql) => {
+      const raw: any = vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql) => {
         capturedSql = sql;
         return { rows: [], rowCount: 1 };
       });
@@ -99,14 +99,14 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
     test("setMessageForwardOrigin returns PostgreSQL write failures to its caller", async () => {
       process.env.DB_CLIENT = "postgres";
       const error: any = new Error("forward origin write failed");
-      vi.spyOn(dbKnex, "raw").mockRejectedValue(error);
+      vi.spyOn(dbKnex as any, "raw").mockRejectedValue(error);
 
       await expect(setMessageForwardOrigin(321, { label: "Source" })).rejects.toBe(error);
     });
 
     test("findUserByUsername returns Promise resolving to user or null under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql, params) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql, params) => {
         if (params && params[0] === "alice") {
           return { rows: [{ id: 1, username: "alice", role: "user" }] };
         }
@@ -126,7 +126,7 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
 
     test("listMutedUserIdsForChat returns Promise resolving to array under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async () => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async () => {
         return { rows: [{ user_id: 10 }] };
       });
 
@@ -138,7 +138,7 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
 
     test("listCallHistoryForUser returns Promise resolving to call history under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async () => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async () => {
         return {
           rows: [
             {
@@ -163,7 +163,7 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
 
     test("findChatByGroupUsername returns Promise resolving to chat or null under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql, params) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql, params) => {
         if (params && (params[0] === "devgroup" || params[1] === "@devgroup")) {
           return {
             rows: [
@@ -198,7 +198,7 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
 
       // Postgres Mode
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql, params) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql, params) => {
         if (params[0] === 1 && params[1] === 2) {
           return { rows: [{ chat_id: 1 }] };
         }
@@ -219,7 +219,7 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
 
     test("hasChatMemberLeft resolves booleans correctly under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql, params) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql, params) => {
         if (params[0] === 1 && params[1] === 5) {
           return { rows: [{ left_chat: 1 }] };
         }
@@ -232,7 +232,7 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
 
     test("isGroupMemberRemoved resolves booleans correctly under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql, params) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql, params) => {
         if (params[0] === 1 && params[1] === 5) {
           return { rows: [{ removed: 1 }] };
         }
@@ -245,7 +245,7 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
 
     test("addAllEligibleChatMembers resolves Promise without throwing addedUsers.forEach is not a function under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql) => {
         const lowerSql: any = String(sql || "").toLowerCase();
         if (lowerSql.includes("users")) {
           if (lowerSql.includes("count")) return { rows: [{ count: 0 }] };
@@ -265,13 +265,13 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
 
     test("deleteChatById resolves Promise without throwing fileRows.map is not a function under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql) => {
         if (sql.includes("SELECT cmf.stored_name")) {
           return { rows: [{ stored_name: "file1.png" }] };
         }
         return { rows: [], rowCount: 1 };
       });
-      vi.spyOn(dbKnex, "transaction").mockImplementation(async (cb) => {
+      vi.spyOn(dbKnex as any, "transaction").mockImplementation(async (cb) => {
         const trx = (table) => {
           const qb: any = dbKnex(table);
           qb.then = function (resolve, reject) {
@@ -288,7 +288,7 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
           }
           return { rows: [], rowCount: 1 };
         };
-        return cb(trx);
+        return cb(trx as any);
       });
 
       const resultPromise: any = deleteChatById("c100");
@@ -299,7 +299,7 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
 
     test("getUserRole, isUserAdmin, isUserOwner, getOwnerUser resolve properly under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql, params) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql, params) => {
         const query: any = String(sql?.sql || sql || "").toLowerCase();
         const bindings = Array.isArray(params) ? params : (sql?.bindings || []);
         if (query.includes("role = 'owner'") || query.includes('"role" =') || query.includes("`role` =") || (bindings && (bindings[0] === "owner" || bindings[0] === "'owner'"))) {
@@ -742,7 +742,7 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
     describe("Issue 2: getAll(...).map is not a function in listChatsForUser", () => {
       test("listChatsForUser handles Promise returned by getAll under Postgres mode without throwing map is not a function", async () => {
         process.env.DB_CLIENT = "postgres";
-        vi.spyOn(dbKnex, "raw").mockImplementation(() =>
+        vi.spyOn(dbKnex as any, "raw").mockImplementation(() =>
           Promise.resolve({ rows: [] })
         );
 
@@ -788,7 +788,7 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
       test("listChatsForUser safely returns empty array without querying when userId is NaN or undefined, and returns empty for non-matching UUID strings", async () => {
         process.env.DB_CLIENT = "postgres";
         let capturedParams: any = null;
-        vi.spyOn(dbKnex, "raw").mockImplementation((sql, params) => {
+        vi.spyOn(dbKnex as any, "raw").mockImplementation((sql, params) => {
           capturedParams = params;
           return Promise.resolve({ rows: [] });
         });
@@ -843,7 +843,7 @@ describe("Dual Database Driver Regression Tests (SQLite & Postgres)", () => {
     describe("Direct DB Helpers Audit under PostgreSQL Mode", () => {
       beforeEach(() => {
         process.env.DB_CLIENT = "postgres";
-        vi.spyOn(dbKnex, "raw").mockImplementation(async (sql, params) => {
+        vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql, params) => {
           const strSql: any = String(sql || "");
           if (strSql.includes("users")) {
             return {

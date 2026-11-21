@@ -2,6 +2,11 @@
 
 All notable changes to ChatDesk are documented in this file.
 
+## 2.0.0-dev.7
+
+- Fixed shadowed `globalThis.File` bug in `src/components/chat/messages/MessageComposer.tsx` (previously shadowed by `File` icon import from `lucide.ts`) caught by full TypeScript `tsc --noEmit` verification.
+- Resolved all remaining third-party `@types/*` mismatches across `src/` (`bucketCors`, `webhookUrl`, `turnHealth`, `redis`, `websocketGateway`, `markdown`, `adminRemoteChannel`, `configure-remote-channel`) and Vitest 5 / Knex mock typings in `test/` so `tsc --noEmit` passes with 0 errors across the entire 530-file pure TypeScript monolith.
+
 ## 2.0.0-dev.6
 
 - Resolved `sql.js` WASM asset path in unified monolith (`src/server/db.ts` and `src/server/scripts/_db-admin.ts`) from root `node_modules` (`projectRootDir`) instead of legacy `server/node_modules`.

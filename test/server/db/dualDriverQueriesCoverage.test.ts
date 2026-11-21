@@ -90,7 +90,7 @@ describe("Dual Driver Complete DB Functions Coverage", () => {
     test("getRemoteChannelSourceByChatId handles SQLite and Postgres modes", async () => {
       // Postgres mode
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockResolvedValue({
+      vi.spyOn(dbKnex as any, "raw").mockResolvedValue({
         rows: [{ id: 10, chat_id: "c1", provider: "telegram" }],
       });
       const pgRes = await getRemoteChannelSourceByChatId("c1");
@@ -104,7 +104,7 @@ describe("Dual Driver Complete DB Functions Coverage", () => {
 
     test("getRemoteChannelSourceById handles SQLite and Postgres modes", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockResolvedValue({
+      vi.spyOn(dbKnex as any, "raw").mockResolvedValue({
         rows: [{ id: 5, chat_id: "c2" }],
       });
       const pgRes = await getRemoteChannelSourceById(5);
@@ -122,7 +122,7 @@ describe("Dual Driver Complete DB Functions Coverage", () => {
 
     test("updateRemoteChannelSourceSeen / Error / Paused under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql) => {
         const lower = String(sql || "").toLowerCase();
         if (lower.includes("select")) {
           return {
@@ -146,7 +146,7 @@ describe("Dual Driver Complete DB Functions Coverage", () => {
 
     test("getCurrentRemoteChannelQueueItemId, skipCurrentRemoteChannelQueueItem, skipAllRemoteChannelQueueItems under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql) => {
         const lower = String(sql || "").toLowerCase();
         if (lower.includes("select")) {
           return { rows: [{ id: 42 }] };
@@ -170,7 +170,7 @@ describe("Dual Driver Complete DB Functions Coverage", () => {
 
     test("getRemoteChannelProviderState and setRemoteChannelProviderState under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql) => {
         const lower = String(sql || "").toLowerCase();
         if (lower.includes("select")) {
           return { rows: [{ provider: "telegram", next_update_offset: 100 }] };
@@ -189,7 +189,7 @@ describe("Dual Driver Complete DB Functions Coverage", () => {
 
     test("enqueueRemoteChannelQueueItem and getRemoteChannelQueueSummary under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql) => {
         const lower = String(sql || "").toLowerCase();
         if (
           lower.includes("group by") ||
@@ -222,7 +222,7 @@ describe("Dual Driver Complete DB Functions Coverage", () => {
 
     test("queue lifecycle functions (releaseStale, claimNext, markDone, markSkipped, markRetry, purgeOld) under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql) => {
         const lower = String(sql || "").toLowerCase();
         if (lower.includes("select q.id")) {
           return { rows: [{ id: 7, source_id: 5, status: "pending" }] };
@@ -255,7 +255,7 @@ describe("Dual Driver Complete DB Functions Coverage", () => {
   describe("Message Files and Metadata Functions under Dual Drivers", () => {
     test("createMessageFiles, findMessageFileById, listMessageFilesByMessageIds, listMessageFilesNeedingMetadata, updateMessageFileMetadata", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql) => {
         const lower = String(sql || "").toLowerCase();
         if (lower.includes("select") && lower.includes("chat_message_files")) {
           return {
@@ -297,7 +297,7 @@ describe("Dual Driver Complete DB Functions Coverage", () => {
   describe("User Profile, Password, Status, and Membership Mutation Functions under Dual Drivers", () => {
     test("user updates and membership functions under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockResolvedValue({ rows: [], rowCount: 1 });
+      vi.spyOn(dbKnex as any, "raw").mockResolvedValue({ rows: [], rowCount: 1 });
 
       await updateUserProfile("u1", "newname", "New Nick", "http://avatar.jpg");
       await updateUserPassword("u1", "newhash");
@@ -321,7 +321,7 @@ describe("Dual Driver Complete DB Functions Coverage", () => {
   describe("Push Subscriptions, Mutes, Hiding and Admin Mutations under Dual Drivers", () => {
     test("push subscriptions and mutes under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql) => {
         const lower = String(sql || "").toLowerCase();
         if (lower.includes("select") && lower.includes("push_subscriptions")) {
           return { rows: [{ user_id: "u1", endpoint: "https://push.com" }] };
@@ -342,11 +342,11 @@ describe("Dual Driver Complete DB Functions Coverage", () => {
 
     test("admin operations (ban, deleteUser, deleteChat, clearAllMessages, resetDatabase, bootstrap) under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockResolvedValue({
+      vi.spyOn(dbKnex as any, "raw").mockResolvedValue({
         rows: [{ stored_name: "f1.png" }],
         rowCount: 1,
       });
-      vi.spyOn(dbKnex, "transaction").mockImplementation(async (cb) => {
+      vi.spyOn(dbKnex as any, "transaction").mockImplementation(async (cb) => {
         const trx = (table) => {
           const qb = dbKnex(table);
           qb.then = function (resolve, reject) {
@@ -364,7 +364,7 @@ describe("Dual Driver Complete DB Functions Coverage", () => {
           rows: [{ stored_name: "f1.png" }],
           rowCount: 1,
         });
-        return cb(trx);
+        return cb(trx as any);
       });
 
       await adminBanUser("u1", true);
@@ -385,7 +385,7 @@ describe("Dual Driver Complete DB Functions Coverage", () => {
 
     test("dbSettings helpers under Postgres mode", async () => {
       process.env.DB_CLIENT = "postgres";
-      vi.spyOn(dbKnex, "raw").mockImplementation(async (sql) => {
+      vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql) => {
         const lower = String(sql || "").toLowerCase();
         if (lower.includes("select")) {
           return { rows: [{ key: "k1", value: "v1" }] };

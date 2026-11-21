@@ -28,8 +28,8 @@ function hasEmptyExplicitPort(url) {
  * @param {object} [env=process.env]
  * @returns {string}
  */
-export function resolveWebhookCallbackUrl(env = process.env) {
-  const source = env || {};
+export function resolveWebhookCallbackUrl(env: Record<string, string | undefined> = process.env) {
+  const source: Record<string, string | undefined> = env || {};
   const explicit = [
     source.WEBHOOK_URL,
     source.WEBHOOK_CALLBACK_URL,

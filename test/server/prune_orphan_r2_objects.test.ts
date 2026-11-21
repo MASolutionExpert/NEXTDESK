@@ -25,7 +25,7 @@ describe("Task 5: Server — prune orphan R2 objects", () => {
     });
 
     vi.spyOn(mockRemoteProvider, "getUploadUrl").mockImplementation(
-      async (info) => {
+      async (info: any) => {
         const key = info?.key || "uploads/test-orphan-file.png";
         return {
           type: "remote",

@@ -198,7 +198,7 @@ describe("E2E S3 & Local Upload Lifecycle", () => {
       });
 
       vi.spyOn(mockRemoteProvider, "getUploadUrl").mockImplementation(
-        async (info) => {
+        async (info: any) => {
           const key = info?.key || "uploads/test.mp4";
           return {
             type: "remote",

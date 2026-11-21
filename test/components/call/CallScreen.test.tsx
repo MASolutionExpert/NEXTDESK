@@ -1088,7 +1088,7 @@ describe("CallScreen screen sharing", () => {
 
       await userEvent.click(page.getByRole("button", { name: "Enter fullscreen" }));
       expect(request).toHaveBeenCalledTimes(1);
-      expect(request.mock.instances[0].contains(page.getByLabelText("Remote video").element())).toBe(true);
+      expect((request.mock.instances[0] as any).contains(page.getByLabelText("Remote video").element())).toBe(true);
       await expect
         .element(page.getByRole("button", { name: "Exit fullscreen" }))
         .toBeInTheDocument();

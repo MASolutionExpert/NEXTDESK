@@ -28,8 +28,8 @@ function splitOrigins(value) {
  * @param {object} [env=process.env]
  * @returns {string[]}
  */
-export function resolveAppOrigins(env = process.env) {
-  const source = env || {};
+export function resolveAppOrigins(env: Record<string, string | undefined> = process.env) {
+  const source: Record<string, string | undefined> = env || {};
   const explicit = splitOrigins(source.APP_PUBLIC_URL);
   if (explicit.length > 0) return [...new Set(explicit)];
 

@@ -20,7 +20,7 @@ describe("Remote Uploads & File Management Routes", () => {
 
     // Mock getUploadUrl and getDownloadUrl to avoid real AWS calls in test
     vi.spyOn(mockRemoteProvider, "getUploadUrl").mockImplementation(
-      async (info) => {
+      async (info: any) => {
         const key = info?.key || info?.filename || "test-file.png";
         return {
           type: "remote",

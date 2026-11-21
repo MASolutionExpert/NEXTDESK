@@ -36,7 +36,7 @@ describe("dispatchMirrorJob", () => {
     });
     expect(res.dispatched).toBe(true);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
-    const [url, opts] = fetchImpl.mock.calls[0];
+    const [url, opts] = (fetchImpl.mock.calls as any[])[0];
     expect(url).toBe("http://127.0.0.1:8080/mirror-media");
     const body = JSON.parse(opts.body);
     expect(body.storageKey).toBe("uploads/messages/x.bin");
@@ -94,7 +94,7 @@ describe("dispatchMirrorJob", () => {
       },
     });
     expect(res.dispatched).toBe(true);
-    const [, opts] = fetchImpl.mock.calls[0];
+    const [, opts] = (fetchImpl.mock.calls as any[])[0];
     const body = JSON.parse(opts.body);
     expect(body.downloadUrl.startsWith("https://app.example.com/")).toBe(true);
   });
@@ -116,7 +116,7 @@ describe("dispatchMirrorJob", () => {
       jobMeta: baseJob,
     });
     expect(res.dispatched).toBe(true);
-    const [, opts] = fetchImpl.mock.calls[0];
+    const [, opts] = (fetchImpl.mock.calls as any[])[0];
     const body = JSON.parse(opts.body);
     expect(body.callbackUrl).toBe(
       "https://app.example.com/api/remote-channel/webhook/mirror-done",
@@ -139,7 +139,7 @@ describe("dispatchMirrorJob", () => {
       jobMeta: baseJob,
     });
     expect(res.dispatched).toBe(true);
-    expect(fetchImpl.mock.calls[0][0]).toBe(
+    expect((fetchImpl.mock.calls as any[])[0][0]).toBe(
       "http://127.0.0.1:8080/mirror-media",
     );
   });

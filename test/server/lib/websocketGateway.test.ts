@@ -107,8 +107,8 @@ describe("WebSocket Gateway", () => {
       onUserConnected,
     });
 
-    vi.spyOn(gateway.wss, "handleUpgrade").mockImplementation((req, socket, head, callback) => {
-      callback({ on: () => {} });
+    vi.spyOn(gateway.wss, "handleUpgrade").mockImplementation((req, socket, head, callback: any) => {
+      callback({ on: () => {} }, req);
     });
 
     const request = {

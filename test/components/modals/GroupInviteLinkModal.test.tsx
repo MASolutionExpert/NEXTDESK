@@ -15,7 +15,7 @@ describe("GroupInviteLinkModal", () => {
 
     const title = page.getByRole("heading", { name: /group created/i });
     await expect.element(title).toBeInTheDocument();
-    await expect.element(title.locator("svg.lucide-users")).toBeInTheDocument();
+    await expect.element((title as any).locator("svg.lucide-users")).toBeInTheDocument();
 
     const description = page.getByText(/join your group/i);
     await expect.element(description).toBeInTheDocument();
@@ -34,7 +34,7 @@ describe("GroupInviteLinkModal", () => {
     const title = page.getByRole("heading", { name: /channel created/i });
     await expect.element(title).toBeInTheDocument();
     await expect
-      .element(title.locator("svg.lucide-megaphone"))
+      .element((title as any).locator("svg.lucide-megaphone"))
       .toBeInTheDocument();
 
     const description = page.getByText(/join your channel/i);

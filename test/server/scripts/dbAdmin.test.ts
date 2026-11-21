@@ -92,7 +92,7 @@ describe("openDatabase Admin Utility", () => {
       exec: vi.fn(async () => {}),
       client: { config: { client: "pg" } },
     };
-    const createKnexInstance = vi.spyOn(knexModule, "createKnexInstance").mockReturnValue(mockKnex);
+    const createKnexInstance = vi.spyOn(knexModule, "createKnexInstance").mockReturnValue(mockKnex as any);
     try {
       process.env.DB_CLIENT = "postgres";
       activeDb = await openDatabase({ dbPath: sqliteDbPath, skipMigrations: true });
@@ -143,7 +143,7 @@ describe("openDatabase Admin Utility", () => {
       exec: vi.fn(async () => {}),
       client: { config: { client: "pg" } },
     };
-    vi.spyOn(knexModule, "createKnexInstance").mockReturnValue(mockKnex);
+    vi.spyOn(knexModule, "createKnexInstance").mockReturnValue(mockKnex as any);
     process.env.DB_CLIENT = "postgres";
     activeDb = await openDatabase({ skipMigrations: true });
     await expect(activeDb.getAll("SELECT 1 AS count")).resolves.toEqual([{ count: 1 }]);
@@ -159,7 +159,7 @@ describe("openDatabase Admin Utility", () => {
       destroy: vi.fn(async () => {}),
       client: { config: { client: "pg" } },
     };
-    vi.spyOn(knexModule, "createKnexInstance").mockReturnValue(mockKnex);
+    vi.spyOn(knexModule, "createKnexInstance").mockReturnValue(mockKnex as any);
     process.env.DB_CLIENT = "postgres";
     activeDb = await openDatabase({ skipMigrations: true });
     expect(typeof activeDb.transaction).toBe("function");

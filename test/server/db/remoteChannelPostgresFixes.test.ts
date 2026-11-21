@@ -67,7 +67,7 @@ describe("remote channel Postgres fixes (NULL params, UUID done-marker)", () => 
   });
 
   test("enqueue returns null on conflict under Postgres (parity with SQLite IGNORE)", async () => {
-    const raw = vi.spyOn(dbKnex, "raw").mockImplementation(async (sql) => {
+    const raw = vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql) => {
       const lower = String(sql || "").toLowerCase();
       if (lower.startsWith("insert")) {
         return { rows: [], rowCount: 0 }; // ON CONFLICT DO NOTHING
@@ -89,7 +89,7 @@ describe("remote channel Postgres fixes (NULL params, UUID done-marker)", () => 
 
   test("markRemoteChannelQueueItemDone passes UUID message ids through untouched", async () => {
     const seen: any = [];
-    vi.spyOn(dbKnex, "raw").mockImplementation(async (sql, params) => {
+    vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql, params) => {
       seen.push({ sql, params });
       return { rows: [], rowCount: 1 };
     });

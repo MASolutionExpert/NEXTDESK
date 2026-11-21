@@ -404,8 +404,8 @@ export function MessageComposer({
     const filename = `voice-message-${Date.now()}.${ext}`;
     let file = blob;
     try {
-      if (typeof File !== "undefined") {
-        file = new File([blob], filename, { type: mimeType });
+      if (typeof globalThis.File !== "undefined") {
+        file = new globalThis.File([blob], filename, { type: mimeType });
       } else {
         file = blob;
       }

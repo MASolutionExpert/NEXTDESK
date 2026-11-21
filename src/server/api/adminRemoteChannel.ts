@@ -117,7 +117,7 @@ function registerAdminRemoteChannelRoutes(app, deps) {
       () => {},
     );
     return new TelegramClient(new StringSession(""), apiId, apiHash, {
-      baseLogger: new Logger("none"),
+      baseLogger: new Logger("none" as any),
       connectionRetries: 2,
       requestRetries: 1,
       autoReconnect: false,
@@ -125,7 +125,7 @@ function registerAdminRemoteChannelRoutes(app, deps) {
       deviceModel: "ChatDesk",
       systemVersion: "ChatDesk Server",
       appVersion: "1.0",
-    });
+    } as any);
   };
 
   const limiterKey = (req) =>
@@ -359,7 +359,7 @@ function registerAdminRemoteChannelRoutes(app, deps) {
         creds.apiId,
         creds.apiHash,
         {
-          baseLogger: new Logger("none"),
+          baseLogger: new Logger("none" as any),
           connectionRetries: 1,
           autoReconnect: false,
           deviceModel: "ChatDesk",

@@ -114,7 +114,7 @@ export function createRedisClient(config: any = {}) {
 
   try {
     const options = url ? url : { host: host || "127.0.0.1", port: Number(port) || 6379 };
-    const client = new Redis(options);
+    const client: any = new Redis(options);
     client.isFallback = false;
     return client;
   } catch (error) {

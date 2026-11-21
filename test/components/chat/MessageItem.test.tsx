@@ -764,9 +764,9 @@ describe("MessageItem — day label", () => {
       />,
     );
     // The root div has data-msg-day — query it via the message id
-    const el = page
-      .getByText("Hello world")
-      .locator("xpath=ancestor::div[@data-msg-day]");
+    const el = (page.getByText("Hello world") as any).locator(
+      "xpath=ancestor::div[@data-msg-day]",
+    );
     await expect.element(el).toBeInTheDocument();
   });
 

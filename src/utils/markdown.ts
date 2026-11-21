@@ -187,7 +187,7 @@ const configureMarkdown = () => {
   if (configured) return;
   configured = true;
 
-  const renderer = new marked.Renderer();
+  const renderer: any = new marked.Renderer();
   renderer.link = (href, _title, text) => {
     const token = typeof href === "object" && href !== null ? href : null;
     const resolvedHref = token ? token.href : href;
@@ -289,7 +289,7 @@ const configureMarkdown = () => {
     breaks: true,
     headerIds: false,
     mangle: false,
-  });
+  } as any);
   marked.use({ renderer, extensions: [autoLinkExtension, mentionExtension] });
 };
 

@@ -24,7 +24,7 @@ export function createWebSocketGateway({
   }
 
   const heartbeatTimer = setInterval(() => {
-    wss.clients.forEach((ws) => {
+    wss.clients.forEach((ws: any) => {
       if (ws.isAlive === false) {
         clearHeartbeatTimeoutTimer(ws);
         if (typeof ws.terminate === "function") {

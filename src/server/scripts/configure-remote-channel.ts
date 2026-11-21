@@ -462,7 +462,7 @@ try {
     (message) => console.warn(message),
   );
   client = new TelegramClient(new StringSession(""), apiId, apiHash, {
-    baseLogger: new Logger("none"),
+    baseLogger: new Logger("none" as any),
     connectionRetries: 3,
     requestRetries: 2,
     reconnectRetries: 0,
@@ -472,7 +472,7 @@ try {
     deviceModel: "ChatDesk",
     systemVersion: "ChatDesk Server",
     appVersion: "1.0",
-  });
+  } as any);
 
   console.log(
     "\nSigning in to Telegram. Use a dedicated Telegram account if possible.",
