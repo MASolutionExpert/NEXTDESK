@@ -62,7 +62,7 @@ if (!isPostgresMode()) {
   if (!betterDb) {
     SQL = await initSqlJs({
       locateFile: (file) =>
-        path.resolve(serverDir, "node_modules", "sql.js", "dist", file),
+        path.resolve(projectRootDir, "node_modules", "sql.js", "dist", file),
     });
 
     const fileExists: any = fs.existsSync(dbPath);

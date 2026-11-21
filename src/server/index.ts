@@ -584,7 +584,7 @@ const presenceTracker: any = createPresenceTracker({
   },
 });
 
-const callManager: any = createCallManager({
+const callManager = createCallManager({
   isMember,
   findChatById,
   listChatMembers,

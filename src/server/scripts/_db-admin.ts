@@ -75,7 +75,7 @@ function updateSchemaSetsFromSql(sql, tablesSet, columnsSet) {
 async function getSql() {
   if (sqlSingleton) return sqlSingleton
   sqlSingleton = await initSqlJs({
-    locateFile: (file) => path.resolve(serverDir, 'node_modules', 'sql.js', 'dist', file),
+    locateFile: (file) => path.resolve(projectRootDir, 'node_modules', 'sql.js', 'dist', file),
   })
   return sqlSingleton
 }

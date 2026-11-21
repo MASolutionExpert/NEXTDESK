@@ -5,7 +5,7 @@ import { playwright } from "@vitest/browser-playwright";
 const headless = process.env.VITEST_HEADFUL !== "1";
 const isCoverage = process.argv.includes("--coverage") || process.env.VITEST_COVERAGE === "1";
 
-const browserInstances = isCoverage
+const browserInstances: any = isCoverage
   ? [{ browser: "chromium" as const, launch: { args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"] } }]
   : [
       { browser: "chromium" as const, launch: { args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"] } },
@@ -60,8 +60,8 @@ export default defineConfig({
         },
       },
     ],
-  },
-  benchmark: {
-    include: ["test/bench/**/*.bench.ts", "test/server/bench/**/*.bench.ts"],
+    benchmark: {
+      include: ["test/bench/**/*.bench.ts", "test/server/bench/**/*.bench.ts"],
+    },
   },
 });

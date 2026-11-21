@@ -2,6 +2,13 @@
 
 All notable changes to ChatDesk are documented in this file.
 
+## 2.0.0-dev.6
+
+- Resolved `sql.js` WASM asset path in unified monolith (`src/server/db.ts` and `src/server/scripts/_db-admin.ts`) from root `node_modules` (`projectRootDir`) instead of legacy `server/node_modules`.
+- Fixed Vitest 5 `benchmark` config placement inside `test` block in `vitest.config.ts` and `worker/vitest.config.ts`, and narrowed `res.Body` stream type in `worker/storage.ts` for strict `tsc --noEmit`.
+- Updated `test/server/scripts/backupDb.test.ts` dynamic import path to `settings/env.ts` and aligned `callManager` declaration in `src/server/index.ts`.
+- Removed tracked `tsconfig.tsbuildinfo` and added `*.tsbuildinfo` to `.gitignore` so server updates never conflict on TypeScript incremental cache files.
+
 ## 2.0.0-dev.5
 
 - **100% Pure TypeScript + Unified Full-Stack Next.js 16 Monolith**: converted every single `.js`, `.jsx`, and `.mjs` file across frontend (`src/`), backend (`src/server/`), tests (`test/` & `test/server/`), worker (`worker/`), docs (`docs/.vitepress/`), and root configs (`server.ts`, `next.config.ts`, `vitest.config.ts`, `eslint.config.ts`, `release.config.ts`, `tsconfig.json`, `postcss.config.json`) to TypeScript — **0 JavaScript files remaining anywhere in the repository**.

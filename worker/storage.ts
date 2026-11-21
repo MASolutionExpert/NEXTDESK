@@ -167,7 +167,7 @@ export function createStorage({
     const res = await client.send(
       new GetObjectCommand({ Bucket: rawBucket, Key: cleanKey }),
     );
-    await pipeline(res.Body, fs.createWriteStream(filePath));
+    await pipeline(res.Body as NodeJS.ReadableStream, fs.createWriteStream(filePath));
   };
 
   const uploadFile = async (key, filePath, contentType) => {

@@ -78,7 +78,7 @@ describe("backup-db.js env loading", () => {
   test("readDbConfig surfaces DB_CLIENT=postgres from environment", () => {
     const script = `
       import path from "node:path";
-      const { readDbConfig } = await import(${JSON.stringify(path.join(serverDir, "settings", "env.js"))});
+      const { readDbConfig } = await import(${JSON.stringify(path.join(serverDir, "settings", "env.ts"))});
       process.stdout.write(JSON.stringify(readDbConfig()));
     `;
     const result = JSON.parse(
