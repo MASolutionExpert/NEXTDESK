@@ -181,18 +181,7 @@ async function main() {
       }
     }
 
-    if (typeof dbApi.transaction === 'function' && process.env.DB_CLIENT?.toLowerCase() === 'postgres') {
-      await dbApi.transaction(execute)
-    } else {
-      await dbApi.run('BEGIN')
-      try {
-        await execute({ raw: dbApi.run })
-        await dbApi.run('COMMIT')
-      } catch (error) {
-        await dbApi.run('ROLLBACK')
-        throw error
-      }
-    }
+    await dbApi.transaction(execute)
 
     const fileCleanup = removeStoredFiles(storedNames)
     await dbApi.save()

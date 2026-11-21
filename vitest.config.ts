@@ -38,7 +38,7 @@ export default defineConfig({
       {
         test: {
           name: "server",
-          env: { DB_CLIENT: "sqlite3" },
+          fileParallelism: false,
           include: ["test/server/**/*.{test,spec}.ts"],
           environment: "node",
         },

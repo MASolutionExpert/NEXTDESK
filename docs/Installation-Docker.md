@@ -72,7 +72,7 @@ nano .env
 ```
 
 :::info Using PostgreSQL with Docker
-NextDesk defaults to SQLite (`DB_CLIENT=sqlite3`). To use PostgreSQL instead, edit `.env` to set `DB_CLIENT=postgres` along with your `POSTGRES_*` environment variables, or uncomment the optional `postgres` service and `postgres-data` volume block in `docker-compose.yaml`.
+NextDesk defaults to SQLite (`DB_CLIENT=postgres`). To use PostgreSQL instead, edit `.env` to set `DB_CLIENT=postgres` along with your `POSTGRES_*` environment variables, or uncomment the optional `postgres` service and `postgres-data` volume block in `docker-compose.yaml`.
 :::
 
 :::info Media Worker Container

@@ -30,6 +30,28 @@ jobs:
   test-server:
     name: Server tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nextdesk_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nextdesk_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/nextdesk_test
+      POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/nextdesk_test
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: nextdesk_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -37,7 +59,11 @@ jobs:
           node-version: 24
       - name: Install monolith dependencies
         run: npm install
-      - name: Run server tests
+      - name: Validate Prisma 7 schema & generate client
+        run: npx prisma validate && npx prisma generate
+      - name: Apply PostgreSQL migrations
+        run: npm run db:migrate
+      - name: Run server tests against PostgreSQL 17
         run: npm run test:server
 
   test-worker:
@@ -81,6 +107,8 @@ jobs:
           node-version: 24
       - name: Install monolith dependencies
         run: npm install
+      - name: Validate Prisma 7 schema & generate client
+        run: npx prisma validate && npx prisma generate
       - name: TypeScript typecheck (tsc --noEmit)
         run: npm run typecheck
       - name: Lint TypeScript monolith

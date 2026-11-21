@@ -1,41 +1,29 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import { execFileSync } from "node:child_process";
+import path from "node:path";
 import { describe, expect, test } from "vitest";
+import { resetTestTables } from "../db/testDbHelper.ts";
 
 const serverDir = path.resolve(
   path.dirname(new URL(import.meta.url).pathname),
   "../../../src/server",
 );
 
-describe("check-owner CLI", () => {
-  test("exits 1 when no owner exists and exits 0 when owner exists", () => {
-    const tempDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "chatdesk-check-owner-"),
-    );
-    const dataDir = path.join(tempDir, "data");
-
+describe("check-owner CLI (PostgreSQL)", () => {
+  test("exits 1 when no owner exists and exits 0 when owner exists", async () => {
+    await resetTestTables();
     try {
-      // 1. Should exit with status 1 on fresh DB (no owner)
       let initialStatus = 0;
       try {
         execFileSync(process.execPath, ["scripts/check-owner.ts"], {
           cwd: serverDir,
           encoding: "utf8",
-          env: {
-            ...process.env,
-            DATA_DIR: dataDir,
-            DB_CLIENT: "sqlite3",
-            SERVER_PORT: "0",
-          },
+          env: { ...process.env, SERVER_PORT: "0" },
         });
-      } catch (err) {
+      } catch (err: any) {
         initialStatus = err.status;
       }
       expect(initialStatus).toBe(1);
 
-      // 2. Create an owner user
       execFileSync(
         process.execPath,
         [
@@ -43,7 +31,7 @@ describe("check-owner CLI", () => {
           "--nickname",
           "Owner Test",
           "--username",
-          "owner_test",
+          "owner_test_cli",
           "--password",
           "test-password",
           "--role",
@@ -52,35 +40,24 @@ describe("check-owner CLI", () => {
         {
           cwd: serverDir,
           encoding: "utf8",
-          env: {
-            ...process.env,
-            DATA_DIR: dataDir,
-            DB_CLIENT: "sqlite3",
-            SERVER_PORT: "0",
-          },
+          env: { ...process.env, SERVER_PORT: "0" },
         },
       );
 
-      // 3. Should exit with status 0 when owner exists
       let statusWithOwner = -1;
       try {
         execFileSync(process.execPath, ["scripts/check-owner.ts"], {
           cwd: serverDir,
           encoding: "utf8",
-          env: {
-            ...process.env,
-            DATA_DIR: dataDir,
-            DB_CLIENT: "sqlite3",
-            SERVER_PORT: "0",
-          },
+          env: { ...process.env, SERVER_PORT: "0" },
         });
         statusWithOwner = 0;
-      } catch (err) {
+      } catch (err: any) {
         statusWithOwner = err.status;
       }
       expect(statusWithOwner).toBe(0);
     } finally {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      await resetTestTables();
     }
   });
 });

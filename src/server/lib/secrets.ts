@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import * as webpush from "web-push";
-import { dbKnex } from "../db/knex.ts";
 
 export function normalizeEnvSecret(value) {
   const raw = String(value ?? "").trim();
@@ -72,7 +71,8 @@ export async function ensureSystemSecrets({
     if (typeof dbGetRow !== "function") return null;
     try {
       const row = await dbGetRow(
-        dbKnex("app_settings").where({ key }).select("value").first(),
+        "SELECT value FROM app_settings WHERE key = $1 LIMIT 1",
+        [key],
       );
       return row?.value ? normalizeEnvSecret(row.value) : null;
     } catch {
@@ -84,10 +84,8 @@ export async function ensureSystemSecrets({
     if (typeof dbRun !== "function") return;
     try {
       await dbRun(
-        dbKnex("app_settings")
-          .insert({ key, value })
-          .onConflict("key")
-          .merge({ value }),
+        "INSERT INTO app_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+        [key, value],
       );
     } catch (err) {
       console.warn(
@@ -256,7 +254,8 @@ export async function syncSecretsFromDatabase({
     if (typeof dbGetRow === "function") {
       try {
         const row = await dbGetRow(
-          dbKnex("app_settings").where({ key }).select("value").first(),
+          "SELECT value FROM app_settings WHERE key = $1 LIMIT 1",
+          [key],
         );
         if (row?.value) {
           value = normalizeEnvSecret(row.value);

@@ -1,4 +1,3 @@
-import { dbKnex } from "../db/knex.ts";
 import { dispatchMediaWorkerJob } from "./mediaWorker.ts";
 import { resolveWebhookCallbackUrl } from "./webhookUrl.ts";
 import { readEnvBool } from "../settings/env.ts";
@@ -220,8 +219,9 @@ export function createVideoTranscodeManager({
 
     let fileRow: any = null;
     if (typeof adminGetRow === "function") {
-      fileRow = adminGetRow(
-        dbKnex("chat_message_files").where("id", fileId).first(),
+      fileRow = await adminGetRow(
+        "SELECT * FROM chat_message_files WHERE id = $1 LIMIT 1",
+        [fileId],
       );
     }
 
@@ -246,10 +246,9 @@ export function createVideoTranscodeManager({
         : "none");
 
     if (typeof adminRun === "function") {
-      adminRun(
-        dbKnex("chat_message_files")
-          .where("id", fileId)
-          .update({ processing_status: "pending" }),
+      await adminRun(
+        "UPDATE chat_message_files SET processing_status = 'pending' WHERE id = $1",
+        [fileId],
       );
       if (typeof adminSave === "function") adminSave();
     }
@@ -388,12 +387,9 @@ export function createVideoTranscodeManager({
         updated = true;
 
         if (typeof adminRun === "function") {
-          adminRun(
-            dbKnex("chat_message_files").where("id", row.id).update({
-              width_px: nextWidth,
-              height_px: nextHeight,
-              duration_seconds: nextDuration,
-            }),
+          await adminRun(
+            "UPDATE chat_message_files SET width_px = $1, height_px = $2, duration_seconds = $3 WHERE id = $4",
+            [nextWidth, nextHeight, nextDuration, row.id],
           );
         }
       }

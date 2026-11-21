@@ -79,7 +79,7 @@ cd /opt/chatdesk/server
 
 یک پشتیبان زمان‌دار و سازگار با موتور را در `data/backups/` ایجاد می‌کند:
 
-- **SQLite:** از `chatdesk.db` در `chatdesk-backup-<timestamp>.db` کپی می‌گیرد.
+- **SQLite:** از `PostgreSQL database` در `chatdesk-backup-<timestamp>.db` کپی می‌گیرد.
 - **PostgreSQL:** با `pg_dump --format=custom` یک آرشیو `chatdesk-backup-<timestamp>.dump` ایجاد می‌کند.
 
 ```bash
@@ -153,14 +153,14 @@ sudo apt-get install -y pgloader
 #### ۳. اجرای انتقال با pgloader
 
 ```bash
-pgloader ./data/chatdesk.db postgresql://chatdesk:password@localhost:5432/chatdesk
+pgloader ./data/PostgreSQL database postgresql://chatdesk:password@localhost:5432/chatdesk
 ```
 
 یا با استفاده از یک فایل پیکربندی `chatdesk.load`:
 
 ```lisp
 LOAD DATABASE
-     FROM sqlite://./data/chatdesk.db
+     FROM sqlite://./data/PostgreSQL database
      INTO postgresql://chatdesk:password@localhost:5432/chatdesk
 
  WITH include drop, create tables, create indexes, reset sequences

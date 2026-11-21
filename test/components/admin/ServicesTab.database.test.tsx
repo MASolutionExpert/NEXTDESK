@@ -1,16 +1,9 @@
-/**
- * Database card tests for the admin ServicesTab.
- *
- * The Database card pings PostgreSQL when one is configured and stays
- * disabled (grayed out) in SQLite mode, where there is no external
- * database to probe.
- */
 import { describe, test, expect } from "vitest";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import ServicesTab from "../../../src/components/admin/ServicesTab.tsx";
 
-function makeData(database) {
+function makeData(database: any) {
   return {
     mediaWorker: { configured: false, reachable: false, latencyMs: null },
     remoteChannel: { enabled: false },
@@ -19,51 +12,7 @@ function makeData(database) {
   };
 }
 
-describe("ServicesTab database card", () => {
-  test("sqlite mode renders an active Database card with latency", async () => {
-    render(
-      <ServicesTab
-        data={makeData({
-          client: "sqlite3",
-          configured: true,
-          reachable: true,
-          latencyMs: 2,
-        })}
-      />,
-    );
-    const card = page.getByRole("button", { name: /database/i });
-    await expect.element(card).toBeInTheDocument();
-    await expect.element(card).toBeEnabled();
-    await expect
-      .element(card.getByText("SQLite · local · 2ms"))
-      .toBeInTheDocument();
-    await expect
-      .element(card.getByText("Active", { exact: true }))
-      .toBeInTheDocument();
-  });
-
-  test("unreachable sqlite reports Unreachable", async () => {
-    render(
-      <ServicesTab
-        data={makeData({
-          client: "sqlite3",
-          configured: true,
-          reachable: false,
-          latencyMs: 5,
-        })}
-      />,
-    );
-    const card = page.getByRole("button", { name: /database/i });
-    await expect.element(card).toBeInTheDocument();
-    await expect.element(card).toBeEnabled();
-    await expect
-      .element(card.getByText("SQLite unreachable."))
-      .toBeInTheDocument();
-    await expect
-      .element(card.getByText("Unreachable", { exact: true }))
-      .toBeInTheDocument();
-  });
-
+describe("ServicesTab database card (PostgreSQL-only)", () => {
   test("postgres mode renders an enabled Database card with latency", async () => {
     render(
       <ServicesTab
@@ -81,6 +30,9 @@ describe("ServicesTab database card", () => {
     await expect
       .element(card.getByText("PostgreSQL · 12ms"))
       .toBeInTheDocument();
+    await expect
+      .element(card.getByText("Active", { exact: true }))
+      .toBeInTheDocument();
   });
 
   test("unreachable postgres reports Unreachable", async () => {
@@ -95,8 +47,10 @@ describe("ServicesTab database card", () => {
       />,
     );
     const card = page.getByRole("button", { name: /database/i });
+    await expect.element(card).toBeInTheDocument();
+    await expect.element(card).toBeEnabled();
     await expect
-      .element(card.getByText("PostgreSQL configured but unreachable."))
+      .element(card.getByText("PostgreSQL unreachable."))
       .toBeInTheDocument();
     await expect
       .element(card.getByText("Unreachable", { exact: true }))

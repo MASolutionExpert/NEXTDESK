@@ -158,11 +158,11 @@ const ActionsTab = forwardRef<any, any>(function ActionsTab({ serviceStatus }: a
   const { t } = useI18n();
   const [appInfo, setAppInfo] = useState<any>(null);
   const [maintenanceInfo, setMaintenanceInfo] = useState({
-    engine: "sqlite",
-    backupExtension: ".db",
-    restoreAccept: ".db,application/x-sqlite3,application/vnd.sqlite3",
-    deleteAvailable: false,
-    offlineRestoreRequired: false,
+    engine: "postgres",
+    backupExtension: ".dump",
+    restoreAccept: ".dump,application/octet-stream",
+    deleteAvailable: true,
+    offlineRestoreRequired: true,
     offlineDeleteRequired: false,
   });
   const [rowStatus, setRowStatus] = useState<any>({});
@@ -236,7 +236,7 @@ const ActionsTab = forwardRef<any, any>(function ActionsTab({ serviceStatus }: a
       }
       const blob = await res.blob();
       const contentDisposition = res.headers.get("content-disposition");
-      let filename = "chatdesk-backup.db";
+      let filename = "nextdesk-backup.dump";
       if (contentDisposition) {
         const match = contentDisposition.match(/filename="?([^";]+)"?/);
         if (match && match[1]) filename = match[1];

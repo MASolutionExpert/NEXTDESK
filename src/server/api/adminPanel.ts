@@ -5,7 +5,6 @@ import { isValidUuid, generateUuid } from "../lib/uuidUtils.ts";
 import { normalizeChatDeskSource, normalizeTelegramSource, resolveChatDeskSource } from "../lib/remoteChannels.ts";
 import { readInstallerLog, readNginxLog, readServiceLog, readWorkerLog, probeLogSources } from "../lib/systemLogs.ts";
 import { userEvents } from "../lib/workers/autoAddWorker.ts";
-import { dbKnex } from "../db/knex.ts";
 import os from "node:os";
 import crypto from "node:crypto";
 import path from "node:path";
@@ -252,26 +251,9 @@ function registerAdminPanelRoutes(app, deps) {
     };
   };
 
-  function toSql(builder, p: any = []) {
-    if (builder && typeof builder.toSQL === "function") {
-      const c: any = builder.toSQL();
-      return { sql: c.sql, params: c.bindings || [] };
-    }
-    return { sql: builder, params: p };
-  }
-
-  const callAdminGetRow = (builder, p?: any) => {
-    const { sql, params } = toSql(builder, p);
-    return adminGetRow(sql, params);
-  };
-  const callAdminGetAll = (builder, p?: any) => {
-    const { sql, params } = toSql(builder, p);
-    return adminGetAll(sql, params);
-  };
-  const callAdminRun = (builder, p?: any) => {
-    const { sql, params } = toSql(builder, p);
-    return adminRun(sql, params);
-  };
+  const callAdminGetRow = (sql: string, params: unknown[] = []) => adminGetRow(sql, params);
+  const callAdminGetAll = (sql: string, params: unknown[] = []) => adminGetAll(sql, params);
+  const callAdminRun = (sql: string, params: unknown[] = []) => adminRun(sql, params);
 
   // ─── Admin panel gate ────────────────────────────────────────────────────────
   // When ADMIN_PANEL=false is set in the environment, all /api/admin/* requests
@@ -447,12 +429,14 @@ function registerAdminPanelRoutes(app, deps) {
     const { projectRootDir, path: nodePath, fs } = deps;
     const effectiveDataDir = adminDataDir || nodePath.join(projectRootDir, "data");
 
-    // DB file size
+    // PostgreSQL database size
     let dbSizeBytes = 0;
     try {
-      if (nodePath && fs) {
-        const dbPath: any = nodePath.join(effectiveDataDir, "chatdesk.db");
-        if (fs.existsSync(dbPath)) dbSizeBytes = fs.statSync(dbPath).size;
+      if (typeof adminGetRow === "function") {
+        const sizeRow: any = await resolveMaybePromise(
+          adminGetRow("SELECT pg_database_size(current_database()) AS bytes"),
+        );
+        dbSizeBytes = Number(sizeRow?.bytes || 0);
       }
     } catch {}
 
@@ -591,15 +575,8 @@ function registerAdminPanelRoutes(app, deps) {
         };
       }
     }
-    // ── Database health probe (sqlite and postgres) ──
-    // `dbConfig` is resolved once at startup from DB_CLIENT; fall back to the
-    // env so the card still renders correctly when deps omit it (tests).
-    const rawDbClient: any = String(
-      dbConfig?.client || process.env.DB_CLIENT || "sqlite3",
-    ).trim().toLowerCase();
-    const dbClient = ["postgres", "postgresql", "pg"].includes(rawDbClient)
-      ? "postgres"
-      : "sqlite3";
+    // ── Database health probe (PostgreSQL) ──
+    const dbClient = "postgres";
     let database: any = { client: dbClient, configured: true, reachable: null, latencyMs: null };
     if (typeof adminGetRow === "function") {
       const started: any = Date.now();
@@ -818,10 +795,10 @@ function registerAdminPanelRoutes(app, deps) {
     if (USERNAME_REGEX && !USERNAME_REGEX.test(rawUsername)) {
       return res.status(400).json({ error: "Invalid username. Use lowercase letters, numbers, . and _" });
     }
-    if ((await callAdminGetRow(dbKnex("users").select("id").where("username", rawUsername).first()))?.id) {
+    if ((await callAdminGetRow("SELECT id FROM users WHERE username = $1 LIMIT 1", [rawUsername]))?.id) {
       return res.status(409).json({ error: "Username already exists." });
     }
-    if ((await callAdminGetRow(dbKnex("chats").select("id").whereIn("type", ["group", "channel"]).where("group_username", rawUsername).first()))?.id) {
+    if ((await callAdminGetRow("SELECT id FROM chats WHERE type IN ('group', 'channel') AND group_username = $1 LIMIT 1", [rawUsername]))?.id) {
       return res.status(409).json({ error: "Username already exists." });
     }
     // Only one owner is allowed at a time
@@ -834,26 +811,19 @@ function registerAdminPanelRoutes(app, deps) {
     const assignedColor  = suppliedColor || setUserColor();
     const verified       = req.body?.verified !== undefined ? (req.body.verified ? 1 : 0) : 0;
     const newUserId: any = generateUuid();
-    await resolveMaybePromise(callAdminRun(
-      dbKnex("users").insert({
-        id: newUserId,
-        username: rawUsername,
-        nickname,
-        avatar_url: null,
-        color: assignedColor,
-        status: "online",
-        password_hash: passwordHash,
-        created_at: dbKnex.raw("datetime('now')"),
-        last_seen: dbKnex.raw("datetime('now')"),
-        verified,
-      }),
-    ));
-    if (role !== "user") {
-      const newUser: any = await callAdminGetRow(dbKnex("users").select("id").where("username", rawUsername).first());
-      if (newUser?.id) await resolveMaybePromise(callAdminRun(dbKnex("users").where("id", newUser.id).update({ role })));
-    }
+    const nowIso = new Date().toISOString();
+    await resolveMaybePromise(
+      callAdminRun(
+        `INSERT INTO users (id, username, nickname, avatar_url, color, status, password_hash, created_at, last_seen, verified, role)
+         VALUES ($1, $2, $3, NULL, $4, 'online', $5, $6, $6, $7, $8)`,
+        [newUserId, rawUsername, nickname, assignedColor, passwordHash, nowIso, verified, role],
+      ),
+    );
     adminSave();
-    const row: any = await callAdminGetRow(dbKnex("users").select("id", "username", "nickname", "color", "role", "verified").where("username", rawUsername).first());
+    const row: any = await callAdminGetRow(
+      "SELECT id, username, nickname, color, role, verified FROM users WHERE username = $1 LIMIT 1",
+      [rawUsername],
+    );
     log(session, "user.create", { targetType: "user", targetLabel: `@${rawUsername}`, details: `role=${role}` });
     userEvents.emit("user:created", { userId: newUserId });
     res.status(201).json({ ok: true, user: row });
@@ -909,27 +879,22 @@ function registerAdminPanelRoutes(app, deps) {
     if (!["online", "invisible"].includes(nextStatus)) return res.status(400).json({ error: "Invalid status." });
 
     if (nextUsername !== String(user.username || "")) {
-      if ((await callAdminGetRow(dbKnex("users").select("id").where("username", nextUsername).where("id", "!=", userId).first()))?.id) {
+      if ((await callAdminGetRow("SELECT id FROM users WHERE username = $1 AND id != $2 LIMIT 1", [nextUsername, userId]))?.id) {
         return res.status(409).json({ error: "Username already exists." });
       }
-      if ((await callAdminGetRow(dbKnex("chats").select("id").whereIn("type", ["group", "channel"]).whereIn("group_username", [nextUsername, `@${nextUsername}`]).first()))?.id) {
+      if ((await callAdminGetRow("SELECT id FROM chats WHERE type IN ('group', 'channel') AND group_username IN ($1, $2) LIMIT 1", [nextUsername, `@${nextUsername}`]))?.id) {
         return res.status(409).json({ error: "Username already exists." });
       }
     }
 
     const nextVerified = b.verified !== undefined ? (b.verified ? 1 : 0) : (user.verified ? 1 : 0);
 
-    await resolveMaybePromise(callAdminRun(
-      dbKnex("users")
-        .where("id", userId)
-        .update({
-          username: nextUsername,
-          nickname: nextNickname,
-          status: nextStatus,
-          color: nextColor,
-          verified: nextVerified,
-        }),
-    ));
+    await resolveMaybePromise(
+      callAdminRun(
+        "UPDATE users SET username = $1, nickname = $2, status = $3, color = $4, verified = $5 WHERE id = $6",
+        [nextUsername, nextNickname, nextStatus, nextColor, nextVerified, userId],
+      ),
+    );
     adminSave();
     const updated: any = await resolveMaybePromise(findUserById(userId));
     log(session, "user.edit", { targetType: "user", targetLabel: `@${updated.username}` });
@@ -954,7 +919,7 @@ function registerAdminPanelRoutes(app, deps) {
     await resolveMaybePromise(adminBanUser(userId, banned));
     // Banning revokes any elevated role; unbanning restores the default user role.
     await resolveMaybePromise(setUserRole(userId, "user"));
-    if (banned) await resolveMaybePromise(callAdminRun(dbKnex("sessions").where("user_id", userId).del()));
+    if (banned) await resolveMaybePromise(callAdminRun("DELETE FROM sessions WHERE user_id = $1", [userId]));
     adminSave();
     log(session, banned ? "user.ban" : "user.unban", { targetType: "user", targetLabel: `@${user.username}` });
     res.json({ ok: true, banned });
@@ -1013,8 +978,8 @@ function registerAdminPanelRoutes(app, deps) {
     }
 
     const hash: any = await bcrypt.hash(newPassword, 10);
-    await resolveMaybePromise(callAdminRun(dbKnex("users").where("id", userId).update({ password_hash: hash })));
-    await resolveMaybePromise(callAdminRun(dbKnex("sessions").where("user_id", userId).del()));
+    await resolveMaybePromise(callAdminRun("UPDATE users SET password_hash = $1 WHERE id = $2", [hash, userId]));
+    await resolveMaybePromise(callAdminRun("DELETE FROM sessions WHERE user_id = $1", [userId]));
     adminSave();
     log(session, "user.reset_password", { targetType: "user", targetLabel: `@${user.username}` });
     res.json({ ok: true });
@@ -1080,7 +1045,7 @@ function registerAdminPanelRoutes(app, deps) {
     if (String(user.avatar_url || "").trim() && user.avatar_url !== avatarUrl) {
       removeAvatarByUrl(user.avatar_url);
     }
-    await resolveMaybePromise(callAdminRun(dbKnex("users").where("id", userId).update({ avatar_url: avatarUrl })));
+    await resolveMaybePromise(callAdminRun("UPDATE users SET avatar_url = $1 WHERE id = $2", [avatarUrl, userId]));
     adminSave();
     const fileName: any = path.basename(avatarUrl);
     if (fileName && typeof removePendingPresignedUploads === "function") {
@@ -1101,7 +1066,7 @@ function registerAdminPanelRoutes(app, deps) {
     const user: any = await resolveMaybePromise(findUserById(userId));
     if (!user) return res.status(404).json({ error: "User not found." });
     if (String(user.avatar_url || "").trim()) removeAvatarByUrl(user.avatar_url);
-    await resolveMaybePromise(callAdminRun(dbKnex("users").where("id", userId).update({ avatar_url: null })));
+    await resolveMaybePromise(callAdminRun("UPDATE users SET avatar_url = NULL WHERE id = $1", [userId]));
     adminSave();
     res.json({ ok: true, avatarUrl: null });
   });
@@ -1174,15 +1139,15 @@ function registerAdminPanelRoutes(app, deps) {
       : await resolveMaybePromise(findUserByUsername(ownerIdOrUsername.toLowerCase()));
     if (!owner?.id) return res.status(404).json({ error: "Owner user not found." });
 
-    if ((await adminGetRow(dbKnex("users").select("id").where("username", username).first()))?.id) {
+    if ((await adminGetRow("SELECT id FROM users WHERE username = $1 LIMIT 1", [username]))?.id) {
       return res.status(409).json({ error: "Username already exists." });
     }
-    if ((await adminGetRow(dbKnex("chats").select("id").whereIn("type", ["group", "channel"]).whereIn("group_username", [username, `@${username}`]).first()))?.id) {
+    if ((await adminGetRow("SELECT id FROM chats WHERE type IN ('group', 'channel') AND group_username IN ($1, $2) LIMIT 1", [username, `@${username}`]))?.id) {
       return res.status(409).json({ error: "Username already exists." });
     }
 
-    const inviteToken: any  = createInviteToken(crypto);
-    const ownerColor   = String((await adminGetRow(dbKnex("users").select("color").where("id", owner.id).first()))?.color || "") || "#10b981";
+    const inviteToken: any = createInviteToken(crypto);
+    const ownerColor = String((await adminGetRow("SELECT color FROM users WHERE id = $1 LIMIT 1", [owner.id]))?.color || "") || "#10b981";
     const groupColor   = normalizeHexColor(String(b.color || "")) || ownerColor;
     const autoAddNewUsers = (visibility === "public" && Boolean(b.autoAddNewUsers || b.auto_add_new_users)) ? 1 : 0;
     const remoteChannelConfig: any = await normalizeAdminRemoteChannel({
@@ -1217,7 +1182,7 @@ function registerAdminPanelRoutes(app, deps) {
       ? (await resolveMaybePromise(addAllEligibleChatMembers(chatId))) || { addedUsers: [], skippedLeftCount: 0 }
       : { addedUsers: [], skippedLeftCount: 0 };
 
-    if (b.verified) await resolveMaybePromise(adminRun(dbKnex("chats").where("id", chatId).update({ verified: 1 })));
+    if (b.verified) await resolveMaybePromise(adminRun("UPDATE chats SET verified = 1 WHERE id = $1", [chatId]));
 
     if (remoteChannelConfig.shouldSave) {
       try {
@@ -1271,10 +1236,10 @@ function registerAdminPanelRoutes(app, deps) {
     const nextColor      = b.color !== undefined ? (normalizeHexColor(String(b.color || "")) || null) : (chat.group_color || null);
 
     if (nextUsername && nextUsername !== (chat.group_username || "")) {
-      if ((await adminGetRow(dbKnex("users").select("id").where("username", nextUsername).first()))?.id) {
+      if ((await adminGetRow("SELECT id FROM users WHERE username = $1 LIMIT 1", [nextUsername]))?.id) {
         return res.status(409).json({ error: "Username already exists." });
       }
-      if ((await adminGetRow(dbKnex("chats").select("id").whereIn("type", ["group", "channel"]).whereIn("group_username", [nextUsername, `@${nextUsername}`]).where("id", "!=", chatId).first()))?.id) {
+      if ((await adminGetRow("SELECT id FROM chats WHERE type IN ('group', 'channel') AND group_username IN ($1, $2) AND id != $3 LIMIT 1", [nextUsername, `@${nextUsername}`, chatId]))?.id) {
         return res.status(409).json({ error: "Username already exists." });
       }
     }
@@ -1285,9 +1250,8 @@ function registerAdminPanelRoutes(app, deps) {
         ? await resolveMaybePromise(findUserById(b.owner))
         : await resolveMaybePromise(findUserByUsername(String(b.owner).toLowerCase()));
       if (!newOwner?.id) return res.status(404).json({ error: "New owner not found." });
-      await resolveMaybePromise(adminRun(dbKnex("chat_members").where("chat_id", chatId).where("role", "owner").update({ role: "member" })));
-      await resolveMaybePromise(adminRun(dbKnex("chat_members").insert({ chat_id: chatId, user_id: newOwner.id, role: "owner" }).onConflict(["chat_id", "user_id"]).ignore()));
-      await resolveMaybePromise(adminRun(dbKnex("chat_members").where({ chat_id: chatId, user_id: newOwner.id }).update({ role: "owner" })));
+      await resolveMaybePromise(adminRun("UPDATE chat_members SET role = 'member' WHERE chat_id = $1 AND role = 'owner'", [chatId]));
+      await resolveMaybePromise(adminRun("INSERT INTO chat_members (chat_id, user_id, role) VALUES ($1, $2, 'owner') ON CONFLICT (chat_id, user_id) DO UPDATE SET role = 'owner'", [chatId, newOwner.id]));
       newOwnerUsername = String(newOwner.username || "");
     }
 
@@ -1316,8 +1280,8 @@ function registerAdminPanelRoutes(app, deps) {
       await resolveMaybePromise(updateChannelChat(chatId, patchPayload));
     }
 
-    if (nextColor) await resolveMaybePromise(adminRun(dbKnex("chats").where("id", chatId).update({ group_color: nextColor })));
-    if (b.verified !== undefined) await resolveMaybePromise(adminRun(dbKnex("chats").where("id", chatId).update({ verified: b.verified ? 1 : 0 })));
+    if (nextColor) await resolveMaybePromise(adminRun("UPDATE chats SET group_color = $1 WHERE id = $2", [nextColor, chatId]));
+    if (b.verified !== undefined) await resolveMaybePromise(adminRun("UPDATE chats SET verified = $1 WHERE id = $2", [b.verified ? 1 : 0, chatId]));
 
     if (b.remoteChannel !== undefined && chat.type === "channel") {
       const remoteChannelConfig: any = await normalizeAdminRemoteChannel({
@@ -1754,14 +1718,13 @@ function registerAdminPanelRoutes(app, deps) {
 
   app.get("/api/admin/maintenance/info", (req, res) => {
     if (!requireAdmin(req, res)) return;
-    const postgres = dbConfig?.client === "postgres";
     res.json({
-      engine: postgres ? "postgres" : "sqlite",
-      backupExtension: postgres ? ".dump" : ".db",
-      restoreAccept: postgres ? ".dump,application/octet-stream" : ".db,application/x-sqlite3,application/vnd.sqlite3",
-      deleteAvailable: postgres,
-      offlineRestoreRequired: postgres,
-      offlineDeleteRequired: postgres,
+      engine: "postgres",
+      backupExtension: ".dump",
+      restoreAccept: ".dump,application/octet-stream",
+      deleteAvailable: true,
+      offlineRestoreRequired: true,
+      offlineDeleteRequired: true,
     });
   });
 
@@ -1769,7 +1732,7 @@ function registerAdminPanelRoutes(app, deps) {
     const session: any = requireAdmin(req, res);
     if (!session) return;
     try {
-      if (dbConfig?.client === "postgres") await postgresMaintenance.vacuum();
+      if (typeof postgresMaintenance?.vacuum === "function") await postgresMaintenance.vacuum();
       else await resolveMaybePromise(vacuumDatabase());
       if (typeof pruneOrphanRemoteObjects === "function") {
         await resolveMaybePromise(pruneOrphanRemoteObjects());
@@ -2063,102 +2026,30 @@ function registerAdminPanelRoutes(app, deps) {
     if (!session) return;
     const stamp: any = new Date().toISOString().replace(/[:.]/g, "-");
 
-    if (dbConfig?.client === "postgres") {
-      const effectiveDataDir = adminDataDir || nodePath.join(projectRootDir, "data");
-      const backupDir: any = nodePath.join(effectiveDataDir, "backups");
-      const backupPath: any = nodePath.join(backupDir, `chatdesk-backup-${stamp}.dump`);
-      try {
-        if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
-        await postgresMaintenance.backup(backupPath);
-        log(session, "db.backup", { targetType: "system", targetLabel: nodePath.basename(backupPath) });
-        res.download(backupPath, nodePath.basename(backupPath), () => {
-          try { fs.rmSync(backupPath, { force: true }); } catch {}
-        });
-      } catch (error) {
-        try { fs.rmSync(backupPath, { force: true }); } catch {}
-        log(session, "db.backup", { targetType: "system", status: "error", details: error?.message || "maintenance command failed" });
-        if (!res.headersSent) res.status(500).json({ error: error?.message || "Backup failed." });
-      }
-      return;
-    }
-
     const effectiveDataDir = adminDataDir || nodePath.join(projectRootDir, "data");
-    const dbPath: any = nodePath.join(effectiveDataDir, "chatdesk.db");
-    if (!fs.existsSync(dbPath)) {
-      return res.status(404).json({ error: "Database file not found." });
-    }
-    try { await resolveMaybePromise(vacuumDatabase()); } catch {}
-    const downloadName = `chatdesk-backup-${stamp}.db`;
-    log(session, "db.backup", { targetType: "system", targetLabel: downloadName });
-    res.download(dbPath, downloadName, (err) => {
-      if (err && !res.headersSent) res.status(500).end();
-    });
-  });
-
-  // Restore by uploading a .db file from the admin's device. Replaces the live
-  // database and hot-reloads it in memory — no service restart needed.
-  const dbUpload: any = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 512 * 1024 * 1024 }, // 512 MB ceiling
-  });
-
-  app.post(
-    "/api/admin/maintenance/restore",
-    // Gate auth before multer buffers the upload.
-    (req, res, next) => {
-      if (!requireAdmin(req, res)) return;
-      // pg_restore --clean cannot safely run through the process that owns live
-      // database connections. The offline CLI detects a running server first.
-      if (dbConfig?.client === "postgres") {
-        return res.status(409).json({
-          error: "Stop ChatDesk, then run npm run db:restore -- -y --file <backup.dump>.",
-        });
-      }
-      next();
-    },
-    dbUpload.single("database"),
-    async (req, res) => {
-    const session: any = requireAdmin(req, res);
-    if (!session) return;
-
-    const file = req.file;
-    if (!file || !file.buffer?.length) {
-      return res.status(400).json({ error: "No database file uploaded." });
-    }
-
-    const header: any = file.buffer.subarray(0, 16).toString("latin1");
-    if (header !== "SQLite format 3\0") {
-      log(session, "db.restore", { targetType: "system", status: "error", details: "Not a valid SQLite file" });
-      return res.status(400).json({ error: "The uploaded file is not a valid SQLite database." });
-    }
-
-    const dataDir = adminDataDir || nodePath.join(projectRootDir, "data");
-    const dbPath: any  = nodePath.join(dataDir, "chatdesk.db");
-
+    const backupDir: any = nodePath.join(effectiveDataDir, "backups");
+    const backupPath: any = nodePath.join(backupDir, `nextdesk-backup-${stamp}.dump`);
     try {
-      if (typeof deps.restoreDatabase === "function") {
-        await deps.restoreDatabase(file.buffer);
-      } else {
-        if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-        const walPath = `${dbPath}-wal`;
-        const shmPath = `${dbPath}-shm`;
-        try { if (fs.existsSync(walPath)) fs.unlinkSync(walPath); } catch {}
-        try { if (fs.existsSync(shmPath)) fs.unlinkSync(shmPath); } catch {}
-        const tmpPath: any = nodePath.join(dataDir, `.restore-${Date.now()}.db`);
-        fs.writeFileSync(tmpPath, file.buffer);
-        fs.renameSync(tmpPath, dbPath);
-        reloadDatabase();
-      }
-      if (typeof deps.loadSettings === "function") {
-        await deps.loadSettings(deps.dbGetAllSettings || deps.dbGetAll);
-      }
-      broadcastAll({ type: "session_revoked" });
-      log(session, "db.restore", { targetType: "system", targetLabel: file.originalname || "uploaded.db" });
-      res.json({ ok: true });
-    } catch (e) {
-      log(session, "db.restore", { targetType: "system", status: "error", details: String(e?.message || e) });
-      res.status(500).json({ error: "Restore failed while replacing the database." });
+      if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+      await postgresMaintenance.backup(backupPath);
+      log(session, "db.backup", { targetType: "system", targetLabel: nodePath.basename(backupPath) });
+      res.download(backupPath, nodePath.basename(backupPath), () => {
+        try { fs.rmSync(backupPath, { force: true }); } catch {}
+      });
+    } catch (error) {
+      try { fs.rmSync(backupPath, { force: true }); } catch {}
+      log(session, "db.backup", { targetType: "system", status: "error", details: error?.message || "maintenance command failed" });
+      if (!res.headersSent) res.status(500).json({ error: error?.message || "Backup failed." });
     }
+  });
+
+  // PostgreSQL restore must run offline so pg_restore --clean does not fight
+  // active connection pools owned by the live server process.
+  app.post("/api/admin/maintenance/restore", (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    return res.status(409).json({
+      error: "Stop NextDesk, then run npm run db:restore -- -y --file <backup.dump>.",
+    });
   });
 
   // ─── Settings ─────────────────────────────────────────────────────────────────
@@ -2181,7 +2072,7 @@ function registerAdminPanelRoutes(app, deps) {
   });
 
   // PUT /api/admin/settings — bulk update one or more settings
-  app.put("/api/admin/settings", (req, res) => {
+  app.put("/api/admin/settings", async (req, res) => {
     const session: any = requireAdmin(req, res);
     if (!session) return;
 
@@ -2191,6 +2082,7 @@ function registerAdminPanelRoutes(app, deps) {
     }
 
     const result: any = setSettings(updates, dbRun, dbSave);
+    if (result?._dbPromise) await result._dbPromise;
     // Log one entry per changed key so the log reads the same as single updates.
     (result.saved || []).forEach((key) => {
       log(session, "settings.update", {
@@ -2206,7 +2098,7 @@ function registerAdminPanelRoutes(app, deps) {
   });
 
   // PUT /api/admin/settings/:key — update a single setting
-  app.put("/api/admin/settings/:key", (req, res) => {
+  app.put("/api/admin/settings/:key", async (req, res) => {
     const session: any = requireAdmin(req, res);
     if (!session) return;
 
@@ -2217,6 +2109,7 @@ function registerAdminPanelRoutes(app, deps) {
     }
 
     const result: any = setSetting(key, String(rawValue), dbRun, dbSave);
+    if (result?._dbPromise) await result._dbPromise;
     if (!result.ok) return res.status(400).json({ error: result.error });
 
     log(session, "settings.update", {
@@ -2228,12 +2121,13 @@ function registerAdminPanelRoutes(app, deps) {
   });
 
   // DELETE /api/admin/settings/:key — reset a setting to its default
-  app.delete("/api/admin/settings/:key", (req, res) => {
+  app.delete("/api/admin/settings/:key", async (req, res) => {
     const session: any = requireAdmin(req, res);
     if (!session) return;
 
     const key: any = String(req.params.key || "").trim();
     const result: any = resetSetting(key, dbRun, dbSave);
+    if (result?._dbPromise) await result._dbPromise;
     if (!result.ok) return res.status(400).json({ error: result.error });
 
     log(session, "settings.reset", {

@@ -1,7 +1,6 @@
 import { getCliArgs, getPositionalArgs } from "./_cli.ts";
 import { openDatabase, runAdminActionViaServer } from "./_db-admin.ts";
 import { resolveChatRow } from "../lib/dbToolHelpers.ts";
-import { dbKnex } from "../db/knex.ts";
 
 async function main() {
   const args = getCliArgs();
@@ -30,13 +29,12 @@ async function main() {
       console.error("Chat not found.");
       process.exit(1);
     }
-
     const nextVerified = Number(chat.verified || 0) ? 0 : 1;
-    await dbApi.run(
-      dbKnex("chats").where("id", chat.id).update({ verified: nextVerified }),
-    );
+    await dbApi.run("UPDATE chats SET verified = $1 WHERE id = $2", [
+      nextVerified,
+      chat.id,
+    ]);
     await dbApi.save();
-
     console.log(
       `Chat ${nextVerified ? "verified" : "unverified"}: id=${chat.id} name=${chat.name || ""}`,
     );
@@ -45,7 +43,7 @@ async function main() {
   }
 }
 
-main().catch((err) => {
+main().catch((err: any) => {
   console.error(err?.message || err);
   process.exit(1);
 });

@@ -91,7 +91,7 @@ HTTPS is required for push notifications (except on `localhost`). Choose a certi
 
 | Option | Description |
 |---|---|
-| SQLite (Default) | In-memory SQLite database with debounced disk persistence (`better-sqlite3`). Best for small to medium instances. |
+| SQLite (Default) | In-memory SQLite database with debounced disk persistence (`pg + @prisma/adapter-pg`). Best for small to medium instances. |
 | PostgreSQL | External PostgreSQL database engine. Recommended for larger instances (+500 users). Prompts for PostgreSQL host, port, database name, username, and password. |
 
 ### 5. Environment prompts

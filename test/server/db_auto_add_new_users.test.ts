@@ -1,11 +1,9 @@
 import { describe, test, expect, beforeAll } from "vitest";
-import { migration037AutoAddNewUsers } from "../../src/server/migrations/037-auto-add-new-users.ts";
 import {
   createChat,
   findChatById,
   updateChat,
   updateGroupChat,
-  updateChannelChat,
   getAutoAddPublicChatIds,
   bulkAddMemberToChats,
   adminListChats,
@@ -13,56 +11,35 @@ import {
   getRow,
   getAll,
 } from "../../src/server/db.ts";
+import { createTestDb } from "./db/testDbHelper.ts";
 
-describe("Migration 037 - auto_add_new_users", () => {
-  test("defines migration 037 with version 37", () => {
-    expect(migration037AutoAddNewUsers.version).toBe(37);
-    expect(typeof migration037AutoAddNewUsers.up).toBe("function");
-  });
-
-  test("runs migration up callback to add column if missing", () => {
-    const executed: any = [];
-    const mockDb = {
-      run: (sql) => executed.push(sql),
-    };
-    const hasColumn = (table, col) => false;
-    migration037AutoAddNewUsers.up({ db: mockDb, hasColumn });
-    expect(executed.some((sql) => sql.includes("auto_add_new_users"))).toBe(
-      true,
-    );
-  });
-});
-
-describe("DB Auto-Add New Users Helpers", () => {
-  let testUserId;
-  let publicAutoAddChatId;
-  let publicNormalChatId;
-  let privateChatId;
+describe("DB Auto-Add New Users Helpers (PostgreSQL + Prisma 7)", () => {
+  let testUserId: string;
+  let publicAutoAddChatId: string;
+  let publicNormalChatId: string;
+  let privateChatId: string;
 
   beforeAll(async () => {
-    testUserId = createUser(`auto_add_user_${Date.now()}`, "password123");
-
+    await createTestDb();
+    testUserId = await createUser(`auto_add_user_${Date.now()}`, "password123");
     publicAutoAddChatId = await createChat("Public Auto Add Group", "group", {
       groupVisibility: "public",
       autoAddNewUsers: true,
     });
-
     publicNormalChatId = await createChat("Public Normal Group", "group", {
       groupVisibility: "public",
       autoAddNewUsers: false,
     });
-
     privateChatId = await createChat("Private Group", "group", {
       groupVisibility: "private",
-      autoAddNewUsers: true, // Should be forced to 0
+      autoAddNewUsers: true,
     });
   });
 
-  test("createChat enforces auto_add_new_users = 0 when visibility is private", () => {
-    const chat = getRow("SELECT * FROM chats WHERE id = ?", [privateChatId]);
+  test("createChat enforces auto_add_new_users = 0 when visibility is private", async () => {
+    const chat = await getRow("SELECT * FROM chats WHERE id = ?", [privateChatId]);
     expect(chat.auto_add_new_users).toBe(0);
-
-    const autoAddChat = getRow("SELECT * FROM chats WHERE id = ?", [
+    const autoAddChat = await getRow("SELECT * FROM chats WHERE id = ?", [
       publicAutoAddChatId,
     ]);
     expect(autoAddChat.auto_add_new_users).toBe(1);
@@ -95,8 +72,7 @@ describe("DB Auto-Add New Users Helpers", () => {
       publicNormalChatId,
     ]);
     expect(addedIds).toEqual([publicAutoAddChatId, publicNormalChatId]);
-
-    const members = getAll(
+    const members = await getAll(
       "SELECT * FROM chat_members WHERE user_id = ? AND chat_id IN (?, ?)",
       [testUserId, publicAutoAddChatId, publicNormalChatId],
     );
@@ -108,13 +84,10 @@ describe("DB Auto-Add New Users Helpers", () => {
       groupVisibility: "public",
       autoAddNewUsers: true,
     });
-
-    let chat = getRow("SELECT * FROM chats WHERE id = ?", [chatId]);
+    let chat = await getRow("SELECT * FROM chats WHERE id = ?", [chatId]);
     expect(chat.auto_add_new_users).toBe(1);
-
     await updateChat(chatId, { group_visibility: "private" });
-
-    chat = getRow("SELECT * FROM chats WHERE id = ?", [chatId]);
+    chat = await getRow("SELECT * FROM chats WHERE id = ?", [chatId]);
     expect(chat.group_visibility).toBe("private");
     expect(chat.auto_add_new_users).toBe(0);
   });
@@ -124,14 +97,12 @@ describe("DB Auto-Add New Users Helpers", () => {
       groupVisibility: "public",
       autoAddNewUsers: true,
     });
-
     await updateGroupChat(chatId, {
       name: "Group Chat Test",
       groupVisibility: "private",
       autoAddNewUsers: true,
     });
-
-    const chat = getRow("SELECT * FROM chats WHERE id = ?", [chatId]);
+    const chat = await getRow("SELECT * FROM chats WHERE id = ?", [chatId]);
     expect(chat.group_visibility).toBe("private");
     expect(chat.auto_add_new_users).toBe(0);
   });

@@ -70,5 +70,5 @@ Departments are created by migration `042-departments`:
 - `users.department_id` (operators)
 - `chats.department_id` (support conversations)
 
-It runs automatically on server boot for both SQLite and PostgreSQL, and is
+It runs automatically on server boot for both PostgreSQL, and is
 included in database backups.

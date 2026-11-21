@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# chatdesk-deploy-version: 2.0.0-dev.2026112101
+# chatdesk-deploy-version: 2.0.0-dev.2026112102
 
 set -uo pipefail
 
@@ -1251,7 +1251,7 @@ select_backup_path() {
 }
 
 prompt_database_choice() {
-  DB_CLIENT="sqlite3"
+  DB_CLIENT="postgres"
   POSTGRES_HOST="$DEFAULT_POSTGRES_HOST"
   POSTGRES_PORT="$DEFAULT_POSTGRES_PORT"
   POSTGRES_DB="$DEFAULT_POSTGRES_DB"
@@ -1260,9 +1260,9 @@ prompt_database_choice() {
   POSTGRES_URL="$DEFAULT_POSTGRES_URL"
   POSTGRES_SSL="$DEFAULT_POSTGRES_SSL"
 
-  printf "\n%bSelect Database Engine:%b\n" "$COLOR_LOG" "$COLOR_RESET"
-  printf "  1) SQLite (Default)\n"
-  printf "  2) PostgreSQL (Recommended for +500 Users)\n"
+  printf "\n%bConfigure PostgreSQL Database:%b\n" "$COLOR_LOG" "$COLOR_RESET"
+  printf "  1) Local PostgreSQL (Managed automatically on this server)\n"
+  printf "  2) Remote PostgreSQL (External host or connection URL)\n"
 
   local choice=""
   while true; do
@@ -1270,7 +1270,7 @@ prompt_database_choice() {
     choice="${choice:-1}"
     case "$choice" in
       1)
-        DB_CLIENT="sqlite3"
+        DB_CLIENT="postgres"
         break
         ;;
       2)
@@ -2542,7 +2542,7 @@ CLIENT_PORT=${CLIENT_PORT}
 APP_ENV=production
 
 # Database Configuration
-DB_CLIENT=${DB_CLIENT:-sqlite3}
+DB_CLIENT=${DB_CLIENT:-postgres}
 POSTGRES_HOST=${POSTGRES_HOST:-127.0.0.1}
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
 POSTGRES_DB=${POSTGRES_DB:-chatdesk}
@@ -5063,7 +5063,7 @@ Backup & repair:
         Prompts: none
         Passes: (no arguments)
   6     Restore backup
-        Prompts: backup .db (SQLite) or .dump (PostgreSQL) path, restore confirmation
+        Prompts: backup .dump (PostgreSQL) path, restore confirmation
         Passes: -y --file
   7     Vacuum database
         Prompts: confirmation
@@ -5130,7 +5130,7 @@ Notes:
   - "Verify/unverify user" is a toggle: run it again to remove verification.
   - "Verify/unverify chat" is a toggle: run it again to remove verification.
   - Public chats always allow member invites. Invite settings only apply to private chats.
-  - Backups are timestamped .db copies for SQLite or .dump archives for PostgreSQL, saved to data/backups/.
+  - Backups are timestamped .dump archives for PostgreSQL, saved to data/backups/.
   - Restore replaces the active database with the selected backup format.
 EOF
 }

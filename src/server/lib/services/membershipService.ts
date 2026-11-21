@@ -6,7 +6,6 @@
  * post-commit effects (system messages, SSE payloads, and notification targets).
  */
 
-import { dbKnex } from "../../db/knex.ts";
 
 export function createMembershipService(dbApi) {
   const {
@@ -29,11 +28,16 @@ export function createMembershipService(dbApi) {
    */
   function isUserPriorLeft(chatId, userId) {
     if (typeof getRow === "function") {
-      const qb1: any = dbKnex("chat_left_members").select(dbKnex.raw("1 as prior_left")).where({ chat_id: chatId, user_id: userId });
-      const qb2: any = dbKnex("chat_messages").select(dbKnex.raw("1 as prior_left")).where({ chat_id: chatId, user_id: userId }).where("body", "like", "[[system:left:%");
       const priorLeft: any = getRow(
-        dbKnex.union([qb1, qb2]).first(),
+        `SELECT 1 AS prior_left FROM chat_left_members WHERE chat_id = $1 AND user_id = $2
+         UNION
+         SELECT 1 AS prior_left FROM chat_messages WHERE chat_id = $1 AND user_id = $2 AND body LIKE '[[system:left:%'
+         LIMIT 1`,
+        [chatId, userId],
       );
+      if (priorLeft && typeof priorLeft.then === "function") {
+        return priorLeft.then((row: any) => Boolean(row?.prior_left));
+      }
       return Boolean(priorLeft?.prior_left);
     }
     return false;
@@ -44,8 +48,12 @@ export function createMembershipService(dbApi) {
    */
   function clearPriorLeft(chatId, userId) {
     if (typeof run === "function") {
-      run(dbKnex("chat_left_members").where({ chat_id: chatId, user_id: userId }).del());
+      return run(
+        "DELETE FROM chat_left_members WHERE chat_id = $1 AND user_id = $2",
+        [chatId, userId],
+      );
     }
+    return undefined;
   }
 
   /**

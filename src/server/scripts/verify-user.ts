@@ -1,7 +1,6 @@
 import { getCliArgs, getPositionalArgs } from "./_cli.ts";
 import { openDatabase, runAdminActionViaServer } from "./_db-admin.ts";
 import { resolveUserRow } from "../lib/dbToolHelpers.ts";
-import { dbKnex } from "../db/knex.ts";
 
 async function main() {
   const args = getCliArgs();
@@ -30,13 +29,12 @@ async function main() {
       console.error("User not found.");
       process.exit(1);
     }
-
     const nextVerified = Number(user.verified || 0) ? 0 : 1;
-    await dbApi.run(
-      dbKnex("users").where("id", user.id).update({ verified: nextVerified }),
-    );
+    await dbApi.run("UPDATE users SET verified = $1 WHERE id = $2", [
+      nextVerified,
+      user.id,
+    ]);
     await dbApi.save();
-
     console.log(
       `User ${nextVerified ? "verified" : "unverified"}: id=${user.id} username=${user.username}`,
     );
@@ -45,7 +43,7 @@ async function main() {
   }
 }
 
-main().catch((err) => {
+main().catch((err: any) => {
   console.error(err?.message || err);
   process.exit(1);
 });

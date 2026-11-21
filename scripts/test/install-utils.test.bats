@@ -953,9 +953,10 @@ EOF
 # ensure_local_postgres_setup & systemd env configuration
 # ===========================================================================
 
-@test "ensure_local_postgres_setup: returns 0 when DB_CLIENT is sqlite3" {
+@test "ensure_local_postgres_setup: returns 0 when POSTGRES_HOST is remote host" {
   cat > "$INSTALL_DIR/.env" <<EOF
-DB_CLIENT=sqlite3
+DB_CLIENT=postgres
+POSTGRES_HOST=pg.internal.example.com
 EOF
   run ensure_local_postgres_setup
   [ "$status" -eq 0 ]

@@ -125,30 +125,25 @@ if (remote) {
       process.exit(0);
     }
 
-    await dbApi.run("BEGIN");
-    try {
+    await dbApi.transaction(async (tx) => {
       if (targetMessageIds.length) {
         const placeholders = targetMessageIds.map(() => "?").join(", ");
-        await dbApi.run(
+        await tx.run(
           `DELETE FROM chat_message_files WHERE message_id IN (${placeholders})`,
           targetMessageIds,
         );
-        await dbApi.run(`DELETE FROM chat_messages WHERE id IN (${placeholders})`, targetMessageIds);
+        await tx.run(`DELETE FROM chat_messages WHERE id IN (${placeholders})`, targetMessageIds);
       }
       if (avatarRows.length) {
         const userIds = avatarRows.map((row) => String(row.id)).filter(Boolean);
         if (userIds.length) {
-          await dbApi.run(
+          await tx.run(
             `UPDATE users SET avatar_url = NULL WHERE id IN (${userIds.map(() => "?").join(", ")})`,
             userIds,
           );
         }
       }
-      await dbApi.run("COMMIT");
-    } catch (error) {
-      await dbApi.run("ROLLBACK");
-      throw error;
-    }
+          });
 
     const fileCleanup = removeStoredFiles(messageStoredNames);
     const avatarCleanup = removeAvatarFiles(

@@ -158,7 +158,7 @@ async function main() {
       // Handle queue management actions
       if (pauseQueue) {
         await dbApi.run(
-          "UPDATE remote_channel_sources SET paused = 1, updated_at = datetime('now') WHERE chat_id = ?",
+          "UPDATE remote_channel_sources SET paused = 1, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
           [chat.id],
         );
         await dbApi.save();
@@ -168,7 +168,7 @@ async function main() {
 
       if (resumeQueue) {
         await dbApi.run(
-          "UPDATE remote_channel_sources SET paused = 0, updated_at = datetime('now') WHERE chat_id = ?",
+          "UPDATE remote_channel_sources SET paused = 0, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
           [chat.id],
         );
         await dbApi.save();
@@ -183,7 +183,7 @@ async function main() {
                locked_at = NULL,
                lock_owner = NULL,
                last_error = 'Manually skipped via CLI.',
-               processed_at = datetime('now')
+               processed_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
            WHERE id = (
              SELECT id FROM remote_channel_queue
              WHERE source_id = ?
@@ -209,7 +209,7 @@ async function main() {
                locked_at = NULL,
                lock_owner = NULL,
                last_error = 'Manually skipped via CLI.',
-               processed_at = datetime('now')
+               processed_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
            WHERE source_id = ?
              AND status IN ('pending', 'retry')`,
           [existing.id],
@@ -229,7 +229,7 @@ async function main() {
       if (disableRemote) {
         if (existing?.id) {
           await dbApi.run(
-            "UPDATE remote_channel_sources SET enabled = 0, updated_at = datetime('now') WHERE chat_id = ?",
+            "UPDATE remote_channel_sources SET enabled = 0, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
             [chat.id],
           );
           await dbApi.save();
@@ -243,7 +243,7 @@ async function main() {
       if (enableRemote) {
         if (existing?.id) {
           await dbApi.run(
-            "UPDATE remote_channel_sources SET enabled = 1, updated_at = datetime('now') WHERE chat_id = ?",
+            "UPDATE remote_channel_sources SET enabled = 1, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
             [chat.id],
           );
           await dbApi.save();
@@ -304,7 +304,7 @@ async function main() {
              chat_id, provider, source_raw, source_chat_id, source_username,
              source_version, sync_metadata, stream_media, enabled, last_error, updated_at
            )
-           VALUES (?, 'telegram', ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))
+           VALUES (?, 'telegram', ?, ?, ?, ?, ?, ?, ?, NULL, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
            ON CONFLICT(chat_id) DO UPDATE SET
              provider = excluded.provider,
              source_title = CASE
@@ -336,7 +336,7 @@ async function main() {
              stream_media = excluded.stream_media,
              enabled = excluded.enabled,
              last_error = NULL,
-             updated_at = datetime('now')`,
+             updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`,
           [
             chat.id,
             sourceRaw,
@@ -356,7 +356,7 @@ async function main() {
                  locked_at = NULL,
                  lock_owner = NULL,
                  last_error = 'Remote source changed before this item was mirrored.',
-                 processed_at = datetime('now')
+                 processed_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
              WHERE source_id = ?
                AND status IN ('pending', 'retry', 'processing')`,
             [existing.id],
@@ -365,7 +365,7 @@ async function main() {
       } else {
         // Only update flags
         await dbApi.run(
-          "UPDATE remote_channel_sources SET sync_metadata = ?, stream_media = ?, updated_at = datetime('now') WHERE chat_id = ?",
+          "UPDATE remote_channel_sources SET sync_metadata = ?, stream_media = ?, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
           [nextSyncMetadata, nextStreamMedia, chat.id],
         );
       }
@@ -501,7 +501,7 @@ async function main() {
         [chat.id],
       );
       await dbApi.run(
-        "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, 'owner')",
+        "INSERT INTO chat_members (chat_id, user_id, role) VALUES (?, ?, 'owner') ON CONFLICT DO NOTHING",
         [chat.id, nextOwner.id],
       );
       await dbApi.run(

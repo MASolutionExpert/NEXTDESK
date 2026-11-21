@@ -1,5 +1,3 @@
-import { dbKnex } from "../db/knex.ts";
-
 export function createInspector({ fs, dataDir, adminGetRow, adminGetAll }: any) {
   const getDiskUsageInfo = () => {
     try {
@@ -27,16 +25,16 @@ export function createInspector({ fs, dataDir, adminGetRow, adminGetAll }: any) 
   };
 
   const buildInspectSnapshot = async (kind = "all", limit = 25) => {
-    const safeLimit: any = Math.max(1, Math.min(1000, Number(limit) || 25));
-    const mode: any = String(kind || "all").toLowerCase();
+    const safeLimit = Math.max(1, Math.min(1000, Number(limit) || 25));
+    const mode = String(kind || "all").toLowerCase();
 
     const [userCount, chatCount, messageCount, fileCount] = await Promise.all([
-      adminGetRow(dbKnex("users").count({ n: "*" }).first()),
-      adminGetRow(dbKnex("chats").count({ n: "*" }).first()),
-      adminGetRow(dbKnex("chat_messages").count({ n: "*" }).first()),
-      adminGetRow(dbKnex("chat_message_files").count({ n: "*" }).first()),
+      adminGetRow("SELECT COUNT(*) AS n FROM users"),
+      adminGetRow("SELECT COUNT(*) AS n FROM chats"),
+      adminGetRow("SELECT COUNT(*) AS n FROM chat_messages"),
+      adminGetRow("SELECT COUNT(*) AS n FROM chat_message_files"),
     ]);
-    const counts: any = {
+    const counts = {
       users: Number(userCount?.n || 0),
       chats: Number(chatCount?.n || 0),
       messages: Number(messageCount?.n || 0),
@@ -52,88 +50,77 @@ export function createInspector({ fs, dataDir, adminGetRow, adminGetAll }: any) 
 
     if (mode === "all" || mode === "user") {
       snapshot.users = await adminGetAll(
-        dbKnex("users")
-          .select("id", "username", "nickname", "status", "banned", "avatar_url", "created_at")
-          .orderBy("id", "asc")
-          .limit(safeLimit),
+        "SELECT id, username, nickname, status, banned, avatar_url, created_at FROM users ORDER BY id ASC LIMIT $1",
+        [safeLimit],
       );
     }
 
     if (mode === "all" || mode === "chat") {
-      const chats: any = await adminGetAll(
-        dbKnex("chats as c")
-          .select(
-            "c.id",
-            "c.type",
-            "c.name",
-            dbKnex.raw("(SELECT COUNT(*) FROM chat_messages m WHERE m.chat_id = c.id) AS messages"),
-            "c.created_at",
-          )
-          .orderBy("c.id", "asc")
-          .limit(safeLimit),
-      );
-      const chatIds: any = chats.map((chat) => Number(chat.id)).filter(Number.isFinite);
-      const members = chatIds.length
-        ? await adminGetAll(
-            dbKnex("chat_members")
-              .select("chat_id", "user_id")
-              .whereIn("chat_id", chatIds)
-              .orderBy("chat_id", "asc")
-              .orderBy("user_id", "asc"),
-          )
+      const chats: any[] =
+        (await adminGetAll(
+          `SELECT c.id, c.type, c.name,
+                  (SELECT COUNT(*) FROM chat_messages m WHERE m.chat_id = c.id) AS messages,
+                  c.created_at
+           FROM chats c
+           ORDER BY c.id ASC
+           LIMIT $1`,
+          [safeLimit],
+        )) || [];
+      const chatIds = chats.map((chat) => String(chat.id || "").trim()).filter(Boolean);
+      const members: any[] = chatIds.length
+        ? (await adminGetAll(
+            `SELECT chat_id, user_id
+             FROM chat_members
+             WHERE chat_id = ANY($1::text[])
+             ORDER BY chat_id ASC, user_id ASC`,
+            [chatIds],
+          )) || []
         : [];
-      const memberIdsByChat: any = new Map<any, any>();
+      const memberIdsByChat = new Map<string, string[]>();
       members.forEach((member) => {
-        const chatId: any = Number(member.chat_id);
-        const userId: any = Number(member.user_id);
-        if (!Number.isFinite(chatId) || !Number.isFinite(userId) || userId <= 0) return;
+        const chatId = String(member.chat_id || "").trim();
+        const userId = String(member.user_id || "").trim();
+        if (!chatId || !userId) return;
         const memberIds = memberIdsByChat.get(chatId) || [];
         memberIds.push(userId);
         memberIdsByChat.set(chatId, memberIds);
       });
-      snapshot.chats = chats.map((chat) => ({
-        ...chat,
-        members: memberIdsByChat.get(Number(chat.id))?.length || 0,
-        member_ids: memberIdsByChat.get(Number(chat.id)) || [],
-        messages: Number(chat.messages || 0),
-      }));
+      snapshot.chats = chats.map((chat) => {
+        const cid = String(chat.id || "").trim();
+        return {
+          ...chat,
+          members: memberIdsByChat.get(cid)?.length || 0,
+          member_ids: memberIdsByChat.get(cid) || [],
+          messages: Number(chat.messages || 0),
+        };
+      });
     }
 
     if (mode === "all" || mode === "file") {
       snapshot.messageFiles = await adminGetAll(
-        dbKnex("chat_message_files as cmf")
-          .join("chat_messages as cm", "cm.id", "cmf.message_id")
-          .select(
-            "cmf.id",
-            "cmf.message_id",
-            "cm.chat_id",
-            "cm.user_id",
-            "cmf.kind",
-            "cmf.original_name",
-            "cmf.stored_name",
-            "cmf.mime_type",
-            "cmf.size_bytes",
-            "cmf.created_at",
-          )
-          .orderBy("cmf.id", "asc")
-          .limit(safeLimit),
+        `SELECT cmf.id, cmf.message_id, cm.chat_id, cm.user_id,
+                cmf.kind, cmf.original_name, cmf.stored_name,
+                cmf.mime_type, cmf.size_bytes, cmf.created_at
+         FROM chat_message_files cmf
+         INNER JOIN chat_messages cm ON cm.id = cmf.message_id
+         ORDER BY cmf.id ASC
+         LIMIT $1`,
+        [safeLimit],
       );
 
       snapshot.avatarFiles = await adminGetAll(
-        dbKnex("users")
-          .select("id AS user_id", "username", "nickname", "avatar_url")
-          .whereNotNull("avatar_url")
-          .where("avatar_url", "!=", "")
-          .orderBy("id", "asc")
-          .limit(safeLimit),
+        `SELECT id AS user_id, username, nickname, avatar_url
+         FROM users
+         WHERE avatar_url IS NOT NULL AND avatar_url != ''
+         ORDER BY id ASC
+         LIMIT $1`,
+        [safeLimit],
       );
 
       snapshot.fileStorage = {
         messageFilesBytes: Number(
           (await adminGetRow(
-            dbKnex("chat_message_files")
-              .select(dbKnex.raw("COALESCE(SUM(size_bytes), 0) AS n"))
-              .first(),
+            "SELECT COALESCE(SUM(size_bytes), 0) AS n FROM chat_message_files",
           ))?.n || 0,
         ),
       };
@@ -143,14 +130,13 @@ export function createInspector({ fs, dataDir, adminGetRow, adminGetAll }: any) 
   };
 
   const hasEnoughFreeDiskSpace = (requiredBytes = 0) => {
-    const required: any = Number(requiredBytes || 0);
+    const required = Number(requiredBytes || 0);
     if (!Number.isFinite(required) || required <= 0) return true;
 
-    const disk: any = getDiskUsageInfo();
+    const disk = getDiskUsageInfo();
     if (!disk || !Number.isFinite(Number(disk.freeBytes))) return true;
 
     const safetyBuffer = 1 * 1024 * 1024;
-
     return Number(disk.freeBytes) >= required + safetyBuffer;
   };
 

@@ -1,6 +1,6 @@
 # NextDesk (نکست‌دسک)
 
-**NextDesk** یک پیام‌رسان سازمانی و سیستم پشتیبانی (Helpdesk) خودمیزبان و بلادرنگ است که به‌صورت یکپارچه روی **Full-Stack Next.js 16 + TypeScript Monolith** (App Router + سرور یکپارچه Express 5 / SSE / WebSocket + PostgreSQL/SQLite + ورکر مدیای FFmpeg) پیاده‌سازی شده است.
+**NextDesk** یک پیام‌رسان سازمانی و سیستم پشتیبانی (Helpdesk) خودمیزبان و بلادرنگ است که به‌صورت یکپارچه روی **Full-Stack Next.js 16 + TypeScript Monolith** (App Router + سرور یکپارچه Express 5 / SSE / WebSocket + PostgreSQL + Prisma 7 ORM + ورکر مدیای FFmpeg) پیاده‌سازی شده است.
 
 ## امکانات کلیدی
 
@@ -10,7 +10,7 @@
 - 📞 **تماس صوتی و تصویری**: تماس WebRTC همراه با اشتراک‌گذاری صفحه و ابزار بررسی TURN.
 - 📎 **مدیریت فایل و استوریج ابری**: پشتیبانی از حافظه محلی و S3 / Cloudflare R2 با رمزنگاری، ویس و تبدیل ویدئو با FFmpeg.
 - 🌐 **دوزبانه بومی (فارسی و انگلیسی)**: پشتیبانی کامل RTL/LTR با فونت‌های Vazirmatn و DM Sans و انتخاب زبان برای هر کاربر.
-- 🛡️ **لایه دیتابیس سخت‌سازی‌شده**: PostgreSQL (پیش‌فرض در سرور) و SQLite با ۲۷ مایگریشن idempotent، تایم‌اوت‌های Fail-Fast، بکاپ خودکار پیش از مایگریشن و ابزار تشخیصی صرفاً خواندنی `db:doctor`.
+- 🛡️ **تک‌دیتابیس PostgreSQL + Prisma 7 ORM**: معماری یکپارچه و پرسرعت فقط روی PostgreSQL با کلاینت تمام‌تایپ‌اسکریپت Prisma 7 (`@prisma/adapter-pg` + `pg.Pool`)، لایه مایگریشن خودکار و غیرمخرب روی دیتابیس لایو (`prisma migrate deploy`)، بکاپ خودکار `pg_dump` پیش از مهاجرت و ابزار تشخیصی صرفاً خواندنی `db:doctor`.
 
 ## نصب سریع روی سرور (Ubuntu 22.04 به بالا)
 

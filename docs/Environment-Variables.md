@@ -22,7 +22,7 @@ nano .env
 | `CLIENT_PORT` | `integer` | `80` | Nginx listen port (what users connect to). |
 | `BIND_ADDRESS` | `string` | `localhost` | Network interface to bind to. Use `localhost` for VPS/private networks to avoid exposing backend when firewall is disabled; use `0.0.0.0` for Docker containers. |
 | `DATA_DIR` | `string` | `<project_root>/data` | Absolute path to the data directory (database, uploads, backups). Override this on cloud platforms (Railway, Render, Fly.io) to point at the platform's persistent volume mount. |
-| `DB_CLIENT` | `string` | `sqlite3` | Database driver client (`sqlite3` or `postgres`). |
+| `DB_CLIENT` | `string` | `postgres` | Database driver client (`postgres` or `postgres`). |
 | `POSTGRES_HOST` | `string` | `127.0.0.1` | PostgreSQL database host. |
 | `POSTGRES_PORT` | `integer` | `5432` | PostgreSQL database port. |
 | `POSTGRES_USER` | `string` | `postgres` | PostgreSQL username. |

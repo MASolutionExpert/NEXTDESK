@@ -263,7 +263,7 @@ describe("admin services status", () => {
 });
 
 describe("admin services database status", () => {
-  function setupServicesApp({ dbConfig = { client: "sqlite3" }, adminGetRow = () => null }: any = {}) {
+  function setupServicesApp({ dbConfig = { client: "postgres" }, adminGetRow = async () => null }: any = {}) {
     const sessionStore = makeSessionStore();
     const userStore = makeUserStore([
       {
@@ -293,34 +293,6 @@ describe("admin services database status", () => {
 
   const getServices = (app) =>
     request(app).get("/api/admin/services").set("Cookie", "sid=sid-admin");
-
-  test("sqlite mode pings the database and reports reachability", async () => {
-    const adminGetRow = vi.fn(() => ({ ok: 1 }));
-    const { app } = setupServicesApp({ dbConfig: { client: "sqlite3" }, adminGetRow });
-    const res = await getServices(app);
-    expect(res.status).toBe(200);
-    expect(res.body.database).toMatchObject({
-      client: "sqlite3",
-      configured: true,
-      reachable: true,
-    });
-    expect(typeof res.body.database.latencyMs).toBe("number");
-    expect(adminGetRow).toHaveBeenCalledWith("SELECT 1 AS ok");
-  });
-
-  test("sqlite mode reports unreachable when the ping fails", async () => {
-    const adminGetRow = vi.fn(() => {
-      throw new Error("disk I/O error");
-    });
-    const { app } = setupServicesApp({ dbConfig: { client: "sqlite3" }, adminGetRow });
-    const res = await getServices(app);
-    expect(res.status).toBe(200);
-    expect(res.body.database).toMatchObject({
-      client: "sqlite3",
-      configured: true,
-      reachable: false,
-    });
-  });
 
   test("postgres mode pings the database and reports reachability", async () => {
     const { app } = setupServicesApp({

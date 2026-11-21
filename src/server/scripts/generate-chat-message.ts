@@ -213,14 +213,13 @@ async function main() {
       return;
     }
 
-    await dbApi.run("BEGIN");
-    try {
-      await dbApi.run(
-        "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)",
+    await dbApi.transaction(async (tx) => {
+      await tx.run(
+        "INSERT INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
         [chatId, userAId, "member"],
       );
-      await dbApi.run(
-        "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)",
+      await tx.run(
+        "INSERT INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
         [chatId, userBId, "member"],
       );
 
@@ -233,7 +232,7 @@ async function main() {
           rawBody.length > MESSAGE_MAX_CHARS
             ? rawBody.slice(0, MESSAGE_MAX_CHARS)
             : rawBody;
-        await dbApi.run(
+        await tx.run(
           "INSERT INTO chat_messages (id, chat_id, user_id, body, created_at, read_at, read_by_user_id) VALUES (?, ?, ?, ?, ?, NULL, NULL)",
           [
             crypto.randomUUID(),
@@ -245,11 +244,7 @@ async function main() {
         );
       }
 
-      await dbApi.run("COMMIT");
-    } catch (error) {
-      await dbApi.run("ROLLBACK");
-      throw error;
-    }
+          });
 
     await dbApi.save();
     console.log(`Generated messages: ${count}`);

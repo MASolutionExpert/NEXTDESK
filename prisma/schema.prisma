@@ -1,0 +1,390 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Meta {
+  key   String @id
+  value String
+
+  @@map("meta")
+}
+
+model AppSetting {
+  key   String @id
+  value String
+
+  @@map("app_settings")
+}
+
+model Department {
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String?
+  color       String?
+  active      Int     @default(1)
+  createdAt   String  @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("created_at")
+
+  @@index([active], map: "idx_departments_active")
+  @@map("departments")
+}
+
+model User {
+  id                   String  @id
+  username             String  @unique
+  nickname             String?
+  avatarUrl            String? @map("avatar_url")
+  avatarStorageDriver  String? @default("local") @map("avatar_storage_driver")
+  avatarStorageKey     String? @map("avatar_storage_key")
+  avatarEncryptionType String? @default("none") @map("avatar_encryption_type")
+  color                String?
+  status               String  @default("online")
+  passwordHash         String  @map("password_hash")
+  role                 String  @default("user")
+  banned               Int     @default(0)
+  verified             Int     @default(0)
+  departmentId         Int?    @map("department_id")
+  language             String  @default("fa")
+  createdAt            String  @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("created_at")
+  lastSeen             String? @map("last_seen")
+
+  chatMembers         ChatMember[]
+  chatLeftMembers     ChatLeftMember[]
+  messages            ChatMessage[]
+  messageReads        ChatMessageRead[]
+  hiddenMessages      HiddenChatMessage[]
+  hiddenChats         HiddenChat[]
+  chatMutes           ChatMute[]
+  removedFromGroups   GroupRemovedMember[] @relation("RemovedMember")
+  removedGroupMembers GroupRemovedMember[] @relation("RemovedByMember")
+  sessions            Session[]
+  pushSubscriptions   PushSubscription[]
+
+  @@index([createdAt], map: "idx_users_created_at")
+  @@index([departmentId], map: "idx_users_department")
+  @@map("users")
+}
+
+model Chat {
+  id                 String  @id
+  name               String?
+  type               String  @default("dm")
+  groupUsername      String? @unique(map: "idx_chats_group_username") @map("group_username")
+  groupVisibility    String  @default("public") @map("group_visibility")
+  inviteToken        String? @unique(map: "idx_chats_invite_token") @map("invite_token")
+  createdByUserId    String? @map("created_by_user_id")
+  groupColor         String? @map("group_color")
+  allowMemberInvites Int     @default(1) @map("allow_member_invites")
+  groupAvatarUrl     String? @map("group_avatar_url")
+  verified           Int     @default(0)
+  autoAddNewUsers    Int     @default(0) @map("auto_add_new_users")
+  departmentId       Int?    @map("department_id")
+  createdAt          String  @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("created_at")
+
+  members             ChatMember[]
+  leftMembers         ChatLeftMember[]
+  messages            ChatMessage[]
+  hiddenByUsers       HiddenChat[]
+  mutes               ChatMute[]
+  removedMembers      GroupRemovedMember[]
+  remoteChannelSource RemoteChannelSource?
+
+  @@index([type], map: "idx_chats_type")
+  @@index([departmentId], map: "idx_chats_department")
+  @@map("chats")
+}
+
+model ChatMember {
+  chatId String @map("chat_id")
+  userId String @map("user_id")
+  role   String @default("member")
+
+  chat Chat @relation(fields: [chatId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@id([chatId, userId])
+  @@index([userId], map: "idx_members_user")
+  @@index([userId, chatId], map: "idx_chat_members_user_chat")
+  @@map("chat_members")
+}
+
+model ChatLeftMember {
+  chatId String @map("chat_id")
+  userId String @map("user_id")
+  leftAt String @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("left_at")
+
+  chat Chat @relation(fields: [chatId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@id([chatId, userId])
+  @@index([userId, chatId], map: "idx_chat_left_members_user")
+  @@map("chat_left_members")
+}
+
+model ChatMessage {
+  id                     String  @id
+  chatId                 String  @map("chat_id")
+  userId                 String  @map("user_id")
+  body                   String
+  clientRequestId        String? @map("client_request_id")
+  createdAt              String  @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("created_at")
+  readAt                 String? @map("read_at")
+  readByUserId           String? @map("read_by_user_id")
+  replyToMessageId       String? @map("reply_to_message_id")
+  edited                 Int     @default(0)
+  editedBody             String? @map("edited_body")
+  hiddenEveryoneAt       String? @map("hidden_everyone_at")
+  forwardedFromChatId    String? @map("forwarded_from_chat_id")
+  forwardedFromLabel     String? @map("forwarded_from_label")
+  forwardedFromUserId    String? @map("forwarded_from_user_id")
+  forwardedFromUsername  String? @map("forwarded_from_username")
+  forwardedFromAvatarUrl String? @map("forwarded_from_avatar_url")
+  forwardedFromColor     String? @map("forwarded_from_color")
+  expiresAt              String? @map("expires_at")
+
+  chat           Chat                @relation(fields: [chatId], references: [id])
+  user           User                @relation(fields: [userId], references: [id])
+  files          ChatMessageFile[]
+  reads          ChatMessageRead[]
+  hiddenForUsers HiddenChatMessage[]
+
+  @@unique([chatId, userId, clientRequestId], map: "idx_chat_messages_client_request")
+  @@index([chatId, createdAt], map: "idx_messages_chat_time")
+  @@index([replyToMessageId], map: "idx_messages_reply_to")
+  @@index([hiddenEveryoneAt], map: "idx_chat_messages_hidden_everyone")
+  @@index([forwardedFromChatId], map: "idx_chat_messages_forwarded_from_chat")
+  @@index([forwardedFromUserId], map: "idx_chat_messages_forwarded_from_user")
+  @@index([expiresAt], map: "idx_chat_messages_expires_at")
+  @@index([chatId, id(sort: Desc)], map: "idx_chat_messages_chat_id_id")
+  @@index([chatId, userId, id(sort: Desc)], map: "idx_chat_messages_chat_user_id_id")
+  @@index([chatId, hiddenEveryoneAt, id(sort: Desc)], map: "idx_chat_messages_chat_hidden_id")
+  @@index([chatId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_chat_messages_chat_created_id")
+  @@index([createdAt], map: "idx_chat_messages_created_at")
+  @@map("chat_messages")
+}
+
+model ChatMessageFile {
+  id               Int     @id @default(autoincrement())
+  messageId        String  @map("message_id")
+  kind             String
+  originalName     String  @map("original_name")
+  storedName       String  @map("stored_name")
+  mimeType         String  @map("mime_type")
+  sizeBytes        Int     @map("size_bytes")
+  widthPx          Int?    @map("width_px")
+  heightPx         Int?    @map("height_px")
+  durationSeconds  Float?  @map("duration_seconds")
+  expiresAt        String? @map("expires_at")
+  storageDriver    String? @default("local") @map("storage_driver")
+  storageKey       String? @map("storage_key")
+  processingStatus String? @default("ready") @map("processing_status")
+  blurhash         String?
+  waveform         String?
+  thumbStorageKey  String? @map("thumb_storage_key")
+  encryptionType   String? @default("none") @map("encryption_type")
+  createdAt        String  @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("created_at")
+
+  message ChatMessage @relation(fields: [messageId], references: [id])
+
+  @@index([messageId], map: "idx_message_files_message_id")
+  @@map("chat_message_files")
+}
+
+model ChatMessageRead {
+  messageId String @map("message_id")
+  userId    String @map("user_id")
+  readAt    String @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("read_at")
+
+  message ChatMessage @relation(fields: [messageId], references: [id])
+  user    User        @relation(fields: [userId], references: [id])
+
+  @@id([messageId, userId])
+  @@index([messageId], map: "idx_message_reads_message")
+  @@index([userId], map: "idx_message_reads_user")
+  @@index([userId, messageId], map: "idx_message_reads_user_message")
+  @@map("chat_message_reads")
+}
+
+model HiddenChatMessage {
+  userId    String @map("user_id")
+  messageId String @map("message_id")
+  hiddenAt  String @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("hidden_at")
+
+  user    User        @relation(fields: [userId], references: [id])
+  message ChatMessage @relation(fields: [messageId], references: [id])
+
+  @@id([userId, messageId])
+  @@index([userId], map: "idx_hidden_chat_messages_user")
+  @@index([messageId], map: "idx_hidden_chat_messages_message")
+  @@index([userId, messageId], map: "idx_hidden_chat_messages_user_message")
+  @@map("hidden_chat_messages")
+}
+
+model HiddenChat {
+  userId   String @map("user_id")
+  chatId   String @map("chat_id")
+  hiddenAt String @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("hidden_at")
+
+  user User @relation(fields: [userId], references: [id])
+  chat Chat @relation(fields: [chatId], references: [id])
+
+  @@id([userId, chatId])
+  @@map("hidden_chats")
+}
+
+model ChatMute {
+  userId    String @map("user_id")
+  chatId    String @map("chat_id")
+  muted     Int    @default(1)
+  updatedAt String @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+  chat Chat @relation(fields: [chatId], references: [id])
+
+  @@id([userId, chatId])
+  @@index([chatId, userId], map: "idx_chat_mutes_chat_user")
+  @@map("chat_mutes")
+}
+
+model GroupRemovedMember {
+  chatId          String @map("chat_id")
+  userId          String @map("user_id")
+  removedByUserId String @map("removed_by_user_id")
+  removedAt       String @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("removed_at")
+
+  chat      Chat @relation(fields: [chatId], references: [id])
+  user      User @relation("RemovedMember", fields: [userId], references: [id])
+  removedBy User @relation("RemovedByMember", fields: [removedByUserId], references: [id])
+
+  @@id([chatId, userId])
+  @@index([userId, chatId], map: "idx_group_removed_members_user")
+  @@map("group_removed_members")
+}
+
+model Session {
+  id        Int    @id @default(autoincrement())
+  userId    String @map("user_id")
+  token     String @unique
+  createdAt String @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("created_at")
+  lastSeen  String @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("last_seen")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([token], map: "idx_sessions_token")
+  @@map("sessions")
+}
+
+model PushSubscription {
+  id             Int     @id @default(autoincrement())
+  userId         String  @map("user_id")
+  endpoint       String  @unique
+  p256dh         String?
+  auth           String?
+  messagePreview Int     @default(1) @map("message_preview")
+  createdAt      String? @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("created_at")
+  updatedAt      String? @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
+}
+
+model RemoteChannelSource {
+  id                  Int     @id @default(autoincrement())
+  chatId              String  @unique @map("chat_id")
+  provider            String  @default("telegram")
+  sourceRaw           String? @map("source_raw")
+  sourceUrl           String? @map("source_url")
+  sourceChatId        String? @map("source_chat_id")
+  sourceUsername      String? @map("source_username")
+  sourceTitle         String? @map("source_title")
+  sourceAvatarUrl     String? @map("source_avatar_url")
+  lastRemoteMessageId Int?    @map("last_remote_message_id")
+  sourceVersion       Int     @default(1) @map("source_version")
+  syncMetadata        Int     @default(0) @map("sync_metadata")
+  streamMedia         Int     @default(0) @map("stream_media")
+  enabled             Int     @default(0)
+  paused              Int     @default(0)
+  lastError           String? @map("last_error")
+  lastSeenAt          String? @map("last_seen_at")
+  createdAt           String  @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("created_at")
+  updatedAt           String  @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("updated_at")
+
+  chat  Chat                 @relation(fields: [chatId], references: [id])
+  queue RemoteChannelQueue[]
+
+  @@index([provider, enabled], map: "idx_remote_channel_sources_provider_enabled")
+  @@map("remote_channel_sources")
+}
+
+model RemoteChannelQueue {
+  id                Int     @id @default(autoincrement())
+  sourceId          Int     @map("source_id")
+  provider          String  @default("telegram")
+  telegramUpdateId  Int?    @map("telegram_update_id")
+  telegramMessageId Int?    @map("telegram_message_id")
+  sourceVersion     Int     @default(1) @map("source_version")
+  payloadJson       String  @map("payload_json")
+  status            String  @default("pending")
+  attempts          Int     @default(0)
+  nextAttemptAt     String? @map("next_attempt_at")
+  lockedAt          String? @map("locked_at")
+  lockOwner         String? @map("lock_owner")
+  lastError         String? @map("last_error")
+  createdMessageId  String? @map("created_message_id")
+  createdAt         String  @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("created_at")
+  processedAt       String? @map("processed_at")
+
+  source RemoteChannelSource @relation(fields: [sourceId], references: [id])
+
+  @@unique([sourceId, sourceVersion, telegramUpdateId], map: "idx_remote_channel_queue_source_update")
+  @@unique([sourceId, sourceVersion, telegramMessageId], map: "idx_remote_channel_queue_source_message")
+  @@index([status, nextAttemptAt, createdAt], map: "idx_remote_channel_queue_status_next")
+  @@index([provider, status, nextAttemptAt, createdAt, id], map: "idx_remote_channel_queue_claim")
+  @@index([status, lockedAt], map: "idx_remote_channel_queue_processing_lock")
+  @@index([sourceId, status], map: "idx_remote_channel_queue_source_status")
+  @@map("remote_channel_queue")
+}
+
+model RemoteChannelProviderState {
+  provider         String  @id
+  nextUpdateOffset Int?    @map("next_update_offset")
+  lastError        String? @map("last_error")
+  lastPolledAt     String? @map("last_polled_at")
+  updatedAt        String  @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("updated_at")
+
+  @@map("remote_channel_provider_state")
+}
+
+model PendingPresignedUpload {
+  storageKey String  @id @map("storage_key")
+  userId     String? @map("user_id")
+  createdAt  String  @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("created_at")
+  expiresAt  String? @map("expires_at")
+
+  @@map("pending_presigned_uploads")
+}
+
+model AdminAuditLog {
+  id            Int     @id @default(autoincrement())
+  ts            String  @default(dbgenerated("(CURRENT_TIMESTAMP::text)"))
+  actorUserId   String? @map("actor_user_id")
+  actorUsername String? @map("actor_username")
+  action        String
+  targetType    String? @map("target_type")
+  targetLabel   String? @map("target_label")
+  details       String?
+  status        String  @default("success")
+
+  @@index([ts(sort: Desc)], map: "idx_admin_audit_logs_ts")
+  @@index([action], map: "idx_admin_audit_logs_action")
+  @@map("admin_audit_logs")
+}

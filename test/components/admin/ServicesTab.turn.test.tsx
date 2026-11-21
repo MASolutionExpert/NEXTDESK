@@ -14,7 +14,7 @@ function makeData(turn) {
     mediaWorker: { configured: false, reachable: false, latencyMs: null },
     remoteChannel: { enabled: false },
     storage: { driver: "local", reachable: true, latencyMs: 3 },
-    database: { client: "sqlite3", configured: false },
+    database: { client: "postgres", configured: true, reachable: true, latencyMs: 4 },
     turn,
   };
 }

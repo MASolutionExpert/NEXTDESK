@@ -1,5 +1,4 @@
 import { Queue, Worker } from "bullmq";
-import { dbKnex } from "../db/knex.ts";
 import { readEnvBool } from "../settings/env.ts";
 
 export function createMediaQueueManager({
@@ -33,23 +32,14 @@ export function createMediaQueueManager({
   const inMemoryQueue: any = [];
   const activeTimers = new Map<any, any>();
 
-  function toSql(builder) {
-    if (builder && typeof builder.toSQL === "function") {
-      const c = builder.toSQL();
-      return { sql: c.sql, params: c.bindings || [] };
-    }
-    return { sql: builder, params: [] };
-  }
-
   async function processMediaJob(jobData) {
-    const { fileId, storageKey, reason } = jobData;
+    const { fileId, storageKey } = jobData;
     if (!fileId) return;
 
     // Check DB status to see if remote provider already processed it
-    const { sql: checkSql, params: checkParams } = toSql(
-      dbKnex("chat_message_files").where("id", fileId).first(),
-    );
-    const row = adminGetRow ? adminGetRow(checkSql, checkParams) : null;
+    const row = adminGetRow
+      ? await adminGetRow("SELECT * FROM chat_message_files WHERE id = $1 LIMIT 1", [fileId])
+      : null;
 
     if (!row) return;
     if (row.processing_status === "ready") return; // Already processed by remote compute
@@ -77,10 +67,10 @@ export function createMediaQueueManager({
       } else {
         // Update DB status to ready
         if (adminRun) {
-          const { sql: updateSql, params: updateParams } = toSql(
-            dbKnex("chat_message_files").where("id", fileId).update({ processing_status: "ready" }),
+          await adminRun(
+            "UPDATE chat_message_files SET processing_status = 'ready' WHERE id = $1",
+            [fileId],
           );
-          adminRun(updateSql, updateParams);
         }
 
         // Broadcast SSE notification
@@ -94,10 +84,10 @@ export function createMediaQueueManager({
       }
     } catch (err) {
       if (adminRun) {
-        const { sql: failSql, params: failParams } = toSql(
-          dbKnex("chat_message_files").where("id", fileId).update({ processing_status: "failed" }),
+        await adminRun(
+          "UPDATE chat_message_files SET processing_status = 'failed' WHERE id = $1",
+          [fileId],
         );
-        adminRun(failSql, failParams);
       }
     }
   }

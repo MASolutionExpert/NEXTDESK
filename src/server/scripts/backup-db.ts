@@ -9,7 +9,6 @@ const projectRootDir = path.resolve(serverDir, "../..");
 dotenv.config({ path: path.join(projectRootDir, ".env"), quiet: true });
 dotenv.config({ path: path.join(serverDir, ".env"), override: true, quiet: true });
 
-const dbPath = path.join(dataDir, "chatdesk.db");
 const backupDir = path.join(dataDir, "backups");
 
 async function main() {
@@ -17,28 +16,10 @@ async function main() {
   if (!fs.existsSync(backupDir)) {
     fs.mkdirSync(backupDir, { recursive: true });
   }
-
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  if (dbConfig.client === "postgres") {
-    const backupPath = path.join(backupDir, `chatdesk-backup-${stamp}.dump`);
-    await createPostgresMaintenance({ config: dbConfig }).backup(backupPath);
-    console.log(`PostgreSQL backup created: ${backupPath}`);
-    return;
-  }
-
-  if (!fs.existsSync(dbPath)) {
-    console.error(`No database found at ${dbPath}.`);
-    process.exit(1);
-  }
-  const backupPath = path.join(backupDir, `chatdesk-backup-${stamp}.db`);
-  try {
-    fs.copyFileSync(dbPath, backupPath);
-  } catch (error) {
-    console.error(`Backup failed: ${error?.message || error}`);
-    process.exit(1);
-  }
-
-  console.log(`Backup created: ${backupPath}`);
+  const backupPath = path.join(backupDir, `nextdesk-backup-${stamp}.dump`);
+  await createPostgresMaintenance({ config: dbConfig }).backup(backupPath);
+  console.log(`PostgreSQL backup created: ${backupPath}`);
 }
 
 await main();

@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 import path from "node:path";
 import rateLimit from "express-rate-limit";
 import { storageEncryption as defaultStorageEncryption } from "../lib/storageEncryption.ts";
-import { dbKnex } from "../db/knex.ts";
 import { dispatchMediaWorkerJob } from "../lib/mediaWorker.ts";
 import { ensureBucketCorsForRequest } from "../lib/bucketCors.ts";
 import { resolveWebhookCallbackUrl } from "../lib/webhookUrl.ts";
@@ -225,12 +224,9 @@ export function registerRemoteUploadRoutes(app, deps) {
           } catch (_) {}
         } else if (typeof adminRun === "function") {
           try {
-            callAdminRun(
-              dbKnex("pending_presigned_uploads").insert({
-                storage_key: finalStorageKey,
-                user_id: session?.userId || null,
-                created_at: new Date().toISOString(),
-              }),
+            await callAdminRun(
+              "INSERT INTO pending_presigned_uploads (storage_key, user_id, created_at) VALUES ($1, $2, $3) ON CONFLICT (storage_key) DO NOTHING",
+              [finalStorageKey, session?.userId || null, new Date().toISOString()],
             );
             if (typeof adminSave === "function") adminSave();
           } catch (_) {}
@@ -333,12 +329,9 @@ export function registerRemoteUploadRoutes(app, deps) {
         }
       }
       if (!fileId && targetMsgId && typeof adminGetRow === "function") {
-        const row: any = callAdminGetRow(
-          dbKnex("chat_message_files")
-            .select("id")
-            .where("storage_key", finalStorageKey)
-            .orderBy("id", "desc")
-            .first(),
+        const row: any = await callAdminGetRow(
+          "SELECT id FROM chat_message_files WHERE storage_key = $1 ORDER BY id DESC LIMIT 1",
+          [finalStorageKey],
         );
         fileId = row?.id || null;
       }
@@ -352,12 +345,9 @@ export function registerRemoteUploadRoutes(app, deps) {
         } catch (_) {}
       } else if (typeof adminRun === "function") {
         try {
-          callAdminRun(
-            dbKnex("pending_presigned_uploads").insert({
-              storage_key: finalStorageKey,
-              user_id: session?.userId || null,
-              created_at: new Date().toISOString(),
-            }),
+          await callAdminRun(
+            "INSERT INTO pending_presigned_uploads (storage_key, user_id, created_at) VALUES ($1, $2, $3) ON CONFLICT (storage_key) DO NOTHING",
+            [finalStorageKey, session?.userId || null, new Date().toISOString()],
           );
           if (typeof adminSave === "function") adminSave();
         } catch (_) {}
@@ -393,8 +383,10 @@ export function registerRemoteUploadRoutes(app, deps) {
       file = raw && typeof raw.then === "function" ? await raw : raw;
     }
     if (!file && typeof adminGetRow === "function") {
-      const raw: any = callAdminGetRow(dbKnex("chat_message_files").where("id", fileId).first());
-      file = raw && typeof raw.then === "function" ? await raw : raw;
+      file = await callAdminGetRow(
+        "SELECT * FROM chat_message_files WHERE id = $1 LIMIT 1",
+        [fileId],
+      );
     }
 
     if (!file) {
@@ -410,7 +402,8 @@ export function registerRemoteUploadRoutes(app, deps) {
       typeof adminGetRow === "function"
     ) {
       const rawMsg: any = callAdminGetRow(
-        dbKnex("chat_messages").select("user_id", "username").where("id", file.message_id).first(),
+        "SELECT user_id, username FROM chat_messages WHERE id = $1 LIMIT 1",
+        [file.message_id],
       );
       const msg = rawMsg && typeof rawMsg.then === "function" ? await rawMsg : rawMsg;
       if (
@@ -444,8 +437,9 @@ export function registerRemoteUploadRoutes(app, deps) {
     }
 
     if (typeof adminRun === "function") {
-      callAdminRun(
-        dbKnex("chat_message_files").where("id", fileId).update({ processing_status: newStatus }),
+      await callAdminRun(
+        "UPDATE chat_message_files SET processing_status = $1 WHERE id = $2",
+        [newStatus, fileId],
       );
       if (typeof adminSave === "function") adminSave();
     }
@@ -516,8 +510,10 @@ export function registerRemoteUploadRoutes(app, deps) {
       file = raw && typeof raw.then === "function" ? await raw : raw;
     }
     if (!file && typeof adminGetRow === "function") {
-      const raw: any = callAdminGetRow(dbKnex("chat_message_files").where("id", fileId).first());
-      file = raw && typeof raw.then === "function" ? await raw : raw;
+      file = await callAdminGetRow(
+        "SELECT * FROM chat_message_files WHERE id = $1 LIMIT 1",
+        [fileId],
+      );
     }
     if (!file) return res.status(404).end();
 
@@ -615,8 +611,10 @@ export function registerRemoteUploadRoutes(app, deps) {
       file = raw && typeof raw.then === "function" ? await raw : raw;
     }
     if (!file && typeof adminGetRow === "function") {
-      const raw: any = callAdminGetRow(dbKnex("chat_message_files").where("id", fileId).first());
-      file = raw && typeof raw.then === "function" ? await raw : raw;
+      file = await callAdminGetRow(
+        "SELECT * FROM chat_message_files WHERE id = $1 LIMIT 1",
+        [fileId],
+      );
     }
 
     if (!file) {
@@ -626,25 +624,34 @@ export function registerRemoteUploadRoutes(app, deps) {
 
     const finalStatus = status || "ready";
     if (typeof adminRun === "function") {
-      const updatePayload: any = { processing_status: finalStatus };
+      const setClauses: string[] = ["processing_status = $1"];
+      const values: unknown[] = [finalStatus];
+      let idx = 2;
       if (transcodedStorageKey) {
-        updatePayload.storage_key = transcodedStorageKey;
-        updatePayload.stored_name = path.basename(transcodedStorageKey);
+        setClauses.push(`storage_key = ${idx++}`, `stored_name = ${idx++}`);
+        values.push(transcodedStorageKey, path.basename(transcodedStorageKey));
       }
-      if (thumbStorageKey) updatePayload.thumb_storage_key = thumbStorageKey;
+      if (thumbStorageKey) {
+        setClauses.push(`thumb_storage_key = ${idx++}`);
+        values.push(thumbStorageKey);
+      }
       if (Number.isFinite(Number(width)) && Number(width) > 0) {
-        updatePayload.width_px = Number(width);
+        setClauses.push(`width_px = ${idx++}`);
+        values.push(Number(width));
       }
       if (Number.isFinite(Number(height)) && Number(height) > 0) {
-        updatePayload.height_px = Number(height);
+        setClauses.push(`height_px = ${idx++}`);
+        values.push(Number(height));
       }
       if (Number.isFinite(Number(duration)) && Number(duration) >= 0) {
-        updatePayload.duration_seconds = Number(duration);
+        setClauses.push(`duration_seconds = ${idx++}`);
+        values.push(Number(duration));
       }
-      const rawUpdate: any = callAdminRun(
-        dbKnex("chat_message_files").where("id", fileId).update(updatePayload),
+      values.push(fileId);
+      await callAdminRun(
+        `UPDATE chat_message_files SET ${setClauses.join(", ")} WHERE id = ${idx}`,
+        values,
       );
-      if (rawUpdate && typeof rawUpdate.then === "function") await rawUpdate;
       if (typeof adminSave === "function") adminSave();
     }
 
@@ -656,7 +663,8 @@ export function registerRemoteUploadRoutes(app, deps) {
     let messageRow: any = null;
     if (file.message_id && typeof adminGetRow === "function") {
       const rawMsg: any = callAdminGetRow(
-        dbKnex("chat_messages").where("id", file.message_id).first(),
+        "SELECT * FROM chat_messages WHERE id = $1 LIMIT 1",
+        [file.message_id],
       );
       messageRow = rawMsg && typeof rawMsg.then === "function" ? await rawMsg : rawMsg;
       chatId = messageRow?.chat_id || null;
@@ -843,12 +851,9 @@ export function registerRemoteUploadRoutes(app, deps) {
     } else if (inserted && typeof inserted === "object" && inserted.id) {
       fileId = inserted.id;
     } else if (typeof adminGetRow === "function") {
-      const row: any = callAdminGetRow(
-        dbKnex("chat_message_files")
-          .select("id")
-          .where("storage_key", generatedKey)
-          .orderBy("id", "desc")
-          .first(),
+      const row: any = await callAdminGetRow(
+        "SELECT id FROM chat_message_files WHERE storage_key = $1 ORDER BY id DESC LIMIT 1",
+        [generatedKey],
       );
       fileId = row?.id || 1;
     } else {
@@ -879,11 +884,8 @@ export function registerRemoteUploadRoutes(app, deps) {
     }
     if (!file && typeof adminGetRow === "function") {
       const raw: any = callAdminGetRow(
-        dbKnex("chat_message_files")
-          .where((builder) => {
-            builder.where("id", idParam).orWhere("stored_name", idParam).orWhere("storage_key", idParam);
-          })
-          .first(),
+        "SELECT * FROM chat_message_files WHERE id = $1 OR stored_name = $1 OR storage_key = $1 LIMIT 1",
+        [idParam],
       );
       file = raw && typeof raw.then === "function" ? await raw : raw;
     }

@@ -55,18 +55,13 @@ async function main() {
       "SELECT COUNT(*) AS count FROM sessions WHERE user_id = ?",
       [user.id],
     );
-    await dbApi.run("BEGIN");
-    try {
-      await dbApi.run("UPDATE users SET banned = ? WHERE id = ?", [
+    await dbApi.transaction(async (tx) => {
+      await tx.run("UPDATE users SET banned = ? WHERE id = ?", [
         nextBanned,
         user.id,
       ]);
-      await dbApi.run("DELETE FROM sessions WHERE user_id = ?", [user.id]);
-      await dbApi.run("COMMIT");
-    } catch (error) {
-      await dbApi.run("ROLLBACK");
-      throw error;
-    }
+      await tx.run("DELETE FROM sessions WHERE user_id = ?", [user.id]);
+          });
     await dbApi.save();
 
     console.log(

@@ -1,52 +1,31 @@
-import { describe, expect, test, afterEach } from "vitest";
-import { createRawTestDb, createTestDb, migrations } from "./testDbHelper.ts";
+import { describe, expect, test } from "vitest";
+import {
+  BASELINE_MIGRATION_NAME,
+  getAppliedMigrations,
+  runDatabaseMigrations,
+} from "../../../src/server/db/migrate.ts";
 
-describe("Database Migrations Integration", () => {
-  let activeDb: any = null;
+describe("Prisma 7 PostgreSQL Migrations Integration", () => {
+  test("applies baseline and records _prisma_migrations cleanly", async () => {
+    const first = await runDatabaseMigrations({
+      autoBackup: false,
+      logger: { log: () => {}, warn: () => {}, error: console.error },
+    });
+    expect(first.appliedMigrations).toContain(BASELINE_MIGRATION_NAME);
 
-  afterEach(() => {
-    if (activeDb) {
-      try {
-        activeDb.close();
-      } catch {}
-      activeDb = null;
-    }
+    const applied = await getAppliedMigrations();
+    expect(applied).toContain(BASELINE_MIGRATION_NAME);
   });
 
-  test("applies all migrations sequentially from version 0 to latest", async () => {
-    activeDb = await createRawTestDb();
-    expect(activeDb.getSchemaVersion()).toBe(0);
-
-    const sortedMigrations = [...migrations].sort(
-      (a, b) => a.version - b.version,
-    );
-    expect(sortedMigrations.length).toBe(migrations.length);
-
-    let expectedVersion = 0;
-    for (const migration of sortedMigrations) {
-      await migration.up(activeDb.migrationContext);
-      activeDb.setSchemaVersion(migration.version);
-      expectedVersion = migration.version;
-      expect(activeDb.getSchemaVersion()).toBe(expectedVersion);
-    }
-
-    expect(activeDb.getSchemaVersion()).toBe(migrations.length);
-  });
-
-  test("migration idempotency: running migrations twice on the same DB instance does not fail", async () => {
-    activeDb = await createTestDb();
-    const initialVersion = activeDb.getSchemaVersion();
-    expect(initialVersion).toBe(migrations.length);
-
-    const sortedMigrations = [...migrations].sort(
-      (a, b) => a.version - b.version,
-    );
-
-    // Run all migration up functions a second time
-    for (const migration of sortedMigrations) {
-      await migration.up(activeDb.migrationContext);
-    }
-
-    expect(activeDb.getSchemaVersion()).toBe(migrations.length);
+  test("migration idempotency: running migrations twice on the same database does not fail", async () => {
+    const first = await runDatabaseMigrations({
+      autoBackup: false,
+      logger: { log: () => {}, warn: () => {}, error: console.error },
+    });
+    const second = await runDatabaseMigrations({
+      autoBackup: false,
+      logger: { log: () => {}, warn: () => {}, error: console.error },
+    });
+    expect(second.appliedMigrations).toEqual(first.appliedMigrations);
   });
 });

@@ -22,7 +22,7 @@ nano .env
 | `CLIENT_PORT` | `integer` | `80` | پورت listen مربوط به Nginx (همان چیزی که کاربران به آن متصل می‌شوند). |
 | `BIND_ADDRESS` | `string` | `localhost` | رابط شبکه مورد اتصال. برای VPS / شبکه‌های خصوصی از `localhost` استفاده کنید تا هنگام غیرفعال بودن فایروال، بک‌اند قابل افشا نباشد؛ و برای کانتینرهای Docker از `0.0.0.0` استفاده کنید. |
 | `DATA_DIR` | `string` | `<project_root>/data` | مسیر مطلق پوشه داده (پایگاه داده، آپلودها، پشتیبان‌ها). این مقدار را روی پلتفرم‌های ابری (Railway، Render، Fly.io) به مسیر mount شده volume پایدار پلتفرم تنظیم کنید. |
-| `DB_CLIENT` | `string` | `sqlite3` | درایور پایگاه داده (`sqlite3` یا `postgres`). |
+| `DB_CLIENT` | `string` | `postgres` | درایور پایگاه داده (`postgres` یا `postgres`). |
 | `POSTGRES_HOST` | `string` | `127.0.0.1` | آدرس هاست پایگاه داده PostgreSQL. |
 | `POSTGRES_PORT` | `integer` | `5432` | پورت پایگاه داده PostgreSQL. |
 | `POSTGRES_USER` | `string` | `postgres` | نام کاربری پایگاه داده PostgreSQL. |

@@ -52,10 +52,9 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   typescript: { ignoreBuildErrors: false },
   serverExternalPackages: [
-    "better-sqlite3",
-    "sql.js",
+    "@prisma/client",
+    "@prisma/adapter-pg",
     "pg",
-    "knex",
     "ws",
     "bullmq",
     "ioredis",

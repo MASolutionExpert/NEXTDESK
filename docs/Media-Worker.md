@@ -6,7 +6,7 @@ Whether deployed as a built-in background process or as a standalone cloud micro
 
 ## Overview & Key Capabilities
 
-- **Stateless & Database-Agnostic**: The Media Worker does not connect directly to SQLite or PostgreSQL. All communication with NextDesk occurs over HTTP REST endpoints (`POST /transcode`) and webhook callbacks (`POST /api/uploads/webhook/processed`). It operates identically across all database configurations.
+- **Stateless & Database-Agnostic**: The Media Worker does not connect directly to PostgreSQL. All communication with NextDesk occurs over HTTP REST endpoints (`POST /transcode`) and webhook callbacks (`POST /api/uploads/webhook/processed`). It operates identically across all database configurations.
 - **Dual Storage Engine Support**: Native support for both local filesystem storage (`STORAGE_DRIVER=local`) and S3-compatible remote object storage (`STORAGE_DRIVER=remote` — Cloudflare R2, AWS S3, MinIO, ArvanCloud, Wasabi, etc.).
 - **Intelligent Transcoding**:
   - Automatically probes video format, codecs, dimensions, and duration using `ffprobe`.

@@ -80,11 +80,11 @@ Do not run individual scripts with `sudo node` or `sudo npm`. Those direct invoc
 
 Creates a timestamped, engine-native backup in `data/backups/`:
 
-- **SQLite:** copies `chatdesk.db` to `chatdesk-backup-<timestamp>.db`.
+- **SQLite:** copies `PostgreSQL database` to `chatdesk-backup-<timestamp>.db`.
 - **PostgreSQL:** creates `chatdesk-backup-<timestamp>.dump` with `pg_dump --format=custom`.
 
 ```bash
-# SQLite or PostgreSQL; the extension is selected from DB_CLIENT
+# PostgreSQL; the extension is selected from DB_CLIENT
 npm run db:backup
 ```
 
@@ -154,14 +154,14 @@ sudo apt-get install -y pgloader
 #### 3. Run migration with pgloader
 
 ```bash
-pgloader ./data/chatdesk.db postgresql://chatdesk:password@localhost:5432/chatdesk
+pgloader ./data/PostgreSQL database postgresql://chatdesk:password@localhost:5432/chatdesk
 ```
 
 Or using a `chatdesk.load` configuration file for fine-grained control:
 
 ```lisp
 LOAD DATABASE
-     FROM sqlite://./data/chatdesk.db
+     FROM sqlite://./data/PostgreSQL database
      INTO postgresql://chatdesk:password@localhost:5432/chatdesk
 
  WITH include drop, create tables, create indexes, reset sequences

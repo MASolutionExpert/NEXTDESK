@@ -431,7 +431,7 @@ export function makeApp(overrides: any = {}) {
     restoreDatabase: () => {},
     adminClearAllMessages: () => {},
     adminResetDatabase: () => {},
-    dbConfig: { client: "sqlite3" },
+    dbConfig: { client: "postgres" },
     postgresMaintenance: {
       backup: async () => {},
       restore: async () => {},

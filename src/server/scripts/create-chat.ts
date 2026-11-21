@@ -153,11 +153,10 @@ async function main() {
     const ownerColorRow: any = await dbApi.getRow("SELECT color FROM users WHERE id = ?", [owner.id]);
     const groupColor = ownerColorRow?.color || "#10b981";
 
-    await dbApi.run("BEGIN");
     let chatId: any = null;
-    try {
+    await dbApi.transaction(async (tx) => {
       const newChatId: any = crypto.randomUUID();
-      await dbApi.run(
+      await tx.run(
         `INSERT INTO chats (
           id, name, type, group_username, group_visibility, invite_token, created_by_user_id, group_color, allow_member_invites, group_avatar_url
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -175,7 +174,7 @@ async function main() {
         ],
       );
 
-      const chatRow: any = await dbApi.getRow(
+      const chatRow: any = await tx.getRow(
         `SELECT id, name, type, group_username, group_visibility, created_by_user_id
          FROM chats
          WHERE invite_token = ?`,
@@ -186,21 +185,17 @@ async function main() {
         throw new Error("Failed to create chat.");
       }
 
-      await dbApi.run(
-        "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)",
+      await tx.run(
+        "INSERT INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
         [chatId, owner.id, "owner"],
       );
       for (const member of memberRows) {
-        await dbApi.run(
-          "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)",
+        await tx.run(
+          "INSERT INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
           [chatId, member.id, "member"],
         );
       }
-      await dbApi.run("COMMIT");
-    } catch (error) {
-      await dbApi.run("ROLLBACK");
-      throw error;
-    }
+          });
 
     await dbApi.save();
     console.log(`Chat created: id=${chatId} type=${type} name=${name}`);
@@ -223,7 +218,7 @@ async function main() {
            chat_id, provider, source_raw, source_chat_id, source_username,
            source_version, sync_metadata, stream_media, enabled, last_error, updated_at
          )
-         VALUES (?, 'telegram', ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))`,
+         VALUES (?, 'telegram', ?, ?, ?, ?, ?, ?, ?, NULL, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))`,
         [
           chatId,
           sourceRaw,

@@ -1,27 +1,12 @@
 import crypto from "node:crypto";
-import { dbKnex } from "../db/knex.ts";
 
-/**
- * Pure business logic for adding members to a chat.
- *
- * Extracted from add-chat-member.js so it can be unit-tested without a real
- * database or process.argv context.
- *
- * @param {object} dbApi   - Database API object with getRow / getAll / run / save
- * @param {object} chat    - Chat row (must have `id`, `type`, `name`)
- * @param {Array}  rows    - Array of user rows to add (each must have `id`)
- * @param {object} options
- * @param {boolean} [options.force=false] - When true, bypass the priorLeft check
- *   and add users who previously left the chat.
- * @returns {{ addedCount: number, skippedLeftCount: number }}
- */
-export async function addChatMembers(dbApi, chat, rows, { force = false }: any = {}) {
+export async function addChatMembers(dbApi: any, chat: any, rows: any[], { force = false }: any = {}) {
   const members = await dbApi.getAll(
-    "SELECT user_id FROM chat_members WHERE chat_id = ? AND role = 'owner'",
+    "SELECT user_id FROM chat_members WHERE chat_id = $1 AND role = 'owner'",
     [chat.id],
   );
   const existingOwnerIds = new Set(
-    (Array.isArray(members) ? members : []).map((row) => row?.user_id),
+    (Array.isArray(members) ? members : []).map((row: any) => row?.user_id),
   );
 
   let addedCount = 0;
@@ -29,7 +14,7 @@ export async function addChatMembers(dbApi, chat, rows, { force = false }: any =
 
   for (const row of rows) {
     const existing = await dbApi.getRow(
-      "SELECT role FROM chat_members WHERE chat_id = ? AND user_id = ?",
+      "SELECT role FROM chat_members WHERE chat_id = $1 AND user_id = $2",
       [chat.id, row.id],
     );
     if (existing?.role) continue;
@@ -38,19 +23,13 @@ export async function addChatMembers(dbApi, chat, rows, { force = false }: any =
       const priorLeft = await dbApi.getRow(
         `SELECT 1 AS prior_left
          FROM chat_left_members
-         WHERE chat_id = ? AND user_id = ?
+         WHERE chat_id = $1 AND user_id = $2
          UNION
          SELECT 1 AS prior_left
          FROM chat_messages
-         WHERE chat_id = ? AND user_id = ? AND body LIKE ?
+         WHERE chat_id = $1 AND user_id = $2 AND body LIKE $3
          LIMIT 1`,
-        [
-          chat.id,
-          row.id,
-          chat.id,
-          row.id,
-          "[[system:left:%",
-        ],
+        [chat.id, row.id, "[[system:left:%"],
       );
       if (priorLeft?.prior_left) {
         skippedLeftCount += 1;
@@ -60,12 +39,12 @@ export async function addChatMembers(dbApi, chat, rows, { force = false }: any =
 
     const role = existingOwnerIds.has(row.id) ? "owner" : "member";
     await dbApi.run(
-      "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)",
+      "INSERT INTO chat_members (chat_id, user_id, role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
       [chat.id, row.id, role],
     );
     if (chat.type === "group") {
       await dbApi.run(
-        "INSERT INTO chat_messages (id, chat_id, user_id, body) VALUES (?, ?, ?, ?)",
+        "INSERT INTO chat_messages (id, chat_id, user_id, body) VALUES ($1, $2, $3, $4)",
         [
           crypto.randomUUID(),
           chat.id,

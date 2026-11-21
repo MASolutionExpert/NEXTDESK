@@ -1,5 +1,4 @@
 import rateLimit from "express-rate-limit";
-import { dbKnex } from "../db/knex.ts";
 
 export function createUploadTools({
   fs,
@@ -216,15 +215,21 @@ export function createUploadTools({
       try {
         const fileName = path.basename(String(storedName || "").trim());
         if (!fileName) return;
-        const stillReferenced = adminGetRow(
-          dbKnex("chat_message_files").select(dbKnex.raw("1 as found")).where("stored_name", fileName).first(),
+        const rawRef = adminGetRow(
+          "SELECT 1 AS found FROM chat_message_files WHERE stored_name = $1 LIMIT 1",
+          [fileName],
         );
-        if (stillReferenced?.found) return;
-
-        const filePath = path.join(uploadRootDir, fileName);
-
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
+        const unlinkIfUnreferenced = (stillReferenced: any) => {
+          if (stillReferenced?.found) return;
+          const filePath = path.join(uploadRootDir, fileName);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        };
+        if (rawRef && typeof rawRef.then === "function") {
+          rawRef.then(unlinkIfUnreferenced).catch(() => {});
+        } else {
+          unlinkIfUnreferenced(rawRef);
         }
       } catch (_) {
         // best effort cleanup
@@ -339,8 +344,9 @@ export function createUploadTools({
     }
 
     if (userId) {
-      adminRun(dbKnex("users").where("id", userId).update({ avatar_url: null }));
-      adminSave();
+      const p = adminRun("UPDATE users SET avatar_url = NULL WHERE id = $1", [userId]);
+      if (p && typeof p.catch === "function") p.catch(() => {});
+      if (typeof adminSave === "function") adminSave();
     }
     return null;
   };
@@ -405,10 +411,8 @@ export function createUploadTools({
         let row: any = null;
         try {
           const rawRow = adminGetRow(
-            dbKnex("chat_message_files")
-              .select("original_name", "mime_type", "storage_key", "storage_driver")
-              .where("stored_name", storedName)
-              .first(),
+            "SELECT original_name, mime_type, storage_key, storage_driver FROM chat_message_files WHERE stored_name = $1 LIMIT 1",
+            [storedName],
           );
           row = (rawRow && typeof rawRow.then === "function") ? await rawRow : rawRow;
         } catch (_) {}

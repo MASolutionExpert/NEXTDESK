@@ -40,7 +40,6 @@ import { USERNAME_REGEX } from "./lib/validation.ts";
 import { USER_COLORS, setUserColor } from "./settings/colors.ts";
 import { readDbConfig, parseEnv } from "./settings/env.ts";
 import { createPostgresMaintenance } from "./lib/postgresMaintenance.ts";
-import { dbKnex } from "./db/knex.ts";
 import {
   addAllEligibleChatMembers,
   addChatMember,
@@ -50,6 +49,7 @@ import {
   adminGetRow,
   adminRun,
   adminSave,
+  adminTransaction,
   adminTransaction,
   ensureSavedChatForUser,
   clearChatMemberLeft,
@@ -653,6 +653,7 @@ const messageFileJobs: any = createMessageFileJobs({
   adminGetRow,
   adminRun,
   adminSave,
+  adminTransaction,
   listMessageFilesByMessageIds,
   removeStoredFileNames,
   uploadRootDir,
@@ -734,39 +735,32 @@ async function backfillStorageEncryption() {
   const BATCH_SIZE = 200;
 
   async function encryptMessageBatch(offset) {
-    const rawBatch: any = adminGetAll(
-      dbKnex("chat_messages")
-        .select("id", "body")
-        .whereNotNull("body")
-        .where("body", "!=", "")
-        .limit(BATCH_SIZE)
-        .offset(offset),
-    );
-    const batch = Array.isArray(rawBatch) ? rawBatch : (await rawBatch) || [];
+    const batch =
+      (await adminGetAll(
+        "SELECT id, body FROM chat_messages WHERE body IS NOT NULL AND body != '' ORDER BY id ASC LIMIT $1 OFFSET $2",
+        [BATCH_SIZE, offset],
+      )) || [];
 
     if (!batch.length) return 0;
 
     let encryptedInBatch = 0;
-    batch.forEach((row) => {
-      const body: any = String(row?.body || "");
-      if (!body || storageEncryption.isSystemMessageBody(body)) return;
+    for (const row of batch) {
+      const body = String(row?.body || "");
+      if (!body || storageEncryption.isSystemMessageBody(body)) continue;
 
-      // Valid ciphertext must remain untouched, while legacy plaintext that
-      // merely imitates the ciphertext prefix is encrypted on startup.
       const isValidCiphertext =
         storageEncryption.isEncryptedText(body) &&
         storageEncryption.decryptText(body) !== body;
-      if (isValidCiphertext) return;
+      if (isValidCiphertext) continue;
 
-      const nextBody: any = storageEncryption.encryptText(body);
-      if (nextBody === body) return;
-      adminRun(
-        dbKnex("chat_messages")
-          .where({ id: Number(row.id) })
-          .update({ body: nextBody }),
-      );
+      const nextBody = storageEncryption.encryptText(body);
+      if (nextBody === body) continue;
+      await adminRun("UPDATE chat_messages SET body = $1 WHERE id = $2", [
+        nextBody,
+        row.id,
+      ]);
       encryptedInBatch += 1;
-    });
+    }
 
     if (encryptedInBatch > 0) adminSave();
 
@@ -782,29 +776,27 @@ async function backfillStorageEncryption() {
     await encryptMessageBatch(0);
 
     // Files and avatars are typically fewer in number; process them once.
-    const rawFileRows: any = adminGetAll(dbKnex("chat_message_files").select("stored_name"));
-    const fileRows = Array.isArray(rawFileRows) ? rawFileRows : (await rawFileRows) || [];
+    const fileRows =
+      (await adminGetAll("SELECT id, stored_name FROM chat_message_files")) || [];
     let encryptedFiles = 0;
 
-    fileRows.forEach((row) => {
-      const storedName: any = path.basename(String(row?.stored_name || "").trim());
-      if (!storedName) return;
+    for (const row of fileRows) {
+      const storedName = path.basename(String(row?.stored_name || "").trim());
+      if (!storedName) continue;
 
-      const filePath: any = path.join(uploadRootDir, storedName);
-      if (!fs.existsSync(filePath)) return;
+      const filePath = path.join(uploadRootDir, storedName);
+      if (!fs.existsSync(filePath)) continue;
 
       if (storageEncryption.encryptFileInPlace(filePath)) {
         encryptedFiles += 1;
-        // Keep the record in sync with the bytes.
         try {
-          adminRun(
-            dbKnex("chat_message_files")
-              .where({ id: row.id })
-              .update({ encryption_type: "local" }),
+          await adminRun(
+            "UPDATE chat_message_files SET encryption_type = 'local' WHERE id = $1",
+            [row.id],
           );
         } catch {}
       }
-    });
+    }
 
     let encryptedAvatars = 0;
     if (fs.existsSync(avatarUploadRootDir)) {
@@ -1298,29 +1290,28 @@ async function cleanupExpiredTextOnlyMessages() {
     return { removedMessages: 0 };
   }
 
-  const rawRows: any = adminGetAll(
-    dbKnex("chat_messages")
-      .select("id", "chat_id")
-      .whereNotNull("expires_at")
-      .where("expires_at", "!=", "")
-      .whereNull("hidden_everyone_at")
-      .whereRaw("julianday(expires_at) <= julianday(?)", [new Date().toISOString()])
-      .whereNotExists(
-        dbKnex("chat_message_files")
-          .select(1)
-          .whereRaw("chat_message_files.message_id = chat_messages.id"),
-      ),
-  );
-  const rows = Array.isArray(rawRows) ? rawRows : (await rawRows) || [];
+  const rows =
+    (await adminGetAll(
+      `SELECT id, chat_id
+       FROM chat_messages
+       WHERE expires_at IS NOT NULL
+         AND expires_at != ''
+         AND hidden_everyone_at IS NULL
+         AND expires_at::timestamptz <= $1::timestamptz
+         AND NOT EXISTS (
+           SELECT 1 FROM chat_message_files
+           WHERE chat_message_files.message_id = chat_messages.id
+         )`,
+      [new Date().toISOString()],
+    )) || [];
 
-  const messageIds: any = rows.map((row) => row?.id).filter(Boolean);
-
+  const messageIds = rows.map((row: any) => row?.id).filter(Boolean);
   if (!messageIds.length) {
     return { removedMessages: 0 };
   }
 
-  const deletedByChat: any = new Map<any, any>();
-  rows.forEach((row) => {
+  const deletedByChat = new Map<any, any>();
+  rows.forEach((row: any) => {
     const chatId = row?.chat_id;
     const messageId = row?.id;
     if (!chatId || !messageId) return;
@@ -1329,18 +1320,13 @@ async function cleanupExpiredTextOnlyMessages() {
     deletedByChat.set(chatId, list);
   });
 
-  adminRun("BEGIN");
-  try {
-    chunkArray(messageIds, 500).forEach((chunk) => {
-      adminRun(dbKnex("chat_message_reads").whereIn("message_id", chunk).del());
-      adminRun(dbKnex("hidden_chat_messages").whereIn("message_id", chunk).del());
-      adminRun(dbKnex("chat_messages").whereIn("id", chunk).del());
-    });
-    adminRun("COMMIT");
-  } catch (error) {
-    adminRun("ROLLBACK");
-    throw error;
-  }
+  await adminTransaction(async (txRun) => {
+    for (const chunk of chunkArray(messageIds, 500)) {
+      await txRun("DELETE FROM chat_message_reads WHERE message_id = ANY($1::text[])", [chunk]);
+      await txRun("DELETE FROM hidden_chat_messages WHERE message_id = ANY($1::text[])", [chunk]);
+      await txRun("DELETE FROM chat_messages WHERE id = ANY($1::text[])", [chunk]);
+    }
+  });
 
   adminSave();
   deletedByChat.forEach((ids, chatId) => {
@@ -1358,45 +1344,39 @@ async function backfillTextMessageExpiry() {
   const textRetentionDays: any = getSetting("MESSAGE_TEXT_RETENTION");
   if (textRetentionDays <= 0) return 0;
 
-  const rawRow: any = adminGetRow(
-    dbKnex("chat_messages")
-      .count({ n: "*" })
-      .where((builder) => {
-        builder.whereNull("expires_at").orWhere("expires_at", "");
-      })
-      .whereNull("hidden_everyone_at")
-      .whereNotNull("body")
-      .whereRaw("TRIM(body) != ''")
-      .whereRaw("body NOT LIKE '[[system:%]]'")
-      .whereNotExists(
-        dbKnex("chat_message_files")
-          .select(1)
-          .whereRaw("chat_message_files.message_id = chat_messages.id"),
-      )
-      .first(),
+  const row = await adminGetRow(
+    `SELECT COUNT(*) AS n
+     FROM chat_messages
+     WHERE (expires_at IS NULL OR expires_at = '')
+       AND hidden_everyone_at IS NULL
+       AND body IS NOT NULL
+       AND TRIM(body) != ''
+       AND body NOT LIKE '[[system:%]]'
+       AND NOT EXISTS (
+         SELECT 1 FROM chat_message_files
+         WHERE chat_message_files.message_id = chat_messages.id
+       )`,
   );
-  const row = rawRow && typeof rawRow.then === "function" ? await rawRow : rawRow;
 
-  const pending: any = Number(row?.n || 0);
+  const pending = Number(row?.n || 0);
   if (!pending) return 0;
 
-  adminRun(
-    dbKnex("chat_messages")
-      .where((builder) => {
-        builder.whereNull("expires_at").orWhere("expires_at", "");
-      })
-      .whereNull("hidden_everyone_at")
-      .whereNotNull("body")
-      .whereRaw("TRIM(body) != ''")
-      .whereRaw("body NOT LIKE '[[system:%]]'")
-      .whereNotExists(
-        dbKnex("chat_message_files")
-          .select(1)
-          .whereRaw("chat_message_files.message_id = chat_messages.id"),
-      )
-      .update({
-        expires_at: dbKnex.raw("datetime(created_at, '+' || ? || ' days')", [textRetentionDays]),
-      }),
+  await adminRun(
+    `UPDATE chat_messages
+     SET expires_at = to_char(
+       (created_at::timestamptz + ($1 * INTERVAL '1 day')) AT TIME ZONE 'UTC',
+       'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'
+     )
+     WHERE (expires_at IS NULL OR expires_at = '')
+       AND hidden_everyone_at IS NULL
+       AND body IS NOT NULL
+       AND TRIM(body) != ''
+       AND body NOT LIKE '[[system:%]]'
+       AND NOT EXISTS (
+         SELECT 1 FROM chat_message_files
+         WHERE chat_message_files.message_id = chat_messages.id
+       )`,
+    [textRetentionDays],
   );
 
   adminSave();

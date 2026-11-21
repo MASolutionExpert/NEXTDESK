@@ -15,7 +15,6 @@
  */
 
 import { readEnvBool, readEnvInt } from "../settings/env.ts";
-import { dbKnex } from "../db/knex.ts";
 
 // ─── Setting types ────────────────────────────────────────────────────────────
 
@@ -730,7 +729,7 @@ export function validateSetting(key, raw) {
  *                               avoid a circular import)
  */
 export async function loadSettings(dbGetAll) {
-  const rawRows = typeof dbGetAll === "function" ? dbGetAll(dbKnex("app_settings").select("key", "value")) : [];
+  const rawRows = typeof dbGetAll === "function" ? dbGetAll("SELECT key, value FROM app_settings") : [];
   const rows = Array.isArray(rawRows) ? rawRows : (await rawRows) || [];
   for (const row of rows) {
     const def = DEFS_BY_KEY[String(row?.key || "")];
@@ -773,18 +772,25 @@ export function setSetting(key, rawValue, dbRun, dbSave) {
   const validation = validateSetting(key, rawValue);
   if (!validation.valid) return { ok: false, error: validation.error };
 
-  dbRun(
-    dbKnex("app_settings")
-      .insert({ key, value: validation.value })
-      .onConflict("key")
-      .merge({ value: validation.value }),
+  const maybePromise = dbRun(
+    "INSERT INTO app_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+    [key, validation.value],
   );
-  dbSave();
+  if (maybePromise && typeof maybePromise.catch === "function") {
+    maybePromise.catch((err: any) => {
+      console.warn(`[appSettings] Failed to persist setting ${key}:`, err?.message || err);
+    });
+  }
+  if (typeof dbSave === "function") dbSave();
 
   const def = DEFS_BY_KEY[key];
   _cache[key] = coerce(def, validation.value);
 
-  return { ok: true, value: _cache[key] };
+  return {
+    ok: true,
+    value: _cache[key],
+    ...(maybePromise && typeof maybePromise.then === "function" ? { _dbPromise: maybePromise } : {}),
+  };
 }
 
 /**
@@ -799,27 +805,36 @@ export function setSettings(updates, dbRun, dbSave) {
   const errors: any = {};
   const saved: any = [];
 
+  const pendingPromises: Promise<any>[] = [];
   for (const [key, rawValue] of Object.entries(updates)) {
     const validation = validateSetting(key, rawValue);
     if (!validation.valid) {
       errors[key] = validation.error;
       continue;
     }
-    dbRun(
-      dbKnex("app_settings")
-        .insert({ key, value: validation.value })
-        .onConflict("key")
-        .merge({ value: validation.value }),
+    const maybePromise = dbRun(
+      "INSERT INTO app_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+      [key, validation.value],
     );
+    if (maybePromise && typeof maybePromise.then === "function") {
+      pendingPromises.push(
+        maybePromise.catch((err: any) => {
+          console.warn(`[appSettings] Failed to persist setting ${key}:`, err?.message || err);
+        }),
+      );
+    }
     const def = DEFS_BY_KEY[key];
     _cache[key] = coerce(def, validation.value);
     saved.push(key);
   }
 
-  if (saved.length > 0) dbSave();
+  if (saved.length > 0 && typeof dbSave === "function") dbSave();
 
-  if (Object.keys(errors).length > 0) return { ok: false, errors, saved };
-  return { ok: true, saved };
+  const dbPromise = pendingPromises.length > 0 ? Promise.all(pendingPromises) : undefined;
+  if (Object.keys(errors).length > 0) {
+    return { ok: false, errors, saved, ...(dbPromise ? { _dbPromise: dbPromise } : {}) };
+  }
+  return { ok: true, saved, ...(dbPromise ? { _dbPromise: dbPromise } : {}) };
 }
 
 /**
@@ -860,10 +875,19 @@ export function resetSetting(key, dbRun, dbSave) {
   const def = DEFS_BY_KEY[key];
   if (!def) return { ok: false, error: `Unknown setting: ${key}` };
 
-  dbRun(dbKnex("app_settings").where("key", key).del());
-  dbSave();
+  const maybePromise = dbRun("DELETE FROM app_settings WHERE key = $1", [key]);
+  if (maybePromise && typeof maybePromise.catch === "function") {
+    maybePromise.catch((err: any) => {
+      console.warn(`[appSettings] Failed to reset setting ${key}:`, err?.message || err);
+    });
+  }
+  if (typeof dbSave === "function") dbSave();
   _cache[key] = resolveEnvDefault(def);
-  return { ok: true, value: _cache[key] };
+  return {
+    ok: true,
+    value: _cache[key],
+    ...(maybePromise && typeof maybePromise.then === "function" ? { _dbPromise: maybePromise } : {}),
+  };
 }
 
 export { DEFS_BY_KEY };

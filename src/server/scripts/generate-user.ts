@@ -71,8 +71,7 @@ try {
   const usedUsernames = new Set(existingRows.map((row) => String(row.username || '').toLowerCase()))
 
   let created = 0
-  await dbApi.run('BEGIN')
-  try {
+  await dbApi.transaction(async (tx) => {
     for (let i = 0; i < amount; i += 1) {
       let username = ''
       do {
@@ -87,17 +86,13 @@ try {
       const nickname =
         rawNickname.length > maxNickname ? rawNickname.slice(0, maxNickname) : rawNickname
       const assignedColor = setUserColor()
-      await dbApi.run(
-        'INSERT INTO users (id, username, nickname, avatar_url, color, status, password_hash, created_at, last_seen) VALUES (?, ?, ?, NULL, ?, ?, ?, datetime("now"), datetime("now"))',
+      await tx.run(
+        'INSERT INTO users (id, username, nickname, avatar_url, color, status, password_hash, created_at, last_seen) VALUES (?, ?, ?, NULL, ?, ?, ?, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))',
         [generateUuid(), username, nickname, assignedColor, 'online', passwordHash],
       )
       created += 1
     }
-    await dbApi.run('COMMIT')
-  } catch (error) {
-    await dbApi.run('ROLLBACK')
-    throw error
-  }
+      })
 
   await dbApi.save()
   console.log(`Generated users: ${created}`)

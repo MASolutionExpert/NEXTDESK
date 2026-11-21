@@ -3,43 +3,37 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import dotenv from "dotenv";
-import {
-  confirmAction,
-  getCliArgs,
-  getFlagValue,
-  hasForceYes,
-  promptInput,
-  serverDir,
-  dataDir,
-} from "./_cli.ts";
+import { serverDir, dataDir, getCliArgs, getFlagValue, hasForceYes, confirmAction, promptInput } from "./_cli.ts";
+import { detectRunningServer, openDatabase } from "./_db-admin.ts";
 import { createPostgresMaintenance } from "../lib/postgresMaintenance.ts";
 import { readDbConfig } from "../settings/env.ts";
-import { detectRunningServer, openDatabase } from "./_db-admin.ts";
 import { syncSecretsFromDatabase } from "../lib/secrets.ts";
 
 const projectRootDir = path.resolve(serverDir, "../..");
 dotenv.config({ path: path.join(projectRootDir, ".env"), quiet: true });
 dotenv.config({ path: path.join(serverDir, ".env"), override: true, quiet: true });
 
-const dbPath = path.join(dataDir, "chatdesk.db");
 const backupDir = path.join(dataDir, "backups");
-const serviceName = process.env.CHATDESK_SERVICE_NAME || "chatdesk.service";
-const serviceUser = process.env.CHATDESK_SERVICE_USER || "chatdesk";
-const serviceGroup = process.env.CHATDESK_SERVICE_GROUP || serviceUser;
+const serviceName = process.env.CHATDESK_SERVICE_NAME || process.env.NEXTDESK_SERVICE_NAME || "nextdesk";
 
-function listDbBackups(extension) {
+function listDbBackups(extension: string): string[] {
   const dirs = [backupDir];
   if (typeof process.getuid === "function" && process.getuid() === 0 && fs.existsSync("/root")) {
     dirs.push("/root");
   }
-  const files: any = [];
+  const files: string[] = [];
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) continue;
     try {
       const entries = fs
         .readdirSync(dir, { withFileTypes: true })
         .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(extension))
-        .filter((entry) => dir !== "/root" || entry.name.startsWith("chatdesk-backup-"))
+        .filter(
+          (entry) =>
+            dir !== "/root" ||
+            entry.name.startsWith("nextdesk-backup-") ||
+            entry.name.startsWith("chatdesk-backup-"),
+        )
         .map((entry) => path.join(dir, entry.name));
       files.push(...entries);
     } catch (_) {}
@@ -53,43 +47,37 @@ function listDbBackups(extension) {
   });
 }
 
-function resolveDbPath(value, extension) {
+function resolveDbPath(value: string, extension: string) {
   const input = String(value || "").trim();
-  if (!input) return { resolved: null, error: null };
-
+  if (!input) return { resolved: null as string | null, error: null as string | null };
   const expandedInput = input.startsWith("~/")
     ? path.join(os.homedir(), input.slice(2))
     : input;
-
   const candidates = [
     path.resolve(expandedInput),
     process.env.INIT_CWD ? path.resolve(process.env.INIT_CWD, expandedInput) : null,
     path.resolve(projectRootDir, expandedInput),
     path.resolve(backupDir, expandedInput),
-  ].filter(Boolean);
-
-  let permissionError: any = null;
-
+  ].filter(Boolean) as string[];
+  let permissionError: string | null = null;
   for (const candidate of candidates) {
     if (path.extname(candidate).toLowerCase() !== extension) continue;
-
     try {
       const stats = fs.statSync(candidate);
       if (stats.isFile()) {
         fs.accessSync(candidate, fs.constants.R_OK);
         return { resolved: candidate, error: null };
       }
-    } catch (err) {
-      if (err.code === "EACCES" || err.code === "EPERM") {
+    } catch (err: any) {
+      if (err?.code === "EACCES" || err?.code === "EPERM") {
         permissionError = `Permission denied accessing backup file: ${candidate}`;
       }
     }
   }
-
   return { resolved: null, error: permissionError };
 }
 
-async function resolveBackupPath(args, extension) {
+async function resolveBackupPath(args: string[], extension: string): Promise<string> {
   const fileFlag = getFlagValue(args, "--file");
   if (fileFlag) {
     const { resolved, error } = resolveDbPath(fileFlag, extension);
@@ -103,7 +91,6 @@ async function resolveBackupPath(args, extension) {
     }
     return resolved;
   }
-
   const detected = listDbBackups(extension);
   if (detected.length) {
     const useDetected = await confirmAction({
@@ -112,14 +99,15 @@ async function resolveBackupPath(args, extension) {
     });
     if (useDetected) return detected[0];
   }
-
   if (!process.stdin.isTTY) {
     console.error(`No backup ${extension} was selected. Provide --file or run interactively. Checked ${backupDir}.`);
     process.exit(1);
   }
-
   while (true) {
-    const answer = await promptInput({ prompt: `Enter the full path to the backup ${extension} file: `, required: true });
+    const answer = await promptInput({
+      prompt: `Enter the full path to the backup ${extension} file: `,
+      required: true,
+    });
     const { resolved, error } = resolveDbPath(answer, extension);
     if (error) {
       console.error(error);
@@ -127,15 +115,6 @@ async function resolveBackupPath(args, extension) {
     }
     if (resolved) return resolved;
     console.log(`Backup file must be an existing ${extension} file.`);
-  }
-}
-
-function applyOwnership() {
-  if (typeof process.getuid !== "function" || process.getuid() !== 0) return;
-  try {
-    execFileSync("chown", [`${serviceUser}:${serviceGroup}`, dbPath], { stdio: "pipe" });
-  } catch (error) {
-    console.warn(`Unable to apply ownership: ${error?.stderr?.toString?.() || error?.message || error}`);
   }
 }
 
@@ -147,7 +126,7 @@ function restartService() {
   try {
     execFileSync("systemctl", ["restart", serviceName], { stdio: "pipe" });
     console.log(`Restarted ${serviceName}.`);
-  } catch (error) {
+  } catch (error: any) {
     console.warn(`Unable to restart ${serviceName}: ${error?.stderr?.toString?.() || error?.message || error}`);
   }
 }
@@ -156,15 +135,15 @@ async function main() {
   const args = getCliArgs();
   const force = hasForceYes(args);
   const dbConfig = readDbConfig();
-  const extension = dbConfig.client === "postgres" ? ".dump" : ".db";
+  const extension = ".dump";
   const sourcePath = await resolveBackupPath(args, extension);
 
   const confirmed = await confirmAction({
-    prompt: `Restore "${path.basename(sourcePath)}" and replace the current database?`,
+    prompt: `Restore "${path.basename(sourcePath)}" and replace the current PostgreSQL database?`,
     force,
     defaultAnswer: "yes",
     forceHint:
-      `Refusing to restore in non-interactive mode without -y/--yes. Run: npm run db:restore -- -y --file <path-to-${extension}>`,
+      "Refusing to restore in non-interactive mode without -y/--yes. Run: npm run db:restore -- -y --file <path-to-.dump>",
   });
   if (!confirmed) {
     console.log("Aborted.");
@@ -173,53 +152,30 @@ async function main() {
 
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-  if (dbConfig.client === "postgres") {
-    const { running, port } = await detectRunningServer();
-    if (running) {
-      console.error(`Stop ChatDesk on port ${port} before restoring a PostgreSQL archive.`);
-      process.exit(1);
-    }
-    console.log(`PostgreSQL active — restoring native archive "${path.basename(sourcePath)}"...`);
-    try {
-      await createPostgresMaintenance({ config: dbConfig }).restore(sourcePath);
-      try {
-        const adminDb = await openDatabase();
-        await syncSecretsFromDatabase({
-          dbGetRow: (query) => adminDb.getRow(query),
-          projectRootDir,
-          serverDir,
-        });
-        await adminDb.close();
-      } catch (_) {}
-    } catch (error) {
-      console.error(`PostgreSQL restore failed: ${error?.message || error}`);
-      process.exit(1);
-    }
-  } else {
-    try {
-      const walPath = `${dbPath}-wal`;
-      const shmPath = `${dbPath}-shm`;
-      try { if (fs.existsSync(walPath)) fs.unlinkSync(walPath); } catch {}
-      try { if (fs.existsSync(shmPath)) fs.unlinkSync(shmPath); } catch {}
-      fs.copyFileSync(sourcePath, dbPath);
-      try {
-        const adminDb = await openDatabase({ dbPath });
-        await syncSecretsFromDatabase({
-          dbGetRow: (query) => adminDb.getRow(query),
-          projectRootDir,
-          serverDir,
-        });
-        await adminDb.close();
-      } catch (_) {}
-    } catch (error) {
-      console.error(`Restore failed: ${error?.message || error}`);
-      process.exit(1);
-    }
-
-    applyOwnership();
+  const { running, port } = await detectRunningServer();
+  if (running) {
+    console.error(`Stop NextDesk on port ${port} before restoring a PostgreSQL archive.`);
+    process.exit(1);
   }
-  restartService();
 
+  console.log(`Restoring PostgreSQL native archive "${path.basename(sourcePath)}"...`);
+  try {
+    await createPostgresMaintenance({ config: dbConfig }).restore(sourcePath);
+    try {
+      const adminDb = await openDatabase();
+      await syncSecretsFromDatabase({
+        dbGetRow: (sql: string, params?: unknown[]) => adminDb.getRow(sql, params),
+        projectRootDir,
+        serverDir,
+      });
+      await adminDb.close();
+    } catch (_) {}
+  } catch (error: any) {
+    console.error(`PostgreSQL restore failed: ${error?.message || error}`);
+    process.exit(1);
+  }
+
+  restartService();
   console.log(`Database restored from: ${sourcePath}`);
 }
 

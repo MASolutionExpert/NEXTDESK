@@ -180,22 +180,15 @@ const ServicesTab = forwardRef<any, any>(function ServicesTab(
     }
   };
 
-  const isPostgres = database?.client === "postgres";
   const databaseReachable = database?.reachable;
   const isDatabaseConfigured = database?.configured !== false;
   const databaseDescription = !isDatabaseConfigured
     ? t("admin.services.dbDisabled")
-    : isPostgres
-      ? databaseReachable === false
-        ? t("admin.services.pgUnreachable")
-        : (databaseReachable && database?.latencyMs != null
-          ? t("admin.services.pgDescMs", { ms: database.latencyMs })
-          : t("admin.services.pgDesc"))
-      : databaseReachable === false
-        ? t("admin.services.sqliteUnreachable")
-        : (databaseReachable && database?.latencyMs != null
-          ? t("admin.services.sqliteDescMs", { ms: database.latencyMs })
-          : t("admin.services.sqliteDesc"));
+    : databaseReachable === false
+      ? t("admin.services.pgUnreachable")
+      : (databaseReachable && database?.latencyMs != null
+        ? t("admin.services.pgDescMs", { ms: database.latencyMs })
+        : t("admin.services.pgDesc"));
   const handleDatabaseCheck = async () => {
     flashStatus("database", "busy", t("admin.services.checking"));
     try {

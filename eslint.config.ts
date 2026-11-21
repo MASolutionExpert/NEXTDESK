@@ -6,7 +6,7 @@ import nextPlugin from "@next/eslint-plugin-next";
 import tseslint from "typescript-eslint";
 
 export default [
-  { ignores: [".next", "dist", "coverage", "worker", "docs", ".railway"] },
+  { ignores: [".next", "dist", "coverage", "worker", "docs", ".railway", "src/generated/prisma"] },
   {
     files: ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
     ignores: ["src/server/**", "test/server/**"],
@@ -45,7 +45,7 @@ export default [
     },
   },
   {
-    files: ["src/server/**/*.ts", "test/server/**/*.ts", "server.ts", "next.config.ts", "vitest.config.ts", "eslint.config.ts", "release.config.ts"],
+    files: ["src/server/**/*.ts", "test/server/**/*.ts", "server.ts", "next.config.ts", "vitest.config.ts", "eslint.config.ts", "prisma.config.ts", "release.config.ts"],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: "module",

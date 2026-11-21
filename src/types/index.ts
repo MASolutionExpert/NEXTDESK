@@ -2,7 +2,7 @@ export type UserRole = "owner" | "admin" | "operator" | "user";
 export type ChatType = "dm" | "group" | "channel" | "saved";
 export type ChatVisibility = "public" | "private";
 export type StorageDriver = "local" | "s3" | "r2" | "gcs";
-export type DbClient = "sqlite3" | "postgres";
+export type DbClient = "postgres";
 
 export interface UserProfile {
   id: string;

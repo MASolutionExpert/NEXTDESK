@@ -1,6 +1,6 @@
 # NextDesk
 
-**NextDesk** is a self-hosted, real-time organizational messenger and helpdesk platform built as a unified **Full-Stack Next.js 16 + TypeScript Monolith** application (App Router + Custom Express/SSE/WebSocket Server + PostgreSQL/SQLite + optional FFmpeg Media Worker).
+**NextDesk** is a self-hosted, real-time organizational messenger and helpdesk platform built as a unified **Full-Stack Next.js 16 + TypeScript Monolith** application (App Router + Custom Express/SSE/WebSocket Server + PostgreSQL + Prisma 7 ORM + optional FFmpeg Media Worker).
 
 ## Highlights
 
@@ -10,7 +10,7 @@
 - 📞 **Voice & Video Calls**: WebRTC 1:1 audio/video calls with TURN diagnostics and screen sharing.
 - 📎 **Media & Object Storage**: Local or S3/Cloudflare R2 encrypted storage, voice waveforms, and FFmpeg video transcoding worker.
 - 🌐 **Bilingual (Persian & English)**: Full RTL/LTR support with Vazirmatn & DM Sans fonts and per-user language preference.
-- 🛡️ **Hardened Database Layer**: PostgreSQL (default in production) & SQLite with 27 idempotent migrations, fail-fast timeouts, pre-migration backups, and read-only `db:doctor`.
+- 🛡️ **PostgreSQL + Prisma 7 ORM**: Single-database PostgreSQL architecture powered by Rust-free Prisma 7 (`@prisma/adapter-pg` + `pg.Pool`), non-destructive live auto-migrations (`prisma migrate deploy`), pre-migration `pg_dump` backups, fail-fast timeouts, and read-only `db:doctor`.
 
 ## Quick Install (Ubuntu 22.04+)
 

@@ -2,6 +2,13 @@
 
 All notable changes to **NextDesk** are documented in this file.
 
+## 2.0.0-dev.2026112102
+
+- **Single-Database PostgreSQL + Prisma 7 ORM Architecture**: completely removed dual-database branching, SQLite (`better-sqlite3`, `sql.js`), `knex`, and `sqlNormalizer.ts`. NextDesk now runs exclusively on **PostgreSQL** via **Prisma 7** (`prisma@7.10.1`, `@prisma/client@7.10.1`, `@prisma/adapter-pg@7.10.1`, `pg@8.23.1`) with a pure-TypeScript, Rust-free generated client (`provider = "prisma-client"`) and `globalThis`-cached `pg.Pool` connection pooling.
+- **Safe, Non-Destructive Live Database Migration Layer**: introduced `prisma/schema.prisma`, `prisma.config.ts`, baseline `prisma/migrations/0001_init/migration.sql`, and `src/server/db/migrate.ts`. On every install, update, Docker container start, and server boot, migrations run automatically with best-effort `pg_dump` backup, idempotent additive column guards, safe baselining (`prisma migrate resolve --applied`), and `prisma migrate deploy` — never dropping tables or destroying live data.
+- **Modular TypeScript Repositories & Pooled Transaction Safety**: split database access into dedicated TypeScript repository modules (`usersRepo.ts`, `chatsRepo.ts`, `messagesRepo.ts`, `remoteChannelsRepo.ts`, `adminRepo.ts`) and replaced raw pooled `BEGIN`/`COMMIT` calls with dedicated-client `withPgTransaction` / `adminTransaction` across API routes, background jobs, and all 30 CLI scripts.
+- **PostgreSQL-Only Admin Panel, Installer, Docker & Real PostgreSQL 17 CI**: simplified Admin Panel maintenance and service health cards, updated `docker-compose.yaml` (PostgreSQL 17 service with persistent volume and healthcheck), `Dockerfile`, `scripts/docker-entrypoint.sh`, `scripts/install.sh`, and GitHub Actions CI (`postgres:17-alpine` service container running live Prisma 7 migrations and the full server test suite).
+
 ## 2.0.0-dev.2026112101
 
 - **100% Pure TypeScript + Unified Full-Stack Next.js 16 Monolith**: migrated the entire codebase across frontend (`src/`), backend (`src/server/`), tests (`test/` & `test/server/`), media worker (`worker/`), docs (`docs/.vitepress/`), and root configs (`server.ts`, `next.config.ts`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.ts`, `postcss.config.json`, `release.config.ts`) to TypeScript — **0 JavaScript files remaining anywhere in the repository**.

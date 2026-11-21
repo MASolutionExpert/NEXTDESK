@@ -72,7 +72,7 @@ nano .env
 ```
 
 :::info استفاده از PostgreSQL در Docker
-پایگاه داده پیشفرض NextDesk بر پایه SQLite است (`DB_CLIENT=sqlite3`). برای استفاده از PostgreSQL، فایل `.env` را ویرایش کرده و `DB_CLIENT=postgres` را به همراه متغیرهای `POSTGRES_*` تنظیم کنید، یا سرویس و volume اختیاری `postgres` را در `docker-compose.yaml` از حالت کامنت خارج کنید.
+پایگاه داده پیشفرض NextDesk بر پایه SQLite است (`DB_CLIENT=postgres`). برای استفاده از PostgreSQL، فایل `.env` را ویرایش کرده و `DB_CLIENT=postgres` را به همراه متغیرهای `POSTGRES_*` تنظیم کنید، یا سرویس و volume اختیاری `postgres` را در `docker-compose.yaml` از حالت کامنت خارج کنید.
 :::
 
 :::info کانتینر Media Worker

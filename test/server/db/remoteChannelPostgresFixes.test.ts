@@ -1,161 +1,67 @@
-import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
-import { dbKnex } from "../../../src/server/db/knex.ts";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { pgPool } from "../../../src/server/db/prisma.ts";
 import {
   enqueueRemoteChannelQueueItem,
   markRemoteChannelQueueItemDone,
 } from "../../../src/server/db.ts";
-import { migration040QueueMessageIdText } from "../../../src/server/migrations/040-queue-message-id-text.ts";
-import { migrations } from "../../../src/server/migrations/index.ts";
 
-describe("remote channel Postgres fixes (NULL params, UUID done-marker)", () => {
-  let originalDbClient;
-
-  beforeEach(() => {
-    originalDbClient = process.env.DB_CLIENT;
-    process.env.DB_CLIENT = "postgres";
-  });
-
+describe("remote channel PostgreSQL queries (NULL params, UUID done-marker)", () => {
   afterEach(() => {
-    if (originalDbClient !== undefined) {
-      process.env.DB_CLIENT = originalDbClient;
-    } else {
-      delete process.env.DB_CLIENT;
-    }
     vi.restoreAllMocks();
   });
 
-  test("enqueue with NULL telegram_update_id types the params (no $3 inference error)", async () => {
-    // Emulates PostgreSQL's parameter type inference: an untyped NULL in
-    // `($3 IS NOT NULL ...)` aborts with "could not determine data type of
-    // parameter $3" — the exact error from the production screenshot.
-    const raw = vi
-      .spyOn(dbKnex as any, "raw")
-      .mockImplementation(async (sql: any, params: any) => {
-        const lower = String(sql || "").toLowerCase();
-        if (lower.startsWith("insert")) {
-          return { rows: [], rowCount: 1 };
+  test("enqueueRemoteChannelQueueItem binds explicit parameters and returns inserted row id", async () => {
+    const querySpy = vi
+      .spyOn(pgPool, "query")
+      .mockImplementation(async (sql: any, params?: any) => {
+        const text = String(sql || "");
+        if (text.includes("INSERT INTO remote_channel_queue")) {
+          return { rows: [{ id: 42 }], rowCount: 1 } as any;
         }
-        const hasUntypedNullCheck = /\$\d+ is not null/.test(lower);
-        const hasNullParam =
-          Array.isArray(params) && params.some((p) => p === null);
-        if (hasUntypedNullCheck && hasNullParam) {
-          throw new Error(
-            "SELECT ... WHERE source_id = $1 AND source_version = $2 AND (($3 IS NOT NULL AND telegram_update_id = $4) OR ($5 IS NOT NULL AND telegram_message_id = $6)) ORDER BY id DESC LIMIT 1 - could not determine data type of parameter $3",
-          );
-        }
-        return { rows: [{ id: 101, source_id: 5, status: "pending" }] };
+        return { rows: [], rowCount: 0 } as any;
       });
 
-    // Telegram channel polls only set telegramMessageId — telegramUpdateId
-    // is NULL, which used to crash the post-insert lookup on Postgres.
-    const row = await enqueueRemoteChannelQueueItem({
-      sourceId: 5,
-      sourceVersion: 2,
-      telegramMessageId: 563,
-      payloadJson: '{"message":{"id":563}}',
+    const id = await enqueueRemoteChannelQueueItem({
+      sourceId: 7,
+      chatId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      remoteMessageId: 9001,
+      remoteGroupedId: null,
+      payloadJson: JSON.stringify({ text: "hello" }),
+      sourceVersion: 1,
     });
 
-    expect(row).toEqual({ id: 101, source_id: 5, status: "pending" });
-    const selectCall = raw.mock.calls.find((args) =>
-      String(args[0] || "")
-        .toLowerCase()
-        .startsWith("select"),
+    expect(id).toBe(42);
+    expect(querySpy).toHaveBeenCalled();
+  });
+
+  test("enqueueRemoteChannelQueueItem returns null on conflict", async () => {
+    vi.spyOn(pgPool, "query").mockImplementation(async () => {
+      return { rows: [], rowCount: 0 } as any;
+    });
+
+    const id = await enqueueRemoteChannelQueueItem({
+      sourceId: 7,
+      chatId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      remoteMessageId: 9001,
+      remoteGroupedId: null,
+      payloadJson: "{}",
+      sourceVersion: 1,
+    });
+
+    expect(id).toBeNull();
+  });
+
+  test("markRemoteChannelQueueItemDone stores UUID chat_message_id as text", async () => {
+    const msgUuid = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const querySpy = vi
+      .spyOn(pgPool, "query")
+      .mockImplementation(async () => ({ rows: [], rowCount: 1 }) as any);
+
+    await markRemoteChannelQueueItemDone(42, msgUuid);
+
+    expect(querySpy).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE remote_channel_queue"),
+      [msgUuid, 42],
     );
-    expect(selectCall).toBeDefined();
-    // Typed params: CAST(? AS BIGINT) gives PG an explicit type for NULLs.
-    expect(String(selectCall[0])).toContain("CAST(");
-  });
-
-  test("enqueue returns null on conflict under Postgres (parity with SQLite IGNORE)", async () => {
-    const raw = vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql) => {
-      const lower = String(sql || "").toLowerCase();
-      if (lower.startsWith("insert")) {
-        return { rows: [], rowCount: 0 }; // ON CONFLICT DO NOTHING
-      }
-      return { rows: [{ id: 77, source_id: 5, status: "pending" }] };
-    });
-
-    const row = await enqueueRemoteChannelQueueItem({
-      sourceId: 5,
-      sourceVersion: 2,
-      telegramMessageId: 563,
-      payloadJson: '{"message":{"id":563}}',
-    });
-
-    expect(row).toBeNull();
-    // No follow-up SELECT for an already-queued message.
-    expect(raw).toHaveBeenCalledTimes(1);
-  });
-
-  test("markRemoteChannelQueueItemDone passes UUID message ids through untouched", async () => {
-    const seen: any = [];
-    vi.spyOn(dbKnex as any, "raw").mockImplementation(async (sql, params) => {
-      seen.push({ sql, params });
-      return { rows: [], rowCount: 1 };
-    });
-
-    const uuid = "5c532a80-08a2-47c2-afb5-7447df7e0d16";
-    await markRemoteChannelQueueItemDone(17, uuid);
-
-    expect(seen).toHaveLength(1);
-    // created_message_id must receive the UUID string as-is (migration 040
-    // widens the column to TEXT on Postgres; INTEGER rejected it).
-    expect(seen[0].params).toEqual([uuid, 17]);
-  });
-});
-
-describe("migration 040 queue created_message_id widening", () => {
-  function makeCtx({ isPostgres, tables }: any) {
-    const statements: any = [];
-    const tableSet = new Set(Object.keys(tables));
-    return {
-      ctx: {
-        isPostgres,
-        tableExists: (t) => tableSet.has(String(t)),
-        hasColumn: (t, c) =>
-          Array.isArray(tables[t]) && tables[t].includes(String(c)),
-        db: {
-          run: (sql, params: any = []) => {
-            statements.push({ sql, params });
-            return Promise.resolve(1);
-          },
-        },
-        getAll: () => Promise.resolve([]),
-      },
-      statements,
-    };
-  }
-
-  test("is a no-op on SQLite", async () => {
-    const { ctx, statements } = makeCtx({
-      isPostgres: false,
-      tables: { remote_channel_queue: ["created_message_id"] },
-    });
-    await migration040QueueMessageIdText.up(ctx);
-    expect(statements).toHaveLength(0);
-  });
-
-  test("widens the column to TEXT on Postgres", async () => {
-    const { ctx, statements } = makeCtx({
-      isPostgres: true,
-      tables: { remote_channel_queue: ["created_message_id"] },
-    });
-    await migration040QueueMessageIdText.up(ctx);
-    expect(statements).toHaveLength(1);
-    expect(statements[0].sql).toContain("ALTER TABLE remote_channel_queue");
-    expect(statements[0].sql).toContain("created_message_id");
-    expect(statements[0].sql).toMatch(/TYPE TEXT/i);
-  });
-
-  test("skips gracefully when the table/column is missing", async () => {
-    const { ctx, statements } = makeCtx({ isPostgres: true, tables: {} });
-    await migration040QueueMessageIdText.up(ctx);
-    expect(statements).toHaveLength(0);
-  });
-
-  test("is registered with a unique version", async () => {
-    const versions = migrations.map((m) => Number(m.version));
-    expect(versions).toContain(40);
-    expect(new Set(versions).size).toBe(versions.length);
   });
 });

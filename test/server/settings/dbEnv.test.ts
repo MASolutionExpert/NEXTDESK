@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { readDbConfig } from "../../../src/server/settings/env.ts";
 
-describe("readDbConfig", () => {
+describe("readDbConfig (PostgreSQL-only)", () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
@@ -12,22 +12,20 @@ describe("readDbConfig", () => {
     process.env = originalEnv;
   });
 
-  test("defaults to sqlite3 client when DB_CLIENT is not set", () => {
+  test("always uses postgres client even when DB_CLIENT is unset", () => {
     delete process.env.DB_CLIENT;
     const config = readDbConfig();
-    expect(config.client).toBe("sqlite3");
+    expect(config.client).toBe("postgres");
   });
 
-  test("parses postgres configuration when DB_CLIENT=postgres", () => {
-    process.env.DB_CLIENT = "postgres";
+  test("parses PostgreSQL connection fields from POSTGRES_* environment variables", () => {
     process.env.POSTGRES_HOST = "db.example.com";
     process.env.POSTGRES_PORT = "5433";
-    process.env.POSTGRES_DB = "chatdesk_prod";
-
+    process.env.POSTGRES_DB = "nextdesk_prod";
     const config = readDbConfig();
     expect(config.client).toBe("postgres");
     expect(config.postgres.host).toBe("db.example.com");
     expect(config.postgres.port).toBe(5433);
-    expect(config.postgres.database).toBe("chatdesk_prod");
+    expect(config.postgres.database).toBe("nextdesk_prod");
   });
 });

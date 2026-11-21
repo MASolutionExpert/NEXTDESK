@@ -3,7 +3,6 @@ import request from "supertest";
 import bcrypt from "bcryptjs";
 import path from "path";
 import { makeApp, makeUserStore } from "../helpers/makeApp.ts";
-import { normalizeSqlForPostgres } from "../../../src/server/lib/sqlNormalizer.ts";
 
 const ALICE_ID = "a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4";
 const CHAT_ID = "c0c0c0c0-d1d1-4e2e-af3f-060606060606";
@@ -123,15 +122,5 @@ describe("Issue 1: File Retention Expiry Payload in /api/messages/upload and SSE
     expect(chatEventPayload.files[0].expiresAt).toBe(
       "2026-08-18T12:00:00.000Z",
     );
-  });
-});
-
-describe("Issue 3: PostgreSQL query normalization for SQLite datetime(...)", () => {
-  test("normalizeSqlForPostgres handles UPDATE SET expires_at = datetime(created_at, '+' || ? || ' days')", () => {
-    const sql = `UPDATE chat_message_files SET expires_at = datetime(created_at, '+' || ? || ' days') WHERE (expires_at IS NULL OR expires_at = '')`;
-    const normalized = normalizeSqlForPostgres(sql, [7]);
-    expect(normalized.sql).not.toContain("datetime(");
-    expect(normalized.sql).toMatch(/created_at/i);
-    expect(normalized.sql).toMatch(/interval/i);
   });
 });

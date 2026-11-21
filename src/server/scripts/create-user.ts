@@ -118,7 +118,7 @@ async function main() {
     const assignedColor = setUserColor();
     const id = crypto.randomUUID();
     await dbApi.run(
-      "INSERT INTO users (id, username, nickname, avatar_url, color, status, password_hash, created_at, last_seen) VALUES (?, ?, ?, NULL, ?, ?, ?, datetime('now'), datetime('now'))",
+      "INSERT INTO users (id, username, nickname, avatar_url, color, status, password_hash, created_at, last_seen) VALUES (?, ?, ?, NULL, ?, ?, ?, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))",
       [id, username, nickname, assignedColor, "online", passwordHash],
     );
 
@@ -133,14 +133,14 @@ async function main() {
     if (Array.isArray(autoAddChats) && autoAddChats.length > 0) {
       for (const chat of autoAddChats) {
         await dbApi.run(
-          "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, 'member')",
+          "INSERT INTO chat_members (chat_id, user_id, role) VALUES (?, ?, 'member') ON CONFLICT DO NOTHING",
           [chat.id, id]
         );
         if (chat.type === "group") {
           const body = `[[system:joined:${nickname || username}]]`;
           const msgId = crypto.randomUUID();
           await dbApi.run(
-            "INSERT INTO chat_messages (id, chat_id, user_id, body, created_at) VALUES (?, ?, ?, ?, datetime('now'))",
+            "INSERT INTO chat_messages (id, chat_id, user_id, body, created_at) VALUES (?, ?, ?, ?, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))",
             [msgId, chat.id, id, body]
           );
         }

@@ -5,7 +5,6 @@ import { openDatabase, runAdminActionViaServer } from "./_db-admin.ts";
 import { createPostgresMaintenance } from "../lib/postgresMaintenance.ts";
 import { readDbConfig } from "../settings/env.ts";
 
-const dbPath = path.join(dataDir, "chatdesk.db");
 const uploadsDir = path.join(dataDir, "uploads", "messages");
 
 async function main() {
@@ -16,62 +15,41 @@ async function main() {
   const dbConfig = readDbConfig();
 
   const confirmed = await confirmAction({
-    prompt: "This will reset database and delete uploaded message files. Continue?",
+    prompt: "This will reset the PostgreSQL database and delete uploaded message files. Continue?",
     force: hasForceFlag,
     forceHint: "Refusing to reset in non-interactive mode without -y/--yes. Run: npm run db:reset -- -y",
   });
   if (!confirmed) return console.log("Aborted.");
 
-  // When ChatDesk is running, reset through its authenticated loopback API.
-  // This preserves schema/settings and uses PostgreSQL TRUNCATE when applicable.
+  // When NextDesk is running, reset through its authenticated loopback API
+  // (schema-preserving PostgreSQL TRUNCATE).
   const remoteResult = await runAdminActionViaServer("reset_db");
   if (remoteResult) {
-    console.log("Server mode: database content reset while server is running.");
+    console.log("Server mode: PostgreSQL database content reset while server is running.");
     return;
   }
 
-  if (dbConfig.client === "postgres") {
-    const maintenance = createPostgresMaintenance({ config: dbConfig });
-    await maintenance.dropDatabase();
-    fs.rmSync(uploadsDir, { recursive: true, force: true });
-
-    const shouldRecreate = hasNoRecreateFlag
-      ? false
-      : hasRecreateFlag || hasForceFlag
-        ? true
-        : await confirmAction({ prompt: "Recreate a fresh PostgreSQL database now?", force: false });
-    if (!shouldRecreate) {
-      console.log("PostgreSQL database reset. Database recreation skipped.");
-      return;
-    }
-
-    await maintenance.createDatabase();
-    const dbApi = await openDatabase();
-    await dbApi.close();
-    console.log("PostgreSQL database reset and migrations recreated the schema.");
-    return;
-  }
-
-  const removedDb = fs.existsSync(dbPath);
-  fs.rmSync(dbPath, { force: true });
-  const removedUploads = fs.existsSync(uploadsDir);
+  const maintenance = createPostgresMaintenance({ config: dbConfig });
+  await maintenance.dropDatabase();
   fs.rmSync(uploadsDir, { recursive: true, force: true });
-  console.log(`Data directory: ${dataDir}`);
-  console.log(`Database reset: ${removedDb ? "yes" : "no (not found)"}`);
-  console.log(`Message uploads removed: ${removedUploads ? "yes" : "no (not found)"}`);
 
   const shouldRecreate = hasNoRecreateFlag
     ? false
     : hasRecreateFlag || hasForceFlag
       ? true
-      : await confirmAction({ prompt: "Recreate a fresh database now?", force: false });
-  if (!shouldRecreate) return console.log("Reset complete. Database recreation skipped.");
+      : await confirmAction({ prompt: "Recreate a fresh PostgreSQL database now?", force: false });
+  if (!shouldRecreate) {
+    console.log("PostgreSQL database reset. Database recreation skipped.");
+    return;
+  }
 
-  await import("../db.ts");
-  console.log(`Database recreated: ${fs.existsSync(dbPath) ? "yes" : "no"}`);
+  await maintenance.createDatabase();
+  const dbApi = await openDatabase();
+  await dbApi.close();
+  console.log("PostgreSQL database reset and Prisma 7 migrations recreated the schema.");
 }
 
-main().catch((error) => {
+main().catch((error: any) => {
   console.error(error?.message || error);
   process.exit(1);
 });

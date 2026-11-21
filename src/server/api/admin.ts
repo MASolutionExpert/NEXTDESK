@@ -11,7 +11,6 @@ import { createInviteToken } from "../lib/inviteTokens.ts";
 import { storageEncryption } from "../lib/storageEncryption.ts";
 import { generateUuid, isValidUuid } from "../lib/uuidUtils.ts";
 import { userEvents } from "../lib/workers/autoAddWorker.ts";
-import { dbKnex } from "../db/knex.ts";
 import crypto from "crypto";
 
 function normalizeTelegramSource(value) {
@@ -56,6 +55,7 @@ function registerAdminRoutes(app, deps) {
     adminRun,
     adminTransaction,
     adminSave,
+    adminTransaction,
     chunkArray,
     bcrypt,
     setUserColor,
@@ -75,25 +75,16 @@ function registerAdminRoutes(app, deps) {
     emitSseEvent,
   } = deps;
 
-  function toSql(builder, p: any = []) {
-    if (builder && typeof builder.toSQL === "function") {
-      const c = builder.toSQL();
-      return { sql: c.sql, params: c.bindings || [] };
-    }
-    return { sql: builder, params: p };
-  }
+  const callAdminGetRow = (sql: string, params: unknown[] = []) => adminGetRow(sql, params);
+  const callAdminGetAll = (sql: string, params: unknown[] = []) => adminGetAll(sql, params);
+  const callAdminRun = (sql: string, params: unknown[] = []) => adminRun(sql, params);
 
-  const callAdminGetRow = (builder, p?: any) => {
-    const { sql, params } = toSql(builder, p);
-    return adminGetRow(sql, params);
-  };
-  const callAdminGetAll = (builder, p?: any) => {
-    const { sql, params } = toSql(builder, p);
-    return adminGetAll(sql, params);
-  };
-  const callAdminRun = (builder, p?: any) => {
-    const { sql, params } = toSql(builder, p);
-    return adminRun(sql, params);
+  const runInTransaction = async (fn: (txRun: (sql: string, params?: unknown[]) => Promise<any>) => Promise<void>) => {
+    if (typeof adminTransaction === "function") {
+      await adminTransaction(fn);
+    } else {
+      await fn((sql: string, params: unknown[] = []) => Promise.resolve(adminRun(sql, params)));
+    }
   };
 
   app.post("/api/admin/db-tools", async (req, res) => {
@@ -136,7 +127,7 @@ function registerAdminRoutes(app, deps) {
               error: "Provide chatIds or set all=true to delete every chat.",
             });
           }
-          const rawChatIds = adminGetAll("SELECT id FROM chats ORDER BY id ASC");
+          const rawChatIds = await adminGetAll("SELECT id FROM chats ORDER BY id ASC");
           chatIds = (Array.isArray(rawChatIds) ? rawChatIds : (await rawChatIds) || [])
             .map((row) => String(row.id))
             .filter(Boolean);
@@ -150,7 +141,7 @@ function registerAdminRoutes(app, deps) {
         }
 
         const placeholders = chatIds.map(() => "?").join(", ");
-        const rawFileRows = adminGetAll(
+        const rawFileRows = await adminGetAll(
           `SELECT cmf.stored_name
            FROM chat_message_files cmf
            JOIN chat_messages cm ON cm.id = cmf.message_id
@@ -160,66 +151,51 @@ function registerAdminRoutes(app, deps) {
         const fileRows = Array.isArray(rawFileRows) ? rawFileRows : (await rawFileRows) || [];
         const storedNames = fileRows.map((row) => row.stored_name);
 
-        await adminRun("BEGIN");
-        try {
+        await runInTransaction(async (txRun) => {
           for (const chunk of chunkArray(chatIds, 500)) {
             const chunkPlaceholders = chunk.map(() => "?").join(", ");
-
-            await adminRun(
+            await txRun(
               `DELETE FROM chat_message_reads WHERE message_id IN (
                 SELECT id FROM chat_messages WHERE chat_id IN (${chunkPlaceholders})
               )`,
               chunk,
             );
-
-            await adminRun(
+            await txRun(
               `DELETE FROM chat_message_files WHERE message_id IN (
                 SELECT id FROM chat_messages WHERE chat_id IN (${chunkPlaceholders})
               )`,
               chunk,
             );
-
-            await adminRun(
+            await txRun(
               `DELETE FROM chat_messages WHERE chat_id IN (${chunkPlaceholders})`,
               chunk,
             );
-
-            await adminRun(
+            await txRun(
               `DELETE FROM chat_members WHERE chat_id IN (${chunkPlaceholders})`,
               chunk,
             );
-
-            await adminRun(
+            await txRun(
               `DELETE FROM chat_mutes WHERE chat_id IN (${chunkPlaceholders})`,
               chunk,
             );
-
-            await adminRun(
+            await txRun(
               `DELETE FROM group_removed_members WHERE chat_id IN (${chunkPlaceholders})`,
               chunk,
             );
-
-            await adminRun(
+            await txRun(
               `DELETE FROM chat_left_members WHERE chat_id IN (${chunkPlaceholders})`,
               chunk,
             );
-
-            await adminRun(
+            await txRun(
               `DELETE FROM hidden_chats WHERE chat_id IN (${chunkPlaceholders})`,
               chunk,
             );
-
-            await adminRun(
+            await txRun(
               `DELETE FROM chats WHERE id IN (${chunkPlaceholders})`,
               chunk,
             );
           }
-
-          await adminRun("COMMIT");
-        } catch (error) {
-          await adminRun("ROLLBACK");
-          throw error;
-        }
+        });
 
         removeStoredFileNames(storedNames);
         adminSave();
@@ -251,7 +227,7 @@ function registerAdminRoutes(app, deps) {
           const isIdSelector = isValidUuid(raw) || (Number.isFinite(num) && num > 0);
 
           if (!isIdSelector) {
-            const rawGroupRow = adminGetRow(
+            const rawGroupRow = await adminGetRow(
               "SELECT id FROM chats WHERE type IN ('group', 'channel') AND group_username = ?",
               [raw],
             );
@@ -285,7 +261,7 @@ function registerAdminRoutes(app, deps) {
               error: "Provide selectors or set all=true to delete every user.",
             });
           }
-          const rawAllUserIds = adminGetAll("SELECT id FROM users ORDER BY id ASC");
+          const rawAllUserIds = await adminGetAll("SELECT id FROM users ORDER BY id ASC");
           userIds = (Array.isArray(rawAllUserIds) ? rawAllUserIds : (await rawAllUserIds) || [])
             .map((row) => String(row.id))
             .filter(Boolean);
@@ -301,7 +277,7 @@ function registerAdminRoutes(app, deps) {
         }
 
         const userPlaceholders = userIds.map(() => "?").join(", ");
-        const rawOwnerChatRows = adminGetAll(
+        const rawOwnerChatRows = await adminGetAll(
           `SELECT chat_id FROM chat_members WHERE role = 'owner' AND user_id IN (${userPlaceholders})`,
           userIds,
         );
@@ -312,7 +288,7 @@ function registerAdminRoutes(app, deps) {
         const chatIdsToDelete: any = [];
         const ownershipTransfers: any = [];
         for (const chatId of ownerChatIds) {
-          const rawRemaining = adminGetAll(
+          const rawRemaining = await adminGetAll(
             `SELECT user_id FROM chat_members WHERE chat_id = ? AND user_id NOT IN (${userPlaceholders})`,
             [chatId, ...userIds],
           );
@@ -337,7 +313,7 @@ function registerAdminRoutes(app, deps) {
         );
         const chatDeletePlaceholders = uniqueChatDeletes.map(() => "?").join(", ");
         const rawChatStored = uniqueChatDeletes.length
-          ? adminGetAll(
+          ? await adminGetAll(
               `SELECT cmf.stored_name
                FROM chat_message_files cmf
                JOIN chat_messages cm ON cm.id = cmf.message_id
@@ -462,7 +438,7 @@ function registerAdminRoutes(app, deps) {
       }
 
       if (action === "check_owner_exists" || action === "check_owner") {
-        const ownerRow = adminGetRow("SELECT id FROM users WHERE role = 'owner' LIMIT 1");
+        const ownerRow = await adminGetRow("SELECT id FROM users WHERE role = 'owner' LIMIT 1");
         const existingOwner = ownerRow && typeof ownerRow.then === "function" ? await ownerRow : ownerRow;
         return res.json({ ok: true, hasOwner: Boolean(existingOwner?.id) });
       }
@@ -499,14 +475,14 @@ function registerAdminRoutes(app, deps) {
             .json({ error: "Invalid username. Allowed: lowercase english letters, numbers, ., _" });
         }
 
-        const existsRow = adminGetRow("SELECT id FROM users WHERE username = ?", [
+        const existsRow = await adminGetRow("SELECT id FROM users WHERE username = ?", [
           rawUsername,
         ]);
         const exists = existsRow && typeof existsRow.then === "function" ? await existsRow : existsRow;
         if (exists?.id) {
           return res.status(409).json({ error: "Username already exists." });
         }
-        const groupExistsRow = adminGetRow(
+        const groupExistsRow = await adminGetRow(
           "SELECT id FROM chats WHERE type IN ('group', 'channel') AND group_username = ?",
           [rawUsername],
         );
@@ -517,7 +493,7 @@ function registerAdminRoutes(app, deps) {
 
         // Only one owner is allowed
         if (role === "owner") {
-          const ownerRow = adminGetRow("SELECT id FROM users WHERE role = 'owner' LIMIT 1");
+          const ownerRow = await adminGetRow("SELECT id FROM users WHERE role = 'owner' LIMIT 1");
           const existingOwner = ownerRow && typeof ownerRow.then === "function" ? await ownerRow : ownerRow;
           if (existingOwner?.id) {
             return res.status(409).json({ error: "An owner already exists. Reassign the owner role first." });
@@ -530,12 +506,12 @@ function registerAdminRoutes(app, deps) {
         const newUserId = generateUuid();
         await adminRun(
           `INSERT INTO users (id, username, nickname, avatar_url, color, status, password_hash, created_at, last_seen, verified)
-           VALUES (?, ?, ?, NULL, ?, ?, ?, datetime('now'), datetime('now'), ?)`,
+           VALUES (?, ?, ?, NULL, ?, ?, ?, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), ?)`,
           [newUserId, rawUsername, nickname, assignedColor, "online", passwordHash, verified],
         );
 
         if (role !== "user") {
-          const newRowResult = adminGetRow("SELECT id FROM users WHERE username = ?", [rawUsername]);
+          const newRowResult = await adminGetRow("SELECT id FROM users WHERE username = ?", [rawUsername]);
           const newRow = newRowResult && typeof newRowResult.then === "function" ? await newRowResult : newRowResult;
           if (newRow?.id) await adminRun("UPDATE users SET role = ? WHERE id = ?", [role, newRow.id]);
         }
@@ -543,7 +519,7 @@ function registerAdminRoutes(app, deps) {
         adminSave();
         userEvents.emit("user:created", { userId: newUserId });
 
-        const rowResult = adminGetRow(
+        const rowResult = await adminGetRow(
           "SELECT id, username, nickname FROM users WHERE username = ?",
           [rawUsername],
         );
@@ -616,54 +592,48 @@ function registerAdminRoutes(app, deps) {
 
         const inviteToken = createInviteToken(deps.crypto);
         const fallbackColor =
-          String((await callAdminGetRow(dbKnex("users").select("color").where("id", owner.id).first()))?.color || "")
+          String((await callAdminGetRow("SELECT color FROM users WHERE id = $1 LIMIT 1", [owner.id]))?.color || "")
             .trim() || "#10b981";
 
         const auto_add_new_users = (visibility === "public" && Boolean(payload.autoAddNewUsers || payload.auto_add_new_users)) ? 1 : 0;
 
         let row: any = null;
-        await adminRun("BEGIN");
-        try {
-          const newChatId = generateUuid();
-          await callAdminRun(
-            dbKnex("chats").insert({
-              id: newChatId,
+        const newChatId = generateUuid();
+        await runInTransaction(async (txRun) => {
+          await txRun(
+            `INSERT INTO chats (
+               id, name, type, group_username, group_visibility, auto_add_new_users,
+               invite_token, created_by_user_id, group_color, allow_member_invites, group_avatar_url
+             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 1, NULL)`,
+            [
+              newChatId,
               name,
               type,
-              group_username: username || null,
-              group_visibility: visibility,
+              username || null,
+              visibility,
               auto_add_new_users,
-              invite_token: inviteToken,
-              created_by_user_id: owner.id,
-              group_color: fallbackColor,
-              allow_member_invites: 1,
-              group_avatar_url: null,
-            }),
+              inviteToken,
+              owner.id,
+              fallbackColor,
+            ],
           );
-          row = await callAdminGetRow(
-            dbKnex("chats")
-              .select("id", "name", "type", "group_username", "group_visibility", "created_by_user_id")
-              .where("group_username", username)
-              .orderBy("id", "desc")
-              .first(),
-          );
-          if (!row?.id) {
-            throw new Error("Failed to create chat.");
-          }
-          await adminRun(
-            "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)",
-            [row.id, owner.id, "owner"],
+          await txRun(
+            "INSERT INTO chat_members (chat_id, user_id, role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+            [newChatId, owner.id, "owner"],
           );
           for (const member of members) {
-            await adminRun(
-              "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)",
-              [row.id, member.id, "member"],
+            await txRun(
+              "INSERT INTO chat_members (chat_id, user_id, role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+              [newChatId, member.id, "member"],
             );
           }
-          await adminRun("COMMIT");
-        } catch (error) {
-          await adminRun("ROLLBACK");
-          throw error;
+        });
+        row = await callAdminGetRow(
+          "SELECT id, name, type, group_username, group_visibility, created_by_user_id FROM chats WHERE id = $1 LIMIT 1",
+          [newChatId],
+        );
+        if (!row?.id) {
+          throw new Error("Failed to create chat.");
         }
         adminSave();
 
@@ -696,12 +666,12 @@ function registerAdminRoutes(app, deps) {
           const sourceChatId = normalized.sourceChatId || null;
           const sourceUsername = normalized.sourceUsername || null;
 
-          adminRun(
+          await adminRun(
             `INSERT INTO remote_channel_sources (
                chat_id, provider, source_raw, source_chat_id, source_username,
                source_version, sync_metadata, stream_media, enabled, last_error, updated_at
              )
-             VALUES (?, 'telegram', ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))`,
+             VALUES (?, 'telegram', ?, ?, ?, ?, ?, ?, ?, NULL, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))`,
             [
               row.id,
               remoteChannelValue,
@@ -798,7 +768,7 @@ function registerAdminRoutes(app, deps) {
               }
             }
             await transactionRun(
-              "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)",
+              "INSERT INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
               [chat.id, user.id, "member"],
             );
             if (chat.type === "group") {
@@ -921,10 +891,9 @@ function registerAdminRoutes(app, deps) {
           auto_add_new_users = payload.auto_add_new_users ? 1 : 0;
         }
 
-        await adminRun("BEGIN");
-        try {
+        await runInTransaction(async (txRun) => {
           if (auto_add_new_users !== undefined) {
-            await adminRun(
+            await txRun(
               `UPDATE chats
                SET name = ?, group_username = ?, group_visibility = ?, group_color = ?, allow_member_invites = ?, auto_add_new_users = ?, created_by_user_id = COALESCE(?, created_by_user_id)
                WHERE id = ? AND type IN ('group', 'channel')`,
@@ -940,7 +909,7 @@ function registerAdminRoutes(app, deps) {
               ],
             );
           } else {
-            await adminRun(
+            await txRun(
               `UPDATE chats
                SET name = ?, group_username = ?, group_visibility = ?, group_color = ?, allow_member_invites = ?, created_by_user_id = COALESCE(?, created_by_user_id)
                WHERE id = ? AND type IN ('group', 'channel')`,
@@ -957,24 +926,16 @@ function registerAdminRoutes(app, deps) {
           }
 
           if (nextOwner?.id) {
-            await adminRun(
+            await txRun(
               "UPDATE chat_members SET role = 'member' WHERE chat_id = ? AND role = 'owner'",
               [chat.id],
             );
-            await adminRun(
-              "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, 'owner')",
-              [chat.id, nextOwner.id],
-            );
-            await adminRun(
-              "UPDATE chat_members SET role = 'owner' WHERE chat_id = ? AND user_id = ?",
+            await txRun(
+              "INSERT INTO chat_members (chat_id, user_id, role) VALUES (?, ?, 'owner') ON CONFLICT (chat_id, user_id) DO UPDATE SET role = 'owner'",
               [chat.id, nextOwner.id],
             );
           }
-          await adminRun("COMMIT");
-        } catch (error) {
-          await adminRun("ROLLBACK");
-          throw error;
-        }
+        });
         adminSave();
 
         const updated = await resolveChatRow(
@@ -1312,7 +1273,7 @@ function registerAdminRoutes(app, deps) {
                 : rawNickname;
             const assignedColor = setUserColor ? setUserColor() : null;
             await transactionRun(
-              "INSERT INTO users (id, username, nickname, avatar_url, color, status, password_hash, created_at, last_seen) VALUES (?, ?, ?, NULL, ?, ?, ?, datetime('now'), datetime('now'))",
+              "INSERT INTO users (id, username, nickname, avatar_url, color, status, password_hash, created_at, last_seen) VALUES (?, ?, ?, NULL, ?, ?, ?, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))",
               [generateUuid(), username, nickname, assignedColor, "online", passwordHash],
             );
             created += 1;
@@ -1337,7 +1298,7 @@ function registerAdminRoutes(app, deps) {
           });
         }
 
-        const chatRow = adminGetRow("SELECT id FROM chats WHERE id = ?", [chatId]);
+        const chatRow = await adminGetRow("SELECT id FROM chats WHERE id = ?", [chatId]);
         if (!chatRow?.id) {
           return res.status(404).json({ error: "Chat not found." });
         }
@@ -1346,10 +1307,10 @@ function registerAdminRoutes(app, deps) {
           const str = String(raw || "").trim();
           if (!str) return null;
           // Try by ID directly (UUID string)
-          const byId = adminGetRow("SELECT id FROM users WHERE id = ?", [str]);
+          const byId = await adminGetRow("SELECT id FROM users WHERE id = ?", [str]);
           if (byId?.id) return byId.id;
           // Try by username
-          const row = adminGetRow("SELECT id FROM users WHERE username = ?", [
+          const row = await adminGetRow("SELECT id FROM users WHERE username = ?", [
             str.toLowerCase(),
           ]);
           return row?.id || null;
@@ -1436,14 +1397,13 @@ function registerAdminRoutes(app, deps) {
           return stamps;
         };
 
-        adminRun("BEGIN");
-        try {
-          adminRun(
-            "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)",
+        await runInTransaction(async (txRun) => {
+          await txRun(
+            "INSERT INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
             [chatId, userAId, "member"],
           );
-          adminRun(
-            "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)",
+          await txRun(
+            "INSERT INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
             [chatId, userBId, "member"],
           );
 
@@ -1455,7 +1415,7 @@ function registerAdminRoutes(app, deps) {
               rawBody.length > maxMessageChars
                 ? rawBody.slice(0, maxMessageChars)
                 : rawBody;
-            adminRun(
+            await txRun(
               "INSERT INTO chat_messages (id, chat_id, user_id, body, created_at, read_at, read_by_user_id) VALUES (?, ?, ?, ?, ?, NULL, NULL)",
               [
                 generateUuid(),
@@ -1466,12 +1426,7 @@ function registerAdminRoutes(app, deps) {
               ],
             );
           }
-
-          adminRun("COMMIT");
-        } catch (error) {
-          adminRun("ROLLBACK");
-          throw error;
-        }
+        });
 
         adminSave();
         return res.json({ ok: true, result: { created: count, chatId } });
@@ -1483,7 +1438,7 @@ function registerAdminRoutes(app, deps) {
         const daysBack = Number(payload.daysBack || 5);
         const allowRecreate = Boolean(payload.allowRecreate);
 
-        const userRow = adminGetRow(
+        const userRow = await adminGetRow(
           `SELECT id FROM users WHERE username = ?`,
           ["demo"],
         );
@@ -1491,18 +1446,18 @@ function registerAdminRoutes(app, deps) {
         let userId = userRow?.id || null;
         if (!userId) {
           const newUserId = generateUuid();
-          adminRun(
+          await adminRun(
             `INSERT INTO users (id, username, password_hash, nickname, status, color, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
+             VALUES (?, ?, ?, ?, ?, ?, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))`,
             [newUserId, "demo", "demo", "Demo User", "online", "#10b981"],
           );
-          userId = adminGetRow("SELECT id FROM users WHERE username = ?", ["demo"])
+          userId = await adminGetRow("SELECT id FROM users WHERE username = ?", ["demo"])
               ?.id || null;
         }
 
         let chatId = payloadChatId;
         if (!chatId) {
-          const row = adminGetRow(
+          const row = await adminGetRow(
             `SELECT id FROM chats WHERE name = ? ORDER BY id ASC LIMIT 1`,
             ["ChatDesk Demo"],
           );
@@ -1511,24 +1466,24 @@ function registerAdminRoutes(app, deps) {
 
         if (!chatId) {
           const newChatId = generateUuid();
-          adminRun(
+          await adminRun(
             `INSERT INTO chats (id, name, type, created_at)
-             VALUES (?, ?, ?, datetime('now'))`,
+             VALUES (?, ?, ?, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))`,
             [newChatId, "ChatDesk Demo", "group"],
           );
 
-          chatId = adminGetRow("SELECT id FROM chats WHERE name = ?", [
+          chatId = await adminGetRow("SELECT id FROM chats WHERE name = ?", [
               "ChatDesk Demo",
             ])?.id || null;
         }
 
-        const memberRow = adminGetRow(
+        const memberRow = await adminGetRow(
           `SELECT chat_id FROM chat_members WHERE chat_id = ? AND user_id = ?`,
           [chatId, userId],
         );
 
         if (!memberRow) {
-          adminRun(
+          await adminRun(
             `INSERT INTO chat_members (chat_id, user_id, role)
              VALUES (?, ?, ?)`,
             [chatId, userId, "owner"],
@@ -1536,7 +1491,7 @@ function registerAdminRoutes(app, deps) {
         }
 
         if (!allowRecreate) {
-          const exists = adminGetRow(
+          const exists = await adminGetRow(
             `SELECT id FROM chat_messages WHERE chat_id = ? LIMIT 1`,
             [chatId],
           );
@@ -1555,10 +1510,10 @@ function registerAdminRoutes(app, deps) {
         const timestampSchedule = buildTimestampSchedule(count, daysBack);
 
         let created = 0;
-        adminRun("BEGIN");
-        try {
-          timestampSchedule.forEach((stamp, index) => {
-            adminRun(
+        await runInTransaction(async (txRun) => {
+          for (let index = 0; index < timestampSchedule.length; index += 1) {
+            const stamp = timestampSchedule[index];
+            await txRun(
               `INSERT INTO chat_messages (id, chat_id, user_id, body, created_at)
                VALUES (?, ?, ?, ?, ?)`,
               [
@@ -1570,12 +1525,8 @@ function registerAdminRoutes(app, deps) {
               ],
             );
             created += 1;
-          });
-          adminRun("COMMIT");
-        } catch (error) {
-          adminRun("ROLLBACK");
-          throw error;
-        }
+          }
+        });
 
         adminSave();
 
@@ -1614,14 +1565,14 @@ function registerAdminRoutes(app, deps) {
         let messageChatPairs: any = [];
 
         if (deleteAll) {
-          targetMessageIds = adminGetAll(
+          targetMessageIds = await adminGetAll(
             "SELECT DISTINCT message_id FROM chat_message_files ORDER BY message_id ASC",
           )
             .map((row) => row.message_id)
             .filter(Boolean);
 
           if (targetMessageIds.length) {
-            messageChatPairs = adminGetAll(
+            messageChatPairs = await adminGetAll(
               `SELECT id, chat_id FROM chat_messages WHERE id IN (${targetMessageIds
                 .map(() => "?")
                 .join(", ")})`,
@@ -1632,11 +1583,11 @@ function registerAdminRoutes(app, deps) {
             }));
           }
 
-          messageStoredNames = adminGetAll(
+          messageStoredNames = await adminGetAll(
             "SELECT stored_name FROM chat_message_files",
           ).map((row) => row.stored_name);
 
-          targetAvatarUsers = adminGetAll(
+          targetAvatarUsers = await adminGetAll(
             `SELECT id, avatar_url
              FROM users
              WHERE avatar_url LIKE '/uploads/avatars/%'
@@ -1651,7 +1602,7 @@ function registerAdminRoutes(app, deps) {
             .filter(Boolean);
 
           const byIdRows = numericIds.length
-            ? adminGetAll(
+            ? await adminGetAll(
                 `SELECT id, message_id, stored_name FROM chat_message_files WHERE id IN (${numericIds
                   .map(() => "?")
                   .join(", ")})`,
@@ -1660,7 +1611,7 @@ function registerAdminRoutes(app, deps) {
             : [];
 
           const byNameRows = named.length
-            ? adminGetAll(
+            ? await adminGetAll(
                 `SELECT id, message_id, stored_name FROM chat_message_files WHERE stored_name IN (${named
                   .map(() => "?")
                   .join(", ")})`,
@@ -1679,7 +1630,7 @@ function registerAdminRoutes(app, deps) {
           );
 
           if (targetMessageIds.length) {
-            messageChatPairs = adminGetAll(
+            messageChatPairs = await adminGetAll(
               `SELECT id, chat_id FROM chat_messages WHERE id IN (${targetMessageIds
                 .map(() => "?")
                 .join(", ")})`,
@@ -1688,7 +1639,7 @@ function registerAdminRoutes(app, deps) {
               id: row.id,
               chatId: row.chat_id,
             }));
-            messageStoredNames = adminGetAll(
+            messageStoredNames = await adminGetAll(
               `SELECT stored_name FROM chat_message_files WHERE message_id IN (${targetMessageIds
                 .map(() => "?")
                 .join(", ")})`,
@@ -1697,7 +1648,7 @@ function registerAdminRoutes(app, deps) {
           }
 
           if (named.length) {
-            targetAvatarUsers = adminGetAll(
+            targetAvatarUsers = await adminGetAll(
               `SELECT id, avatar_url
                FROM users
                WHERE avatar_url LIKE '/uploads/avatars/%'
@@ -1708,41 +1659,33 @@ function registerAdminRoutes(app, deps) {
           }
         }
 
-        adminRun("BEGIN");
-        try {
+        await runInTransaction(async (txRun) => {
           if (targetMessageIds.length) {
-            chunkArray(targetMessageIds, 500).forEach((chunk) => {
+            for (const chunk of chunkArray(targetMessageIds, 500)) {
               const placeholders = chunk.map(() => "?").join(", ");
-
-              adminRun(
+              await txRun(
                 `DELETE FROM chat_message_files WHERE message_id IN (${placeholders})`,
                 chunk,
               );
-
-              adminRun(
+              await txRun(
                 `DELETE FROM chat_messages WHERE id IN (${placeholders})`,
                 chunk,
               );
-            });
+            }
           }
           if (targetAvatarUsers.length) {
-            chunkArray(
-              targetAvatarUsers.map((row) => String(row.id)).filter(Boolean),
+            for (const chunk of chunkArray(
+              targetAvatarUsers.map((row: any) => String(row.id)).filter(Boolean),
               500,
-            ).forEach((chunk) => {
+            )) {
               const placeholders = chunk.map(() => "?").join(", ");
-
-              adminRun(
+              await txRun(
                 `UPDATE users SET avatar_url = NULL WHERE id IN (${placeholders})`,
                 chunk,
               );
-            });
+            }
           }
-          adminRun("COMMIT");
-        } catch (error) {
-          adminRun("ROLLBACK");
-          throw error;
-        }
+        });
 
         removeStoredFileNames(messageStoredNames);
         targetAvatarUsers.forEach((row) => {
@@ -1835,7 +1778,7 @@ function registerAdminRoutes(app, deps) {
         const skipQueue = Boolean(payload.skipQueue);
         const skipAllQueue = Boolean(payload.skipAllQueue);
 
-        const existing = adminGetRow(
+        const existing = await adminGetRow(
           "SELECT id, source_raw, source_chat_id, source_username, source_version, sync_metadata, stream_media, enabled, paused FROM remote_channel_sources WHERE chat_id = ?",
           [chat.id],
         );
@@ -1858,8 +1801,8 @@ function registerAdminRoutes(app, deps) {
         }
 
         if (pauseQueue) {
-          adminRun(
-            "UPDATE remote_channel_sources SET paused = 1, updated_at = datetime('now') WHERE chat_id = ?",
+          await adminRun(
+            "UPDATE remote_channel_sources SET paused = 1, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
             [chat.id],
           );
           adminSave();
@@ -1867,8 +1810,8 @@ function registerAdminRoutes(app, deps) {
         }
 
         if (resumeQueue) {
-          adminRun(
-            "UPDATE remote_channel_sources SET paused = 0, updated_at = datetime('now') WHERE chat_id = ?",
+          await adminRun(
+            "UPDATE remote_channel_sources SET paused = 0, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
             [chat.id],
           );
           adminSave();
@@ -1876,13 +1819,13 @@ function registerAdminRoutes(app, deps) {
         }
 
         if (skipQueue) {
-          adminRun(
+          await adminRun(
             `UPDATE remote_channel_queue
              SET status = 'skipped',
                  locked_at = NULL,
                  lock_owner = NULL,
                  last_error = 'Manually skipped via CLI.',
-                 processed_at = datetime('now')
+                 processed_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
              WHERE id = (
                SELECT id FROM remote_channel_queue
                WHERE source_id = ?
@@ -1897,13 +1840,13 @@ function registerAdminRoutes(app, deps) {
         }
 
         if (skipAllQueue) {
-          adminRun(
+          await adminRun(
             `UPDATE remote_channel_queue
              SET status = 'skipped',
                  locked_at = NULL,
                  lock_owner = NULL,
                  last_error = 'Manually skipped via CLI.',
-                 processed_at = datetime('now')
+                 processed_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
              WHERE source_id = ?
                AND status IN ('pending', 'retry')`,
             [existing.id],
@@ -1914,8 +1857,8 @@ function registerAdminRoutes(app, deps) {
 
         if (disableRemote) {
           if (existing?.id) {
-            adminRun(
-              "UPDATE remote_channel_sources SET enabled = 0, updated_at = datetime('now') WHERE chat_id = ?",
+            await adminRun(
+              "UPDATE remote_channel_sources SET enabled = 0, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
               [chat.id],
             );
             adminSave();
@@ -1929,8 +1872,8 @@ function registerAdminRoutes(app, deps) {
               error: `No Remote Channel configured for chat: id=${chat.id}. Configure it during channel creation with db:chat:create.`,
             });
           }
-          adminRun(
-            "UPDATE remote_channel_sources SET enabled = 1, updated_at = datetime('now') WHERE chat_id = ?",
+          await adminRun(
+            "UPDATE remote_channel_sources SET enabled = 1, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
             [chat.id],
           );
           adminSave();
@@ -1974,12 +1917,12 @@ function registerAdminRoutes(app, deps) {
                 : Number(existing?.stream_media || 0);
           const nextEnabled = Number(existing?.enabled ?? 1);
 
-          adminRun(
+          await adminRun(
             `INSERT INTO remote_channel_sources (
                chat_id, provider, source_raw, source_chat_id, source_username,
                source_version, sync_metadata, stream_media, enabled, last_error, updated_at
              )
-             VALUES (?, 'telegram', ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))
+             VALUES (?, 'telegram', ?, ?, ?, ?, ?, ?, ?, NULL, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
              ON CONFLICT(chat_id) DO UPDATE SET
                provider = excluded.provider,
                source_title = CASE
@@ -2011,7 +1954,7 @@ function registerAdminRoutes(app, deps) {
                stream_media = excluded.stream_media,
                enabled = excluded.enabled,
                last_error = NULL,
-               updated_at = datetime('now')`,
+               updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`,
             [
               chat.id,
               remoteChannelValue,
@@ -2025,13 +1968,13 @@ function registerAdminRoutes(app, deps) {
           );
 
           if (existing?.id && sourceVersion > Number(existing.source_version || 1)) {
-            adminRun(
+            await adminRun(
               `UPDATE remote_channel_queue
                SET status = 'skipped',
                    locked_at = NULL,
                    lock_owner = NULL,
                    last_error = 'Remote source changed before this item was mirrored.',
-                   processed_at = datetime('now')
+                   processed_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
                WHERE source_id = ?
                  AND status IN ('pending', 'retry', 'processing')`,
               [existing.id],
@@ -2069,8 +2012,8 @@ function registerAdminRoutes(app, deps) {
               : streamMedia === false
                 ? 0
                 : Number(existing.stream_media || 0);
-          adminRun(
-            "UPDATE remote_channel_sources SET sync_metadata = ?, stream_media = ?, updated_at = datetime('now') WHERE chat_id = ?",
+          await adminRun(
+            "UPDATE remote_channel_sources SET sync_metadata = ?, stream_media = ?, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
             [nextSyncMetadata, nextStreamMedia, chat.id],
           );
           adminSave();
@@ -2088,9 +2031,7 @@ function registerAdminRoutes(app, deps) {
       }
 
       if (action === "reset_db") {
-        // This is the online reset path used by db:reset. In PostgreSQL it
-        // delegates to the same schema-preserving TRUNCATE as the Admin Panel;
-        // in SQLite it performs the equivalent transactional row cleanup.
+        // Online schema-preserving TRUNCATE used by db:reset and the Admin Panel.
         const resetResult = await adminResetDatabase();
         removeAllMessageUploads();
         adminSave();
@@ -2101,21 +2042,15 @@ function registerAdminRoutes(app, deps) {
       }
 
       if (action === "delete_db") {
-        adminRun("BEGIN");
-
-        try {
-          adminRun("DELETE FROM chat_message_files");
-          adminRun("DELETE FROM chat_messages");
-          adminRun("DELETE FROM hidden_chats");
-          adminRun("DELETE FROM chat_members");
-          adminRun("DELETE FROM chats");
-          adminRun("DELETE FROM sessions");
-          adminRun("DELETE FROM users");
-          adminRun("COMMIT");
-        } catch (error) {
-          adminRun("ROLLBACK");
-          throw error;
-        }
+        await runInTransaction(async (txRun) => {
+          await txRun("DELETE FROM chat_message_files");
+          await txRun("DELETE FROM chat_messages");
+          await txRun("DELETE FROM hidden_chats");
+          await txRun("DELETE FROM chat_members");
+          await txRun("DELETE FROM chats");
+          await txRun("DELETE FROM sessions");
+          await txRun("DELETE FROM users");
+        });
 
         removeAllMessageUploads();
         adminSave();
