@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# chatdesk-deploy-version: 2.0.0-dev.4
+# chatdesk-deploy-version: 2.0.0-dev.5
 
 set -uo pipefail
 
@@ -3062,7 +3062,7 @@ Group=${SERVICE_GROUP}
 EnvironmentFile=${INSTALL_DIR}/.env
 WorkingDirectory=${INSTALL_DIR}/server
 Environment=NODE_ENV=production
-ExecStart=${NODE_EXEC_PATH} ${INSTALL_DIR}/server.mjs
+ExecStart=${NODE_EXEC_PATH} ${INSTALL_DIR}/server.ts
 Restart=on-failure
 RestartSec=5
 
@@ -3085,7 +3085,7 @@ User=${SERVICE_USER}
 Group=${SERVICE_GROUP}
 EnvironmentFile=${INSTALL_DIR}/.env
 WorkingDirectory=${INSTALL_DIR}/worker
-ExecStart=${NODE_EXEC_PATH} ${INSTALL_DIR}/worker/index.js
+ExecStart=${NODE_EXEC_PATH} ${INSTALL_DIR}/worker/index.ts
 Restart=on-failure
 RestartSec=5
 
@@ -3678,7 +3678,7 @@ restore_backup_if_provided() {
   fi
 
   log "Restoring database from backup: $DB_BACKUP_PATH"
-  local cmd=(npm --prefix server run db:restore -- -y --file "$DB_BACKUP_PATH")
+  local cmd=(npm run db:restore -- -y --file "$DB_BACKUP_PATH")
 
   if [[ "${RESTORE_BACKUP_QUIET:-no}" == "yes" ]]; then
     if ! run_db_command_logged_quiet "${cmd[@]}"; then
@@ -3698,7 +3698,7 @@ backup_database() {
     return 0
   fi
   log "Backing up database before update..."
-  if ! run_in_install_dir "npm --prefix server run db:backup"; then
+  if ! run_in_install_dir "npm run db:backup"; then
     warn "DB backup command failed. Update aborted."
     return 1
   fi
@@ -3722,7 +3722,7 @@ run_migrations() {
   # outside those knobs stalls, force-stop instead of hanging forever.
   # Override with DB_MIGRATION_MAX_SECONDS for very large datasets.
   local migration_max_seconds="${DB_MIGRATION_MAX_SECONDS:-900}"
-  local migrate_cmd="npm --prefix server run db:migrate"
+  local migrate_cmd="npm run db:migrate"
   if have_cmd timeout; then
     migrate_cmd="timeout --kill-after=15 ${migration_max_seconds} ${migrate_cmd}"
   else
@@ -4996,8 +4996,8 @@ resolve_chat_visibility_for_script() {
     node --input-type=module -e "
       import { pathToFileURL } from \"node:url\";
       const rootUrl = pathToFileURL(process.cwd() + \"/\");
-      const { openDatabase } = await import(new URL(\"./server/scripts/_db-admin.js\", rootUrl));
-      const { resolveChatRow } = await import(new URL(\"./server/lib/dbToolHelpers.js\", rootUrl));
+      const { openDatabase } = await import(new URL(\"./src/server/scripts/_db-admin.ts\", rootUrl));
+      const { resolveChatRow } = await import(new URL(\"./src/server/lib/dbToolHelpers.ts\", rootUrl));
       const dbApi = await openDatabase();
       try {
         const chat = await resolveChatRow(dbApi, String(process.env.CHAT_SELECTOR || \"\").trim());
@@ -5015,7 +5015,7 @@ resolve_chat_visibility_for_script() {
 # Check whether any user with role='owner' exists in the database.
 # Exits 0 if owner exists, 1 if not (or if check fails).
 check_owner_exists() {
-  run_db_command_logged_quiet npm --prefix server run db:owner:check
+  run_db_command_logged_quiet npm run db:owner:check
 }
 
 # After installation, offer to create an owner user if none exists.
@@ -5038,7 +5038,7 @@ create_owner_user() {
   username="$(prompt_non_empty "Username (lowercase letters, numbers, ., _)")"
   password="$(prompt_secret "Password")"
 
-  run_db_command npm --prefix server run db:user:create -- \
+  run_db_command npm run db:user:create -- \
     --nickname "$nickname" \
     --username "$username" \
     --password "$password" \
@@ -5137,7 +5137,7 @@ EOF
 
 db_backup() {
   log "Creating database backup..."
-  run_db_command npm --prefix server run db:backup
+  run_db_command npm run db:backup
   press_enter_to_continue
 }
 
@@ -5155,7 +5155,7 @@ db_vacuum() {
     press_enter_to_continue
     return 0
   fi
-  run_db_command npm --prefix server run db:vacuum -- -y
+  run_db_command npm run db:vacuum -- -y
   press_enter_to_continue
 }
 
@@ -5168,7 +5168,7 @@ db_restore() {
     press_enter_to_continue
     return 0
   fi
-  run_db_command npm --prefix server run db:restore -- -y --file "$backup_path"
+  run_db_command npm run db:restore -- -y --file "$backup_path"
   press_enter_to_continue
 }
 
@@ -5179,7 +5179,7 @@ db_doctor() {
     return 0
   fi
   log "Running database diagnostics (db:doctor)..."
-  if ! run_db_command npm --prefix server run db:doctor; then
+  if ! run_db_command npm run db:doctor; then
     warn "The doctor reported failures — see the [FAIL] lines above for the exact cause and fix."
   fi
   press_enter_to_continue
@@ -5194,10 +5194,10 @@ db_inspect() {
   [[ -z "$limit" ]] && limit="25"
 
   case "$kind" in
-    all) run_db_command npm --prefix server run db:inspect -- --limit "$limit" ;;
-    chat) run_db_command npm --prefix server run db:chat:inspect -- --limit "$limit" ;;
-    user) run_db_command npm --prefix server run db:user:inspect -- --limit "$limit" ;;
-    file) run_db_command npm --prefix server run db:file:inspect -- --limit "$limit" ;;
+    all) run_db_command npm run db:inspect -- --limit "$limit" ;;
+    chat) run_db_command npm run db:chat:inspect -- --limit "$limit" ;;
+    user) run_db_command npm run db:user:inspect -- --limit "$limit" ;;
+    file) run_db_command npm run db:file:inspect -- --limit "$limit" ;;
   esac
   press_enter_to_continue
 }
@@ -5214,9 +5214,9 @@ db_reset() {
   fi
 
   if [[ "$recreate" == "yes" ]]; then
-    run_db_command npm --prefix server run db:reset -- -y --recreate
+    run_db_command npm run db:reset -- -y --recreate
   else
-    run_db_command npm --prefix server run db:reset -- -y --no-recreate
+    run_db_command npm run db:reset -- -y --no-recreate
   fi
   press_enter_to_continue
 }
@@ -5227,7 +5227,7 @@ db_delete() {
     press_enter_to_continue
     return 0
   fi
-  run_db_command npm --prefix server run db:delete -- -y
+  run_db_command npm run db:delete -- -y
   press_enter_to_continue
 }
 
@@ -5244,9 +5244,9 @@ db_chat_delete() {
   fi
 
   if [[ "${#selectors[@]}" -eq 1 && "${selectors[0],,}" == "all" ]]; then
-    run_db_command npm --prefix server run db:chat:delete -- --all -y
+    run_db_command npm run db:chat:delete -- --all -y
   else
-    run_db_command npm --prefix server run db:chat:delete -- -y "${selectors[@]}"
+    run_db_command npm run db:chat:delete -- -y "${selectors[@]}"
   fi
   press_enter_to_continue
 }
@@ -5264,9 +5264,9 @@ db_file_delete() {
   fi
 
   if [[ "${#selectors[@]}" -eq 1 && "${selectors[0],,}" == "all" ]]; then
-    run_db_command npm --prefix server run db:file:delete -- --all -y
+    run_db_command npm run db:file:delete -- --all -y
   else
-    run_db_command npm --prefix server run db:file:delete -- -y "${selectors[@]}"
+    run_db_command npm run db:file:delete -- -y "${selectors[@]}"
   fi
   press_enter_to_continue
 }
@@ -5284,9 +5284,9 @@ db_user_delete() {
   fi
 
   if [[ "${#selectors[@]}" -eq 1 && "${selectors[0],,}" == "all" ]]; then
-    run_db_command npm --prefix server run db:user:delete -- --all -y
+    run_db_command npm run db:user:delete -- --all -y
   else
-    run_db_command npm --prefix server run db:user:delete -- -y "${selectors[@]}"
+    run_db_command npm run db:user:delete -- -y "${selectors[@]}"
   fi
   press_enter_to_continue
 }
@@ -5312,7 +5312,7 @@ db_user_create() {
     esac
   done
 
-  run_db_command npm --prefix server run db:user:create -- \
+  run_db_command npm run db:user:create -- \
     --nickname "$nickname" \
     --username "$username" \
     --password "$password" \
@@ -5344,7 +5344,7 @@ db_user_generate() {
   username_prefix="${username_prefix%"${username_prefix##*[![:space:]]}"}"
   [[ -z "$username_prefix" ]] && username_prefix="user"
 
-  run_db_command npm --prefix server run db:user:generate -- \
+  run_db_command npm run db:user:generate -- \
     --count "$count" \
     --password "$password" \
     --nickname-prefix "$nickname_prefix" \
@@ -5410,7 +5410,7 @@ db_chat_create() {
     fi
   fi
 
-  run_db_command npm --prefix server run db:chat:create -- "${args[@]}"
+  run_db_command npm run db:chat:create -- "${args[@]}"
   press_enter_to_continue
 }
 
@@ -5424,7 +5424,7 @@ db_chat_add() {
   add_all="$(prompt_yes_no "Add all users in the database to this chat?" "no")"
 
   if [[ "$add_all" == "yes" ]]; then
-    run_db_command npm --prefix server run db:chat:add -- "$chat" --all
+    run_db_command npm run db:chat:add -- "$chat" --all
     press_enter_to_continue
     return 0
   fi
@@ -5436,7 +5436,7 @@ db_chat_add() {
     press_enter_to_continue
     return 0
   fi
-  run_db_command npm --prefix server run db:chat:add -- "$chat" "${user_selectors[@]}"
+  run_db_command npm run db:chat:add -- "$chat" "${user_selectors[@]}"
   press_enter_to_continue
 }
 
@@ -5531,7 +5531,7 @@ db_chat_edit() {
         ;;
     esac
     
-    run_db_command npm --prefix server run db:chat:edit -- "${args[@]}"
+    run_db_command npm run db:chat:edit -- "${args[@]}"
     press_enter_to_continue
     return 0
   fi
@@ -5570,7 +5570,7 @@ db_chat_edit() {
     args+=(--disallow-member-invites)
   fi
 
-  run_db_command npm --prefix server run db:chat:edit -- "${args[@]}"
+  run_db_command npm run db:chat:edit -- "${args[@]}"
   press_enter_to_continue
 }
 
@@ -5582,7 +5582,7 @@ db_chat_verify() {
     press_enter_to_continue
     return 0
   fi
-  run_db_command npm --prefix server run db:chat:verify -- "$chat"
+  run_db_command npm run db:chat:verify -- "$chat"
   press_enter_to_continue
 }
 
@@ -5624,7 +5624,7 @@ db_user_edit() {
   [[ -n "$color" ]] && args+=(--color "$color")
   [[ -n "$role" ]] && args+=(--role "$role")
 
-  run_db_command npm --prefix server run db:user:edit -- "${args[@]}"
+  run_db_command npm run db:user:edit -- "${args[@]}"
   press_enter_to_continue
 }
 
@@ -5636,7 +5636,7 @@ db_user_ban() {
     press_enter_to_continue
     return 0
   fi
-  run_db_command npm --prefix server run db:user:ban -- -y "$user"
+  run_db_command npm run db:user:ban -- -y "$user"
   press_enter_to_continue
 }
 
@@ -5703,7 +5703,7 @@ db_remote_configure() {
 
   printf "\nTelegram will send a login code now. Enter that code when the helper asks for it.\n"
   args=(
-    node server/scripts/configure-remote-channel.js
+    node src/server/scripts/configure-remote-channel.ts
     --env-file "${INSTALL_DIR}/.env"
     --api-id "$api_id"
     --api-hash "$api_hash"
@@ -5751,7 +5751,7 @@ db_user_verify() {
     press_enter_to_continue
     return 0
   fi
-  run_db_command npm --prefix server run db:user:verify -- "$user"
+  run_db_command npm run db:user:verify -- "$user"
   press_enter_to_continue
 }
 

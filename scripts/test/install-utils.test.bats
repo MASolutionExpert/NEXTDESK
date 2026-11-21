@@ -2146,7 +2146,7 @@ setup_test_git_repo() {
   local captured_cmd
   captured_cmd="$(cat "$captured_file")"
   [[ "$captured_cmd" == *"timeout --kill-after=15"* ]]
-  [[ "$captured_cmd" == *"npm --prefix server run db:migrate"* ]]
+  [[ "$captured_cmd" == *"npm run db:migrate"* ]]
 }
 
 @test "run_migrations: maps timeout exit codes to a diagnostics hint" {

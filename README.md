@@ -1,10 +1,10 @@
 # NextDesk
 
-**NextDesk** is a self-hosted, real-time organizational messenger and helpdesk platform built as a unified **Full-Stack Next.js 16** application (App Router + Custom Express/SSE/WebSocket Server + PostgreSQL/SQLite + optional FFmpeg Media Worker).
+**NextDesk** is a self-hosted, real-time organizational messenger and helpdesk platform built as a unified **Full-Stack Next.js 16 + TypeScript Monolith** application (App Router + Custom Express/SSE/WebSocket Server + PostgreSQL/SQLite + optional FFmpeg Media Worker).
 
 ## Highlights
 
-- ⚡ **Unified Full-Stack Next.js 16**: Single runtime (`server.mjs`) serving the Next.js App Router frontend alongside Express 5 APIs, Server-Sent Events (`/api/events`), and WebSocket signaling (`/ws`).
+- ⚡ **Unified Full-Stack Next.js 16 + TypeScript Monolith**: Single runtime (`server.ts`) serving the Next.js App Router frontend alongside Express 5 APIs, Server-Sent Events (`/api/events`), and WebSocket signaling (`/ws`).
 - 🎧 **Built-in Helpdesk**: Departments, operator roles, fair routing (round-robin / least-busy), support request queues, and admin reports.
 - 💬 **Full Organizational Messenger**: Direct messages, groups, channels, replies, forwarding, mentions, pinned/hidden messages, read receipts, and offline-resilient IndexedDB caching.
 - 📞 **Voice & Video Calls**: WebRTC 1:1 audio/video calls with TURN diagnostics and screen sharing.
@@ -29,7 +29,7 @@ Manage your installation anytime from anywhere with `nextdesk-deploy` (or `chatd
 ```bash
 # Install dependencies (Node >= 24)
 npm install
-npm install --prefix server
+npm install
 npm install --prefix worker
 
 # Run unified Full-Stack Next.js dev server (frontend + API + SSE + WebSocket)

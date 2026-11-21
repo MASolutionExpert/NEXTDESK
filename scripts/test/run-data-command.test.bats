@@ -48,12 +48,12 @@ make_data_target() {
     const dbScripts = Object.entries(pkg.scripts).filter(([name]) => name.startsWith("db:"));
     if (dbScripts.length === 0) process.exit(1);
     for (const [name, command] of dbScripts) {
-      if (!command.startsWith("/bin/bash -p ../scripts/run-data-command.sh ")) {
+      if (!command.startsWith("/bin/bash -p scripts/run-data-command.sh ")) {
         console.error(`${name} does not use the privileged data-command launcher`);
         process.exit(1);
       }
     }
-  ' "$repo_root/server/package.json"
+  ' "$repo_root/package.json"
   [ "$status" -eq 0 ]
 }
 

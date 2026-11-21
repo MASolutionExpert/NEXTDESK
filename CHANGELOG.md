@@ -2,6 +2,14 @@
 
 All notable changes to ChatDesk are documented in this file.
 
+## 2.0.0-dev.5
+
+- **100% Pure TypeScript + Unified Full-Stack Next.js 16 Monolith**: converted every single `.js`, `.jsx`, and `.mjs` file across frontend (`src/`), backend (`src/server/`), tests (`test/` & `test/server/`), worker (`worker/`), docs (`docs/.vitepress/`), and root configs (`server.ts`, `next.config.ts`, `vitest.config.ts`, `eslint.config.ts`, `release.config.ts`, `tsconfig.json`, `postcss.config.json`) to TypeScript — **0 JavaScript files remaining anywhere in the repository**.
+- **Single Unified Monolith**: merged `server/` into `src/server/` and consolidated all frontend, backend, database, realtime, TypeScript, ESLint, and Vitest dependencies + all 28 `db:*` CLI scripts into one root `package.json`, executed natively by Node.js 24 (`node server.ts`).
+- Moved PWA Service Worker from `public/sw.js` to a native Next.js 16 App Router Route Handler (`src/app/sw.js/route.ts`) with `/_next/static/` caching support.
+- Added shared full-stack domain TypeScript interfaces (`src/types/index.ts`), `typescript@^5.9.3`, `typescript-eslint@^8.73.0`, `jiti@^2.7.0`, and full `tsc --noEmit` CI verification in `.github/workflows/build.yml`.
+- Updated `Dockerfile`, `worker/Dockerfile`, `scripts/install.sh`, `scripts/run-data-command.sh`, `scripts/docker-entrypoint.sh`, bats tests, `AGENTS.md`, `DESIGN.md`, `README.md`, and `README.fa_IR.md` for the pure TypeScript monolith.
+
 ## 2.0.0-dev.4
 
 - Updated `web-push` v4 ESM imports in `server/index.js` and `server/lib/secrets.js` (`import * as webpush from "web-push"`) for native `web-push@^4.0.0` named-export compatibility.

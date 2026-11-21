@@ -16,8 +16,8 @@ This document defines the design language, UI patterns, color system, typography
 
 ## 2. Tech Stack & UI Framework
 
-- **Framework**: Full-Stack Next.js 16 (App Router, React 19, JSX).
-- **Routing**: Next.js 16 App Router routes under `src/app/` paired with persistent shell state in `src/components/NextDeskApp.jsx` so active chat/SSE/WebRTC sessions survive navigation between `/chat` and `/admin`.
+- **Framework**: Full-Stack Next.js 16 + TypeScript Monolith (App Router, React 19.3, 100% TypeScript / TSX).
+- **Routing**: Next.js 16 App Router routes under `src/app/` paired with persistent shell state in `src/components/NextDeskApp.tsx` so active chat/SSE/WebRTC sessions survive navigation between `/chat` and `/admin`.
 - **Styling**: Tailwind CSS 4 with custom `@theme` variables and custom utilities in `src/app/globals.css`.
 - **Icons**: Centralized re-exports from Lucide Icons in `src/icons/lucide.js` and brand SVGs in `src/icons/BrandIcons.jsx`. *Always import icons from `src/icons/lucide.js` or `BrandIcons.jsx`, never directly from `lucide-react`*.
 - **API Boundary**: All HTTP requests **must** use `apiFetch` in `src/api/chatApi.js` (`credentials: "include"`). *Do not call native `fetch` directly inside components*.

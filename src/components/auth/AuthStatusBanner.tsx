@@ -1,0 +1,13 @@
+'use client';
+
+import { AlertCircle } from "../../icons/lucide.ts";
+
+export default function AuthStatusBanner({ status }: any) {
+  if (!status) return null;
+  return (
+    <p className="mt-3 flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/30 dark:bg-rose-900/40 dark:text-rose-200 sm:mt-4 sm:px-4 sm:py-3 sm:text-sm">
+      <AlertCircle size={16} className="shrink-0 self-center" />
+      <span>{status}</span>
+    </p>
+  );
+}

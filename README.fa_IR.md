@@ -1,10 +1,10 @@
 # NextDesk (نکست‌دسک)
 
-**NextDesk** یک پیام‌رسان سازمانی و سیستم پشتیبانی (Helpdesk) خودمیزبان و بلادرنگ است که به‌صورت یکپارچه روی **Full-Stack Next.js 16** (App Router + سرور یکپارچه Express 5 / SSE / WebSocket + PostgreSQL/SQLite + ورکر مدیای FFmpeg) پیاده‌سازی شده است.
+**NextDesk** یک پیام‌رسان سازمانی و سیستم پشتیبانی (Helpdesk) خودمیزبان و بلادرنگ است که به‌صورت یکپارچه روی **Full-Stack Next.js 16 + TypeScript Monolith** (App Router + سرور یکپارچه Express 5 / SSE / WebSocket + PostgreSQL/SQLite + ورکر مدیای FFmpeg) پیاده‌سازی شده است.
 
 ## امکانات کلیدی
 
-- ⚡ **معماری یکپارچه Full-Stack Next.js 16**: یک سرور واحد (`server.mjs`) هم‌زمان فرانت‌اند Next.js App Router، تمام APIها، جریان بلادرنگ SSE (`/api/events`) و WebSocket (`/ws`) را سرویس می‌دهد.
+- ⚡ **معماری یکپارچه Full-Stack Next.js 16 + TypeScript Monolith**: یک سرور واحد (`server.ts`) هم‌زمان فرانت‌اند Next.js App Router، تمام APIها، جریان بلادرنگ SSE (`/api/events`) و WebSocket (`/ws`) را سرویس می‌دهد.
 - 🎧 **ماژول کامل پشتیبانی (Helpdesk)**: دپارتمان‌ها، نقش اپراتور، توزیع عادلانه درخواست‌ها (Round-Robin / Least-Busy)، صف گفتگوها و گزارش‌های مدیریتی.
 - 💬 **پیام‌رسان کامل سازمانی**: پیام خصوصی، گروه، کانال، ریپلای، فوروارد، منشن، وضعیت خوانده‌شدن، کش آفلاین IndexedDB و PWA.
 - 📞 **تماس صوتی و تصویری**: تماس WebRTC همراه با اشتراک‌گذاری صفحه و ابزار بررسی TURN.
@@ -29,7 +29,7 @@
 ```bash
 # نصب وابستگی‌ها (Node >= 24)
 npm install
-npm install --prefix server
+npm install
 npm install --prefix worker
 
 # اجرای یکپارچه Full-Stack Next.js (فرانت + API + SSE + WebSocket)

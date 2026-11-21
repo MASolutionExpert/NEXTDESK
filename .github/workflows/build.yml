@@ -35,10 +35,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install server dependencies
-        run: npm install --prefix server
+      - name: Install monolith dependencies
+        run: npm install
       - name: Run server tests
-        run: npm test --prefix server
+        run: npm run test:server
 
   test-worker:
     name: Worker tests
@@ -52,8 +52,10 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - name: Install worker dependencies
         run: npm install --prefix worker
+      - name: Typecheck worker
+        run: npm --prefix worker run typecheck
       - name: Run worker tests
-        run: npm test --prefix worker
+        run: npm --prefix worker run test
 
   test-client-unit:
     name: Client unit tests
@@ -63,13 +65,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install root Next.js dependencies
+      - name: Install monolith dependencies
         run: npm install
       - name: Run client unit tests
         run: npm run test:client:unit
 
   build:
-    name: Next.js Production Build
+    name: Next.js 16 + TypeScript Production Build
     runs-on: ubuntu-latest
     needs: [release-sync, test-scripts, test-server, test-worker, test-client-unit]
     steps:
@@ -77,11 +79,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install root Next.js dependencies
+      - name: Install monolith dependencies
         run: npm install
-      - name: Install server dependencies
-        run: npm install --prefix server
-      - name: Lint Next.js source
+      - name: TypeScript typecheck (tsc --noEmit)
+        run: npm run typecheck
+      - name: Lint TypeScript monolith
         run: npm run lint
-      - name: Build Next.js production app
+      - name: Build Next.js 16 production app
         run: npm run build

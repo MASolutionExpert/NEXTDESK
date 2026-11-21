@@ -130,7 +130,7 @@ validate_current_account() {
 is_privileged_data_command() {
   local arg
   for arg in "$@"; do
-    if [[ "$arg" == *"restore-db.js"* || "$arg" == *"db:restore"* ]]; then
+    if [[ "$arg" == *"restore-db.ts"* || "$arg" == *"restore-db.js"* || "$arg" == *"db:restore"* ]]; then
       return 0
     fi
   done
