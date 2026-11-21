@@ -181,29 +181,25 @@ async function main() {
       }
     }
 
-    try {
-      if (typeof dbApi.transaction === 'function' && process.env.DB_CLIENT?.toLowerCase() === 'postgres') {
-        await dbApi.transaction(execute)
-      } else {
-        await dbApi.run('BEGIN')
-        try {
-          await execute({ raw: dbApi.run })
-          await dbApi.run('COMMIT')
-        } catch (error) {
-          await dbApi.run('ROLLBACK')
-          throw error
-        }
+    if (typeof dbApi.transaction === 'function' && process.env.DB_CLIENT?.toLowerCase() === 'postgres') {
+      await dbApi.transaction(execute)
+    } else {
+      await dbApi.run('BEGIN')
+      try {
+        await execute({ raw: dbApi.run })
+        await dbApi.run('COMMIT')
+      } catch (error) {
+        await dbApi.run('ROLLBACK')
+        throw error
       }
-
-      const fileCleanup = removeStoredFiles(storedNames)
-      await dbApi.save()
-
-      console.log(`Users deleted: ${userIds.length}`)
-      console.log(`Stored files removed: ${fileCleanup.removed}`)
-      console.log(`Stored files missing on disk: ${fileCleanup.missing}`)
-    } catch (error) {
-      throw error
     }
+
+    const fileCleanup = removeStoredFiles(storedNames)
+    await dbApi.save()
+
+    console.log(`Users deleted: ${userIds.length}`)
+    console.log(`Stored files removed: ${fileCleanup.removed}`)
+    console.log(`Stored files missing on disk: ${fileCleanup.missing}`)
   } finally {
     await dbApi.close()
   }

@@ -2,6 +2,10 @@
 
 All notable changes to ChatDesk are documented in this file.
 
+## 2.0.0-dev.10
+
+- Resolved all 3 ESLint errors across newly linted `src/server/` TypeScript modules (`no-extra-boolean-cast` in `messages.ts`, `no-empty` in `messageFileJobs.ts`, and `no-useless-catch` in `scripts/delete-user.ts`) for a 0-error `tsc --noEmit` + `eslint` + Next.js 16 production build.
+
 ## 2.0.0-dev.8
 
 - Completed remaining Knex spy callback parameter annotations in `dualDriverQueriesCoverage.test.ts`, `dualDriverRegression.test.ts`, and `remoteChannelPostgresFixes.test.ts` so `tsc --noEmit` passes with 0 errors across the entire 530-file TypeScript monolith.
