@@ -2,6 +2,10 @@
 
 All notable changes to **NextDesk** are documented in this file.
 
+## 2.0.0-dev.2026112104
+
+- **Final PostgreSQL + Prisma 7 Server Verification Fixes**: restored `createUser(username, passwordHash, nickname?, ...)` signature order in `src/server/db/usersRepo.ts`, removed duplicate `adminTransaction` import in `src/server/index.ts`, fixed template literal quoting on two `INSERT INTO users` statements, and aligned normalized timestamp format in `test/server/db/prisma.test.ts`.
+
 ## 2.0.0-dev.2026112103
 
 - **PostgreSQL + Prisma 7 CI Stabilization**: fixed SQL template literal escaping for UTC ISO timestamps across admin routes and CLI scripts, removed duplicate `adminTransaction` destructuring, standardized `?` placeholders across unit-tested helpers (`secrets.ts`, `dbToolHelpers.ts`, `inspect.ts`, `_addChatMemberLogic.ts`), aligned `db-doctor.ts` diagnostics metadata, and moved Prisma CLI npm aliases to `prisma:*` to satisfy the privileged `db:*` launcher policy.

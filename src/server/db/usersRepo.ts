@@ -81,8 +81,8 @@ export async function searchUsers(
 
 export async function createUser(
   username: string,
-  nickname: string | null,
   passwordHash: string,
+  nickname: string | null = null,
   avatarUrl: string | null = null,
   color: string | null = null,
   status = "online",

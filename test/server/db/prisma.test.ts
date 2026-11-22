@@ -150,17 +150,17 @@ describe("Prisma 7 ORM CRUD, Transactions & Non-Destructive Migrations", () => {
     const msg1Id = await createMessage(chatId, userId, "First");
     await prisma.chatMessage.update({
       where: { id: msg1Id },
-      data: { createdAt: "2026-08-11T10:00:00.000Z" },
+      data: { createdAt: "2026-08-11 10:00:00" },
     });
     const msg2Id = await createMessage(chatId, userId, "Second");
     await prisma.chatMessage.update({
       where: { id: msg2Id },
-      data: { createdAt: "2026-08-11T10:05:00.000Z" },
+      data: { createdAt: "2026-08-11 10:05:00" },
     });
 
     const after = await getMessages(chatId, {
       afterId: msg2Id,
-      afterCreatedAt: "2026-08-11T10:05:00.000Z",
+      afterCreatedAt: "2026-08-11 10:05:00",
     });
     expect(after.messages.map((m) => m.id)).toEqual([msg2Id]);
   });

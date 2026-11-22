@@ -118,7 +118,7 @@ async function main() {
     const assignedColor = setUserColor();
     const id = crypto.randomUUID();
     await dbApi.run(
-      `INSERT INTO users (id, username, nickname, avatar_url, color, status, password_hash, created_at, last_seen) VALUES (?, ?, ?, NULL, ?, ?, ?, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD`T"HH24:MI:SS"Z"'))",
+      `INSERT INTO users (id, username, nickname, avatar_url, color, status, password_hash, created_at, last_seen) VALUES (?, ?, ?, NULL, ?, ?, ?, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))`,
       [id, username, nickname, assignedColor, "online", passwordHash],
     );
 
