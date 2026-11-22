@@ -127,7 +127,7 @@ describe("computeExpiryIso — reads getSetting live (no restart required)", () 
 // ─── cleanupExpiredMessageFiles ───────────────────────────────────────────────
 
 describe("cleanupExpiredMessageFiles — retention disabled", () => {
-  test("returns zero counts without touching the DB when retention is 0", () => {
+  test("returns zero counts without touching the DB when retention is 0", async () => {
     let queryCalled = false;
     const jobs = createMessageFileJobs({
       getSetting: () => 0,
@@ -145,7 +145,7 @@ describe("cleanupExpiredMessageFiles — retention disabled", () => {
       path: { join: (...p) => p.join("/"), basename: (p) => p },
     });
 
-    const result = jobs.cleanupExpiredMessageFiles();
+    const result = await jobs.cleanupExpiredMessageFiles();
     expect(result).toEqual({ removedMessages: 0, removedFiles: 0 });
     expect(queryCalled).toBe(false);
   });
@@ -154,7 +154,7 @@ describe("cleanupExpiredMessageFiles — retention disabled", () => {
 // ─── backfillMessageFileExpiry ────────────────────────────────────────────────
 
 describe("backfillMessageFileExpiry — retention disabled", () => {
-  test("returns 0 without running any SQL when retention is 0", () => {
+  test("returns 0 without running any SQL when retention is 0", async () => {
     let queryCalled = false;
     const jobs = createMessageFileJobs({
       getSetting: () => 0,
@@ -172,7 +172,7 @@ describe("backfillMessageFileExpiry — retention disabled", () => {
       path: { join: (...p) => p.join("/"), basename: (p) => p },
     });
 
-    const result = jobs.backfillMessageFileExpiry();
+    const result = await jobs.backfillMessageFileExpiry();
     expect(result).toBe(0);
     expect(queryCalled).toBe(false);
   });
@@ -204,7 +204,7 @@ describe("cleanupMissingMessageFiles — remote storage must not be pruned", () 
     });
   }
 
-  test("does not delete a remote-storage message when its local file is absent", () => {
+  test("does not delete a remote-storage message when its local file is absent", async () => {
     const adminRunSpy = vi.fn();
     const rows = [
       {
@@ -217,14 +217,14 @@ describe("cleanupMissingMessageFiles — remote storage must not be pruned", () 
     ];
 
     const jobs = makeJobsWithRows({ rows, adminRunSpy });
-    const result = jobs.cleanupMissingMessageFiles([MESSAGE_ID]);
+    const result = await jobs.cleanupMissingMessageFiles([MESSAGE_ID]);
 
     expect(result.changed).toBe(false);
     expect(adminRunSpy).not.toHaveBeenCalledWith(expect.stringContaining("DELETE"));
     expect(adminRunSpy).not.toHaveBeenCalled();
   });
 
-  test("still deletes a local-storage message whose file is absent from disk", () => {
+  test("still deletes a local-storage message whose file is absent from disk", async () => {
     const adminRunSpy = vi.fn();
     const rows = [
       {
@@ -237,9 +237,9 @@ describe("cleanupMissingMessageFiles — remote storage must not be pruned", () 
     ];
 
     const jobs = makeJobsWithRows({ rows, adminRunSpy });
-    const result = jobs.cleanupMissingMessageFiles([MESSAGE_ID]);
+    const result = await jobs.cleanupMissingMessageFiles([MESSAGE_ID]);
 
     expect(result.changed).toBe(true);
-    expect(adminRunSpy).toHaveBeenCalledWith("BEGIN");
+    expect(adminRunSpy).toHaveBeenCalledWith(expect.stringContaining("DELETE FROM chat_messages"), expect.anything());
   });
 });

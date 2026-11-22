@@ -14,7 +14,7 @@ describe("Prisma 7 PostgreSQL Migrations Integration", () => {
     expect(first.appliedMigrations).toContain(BASELINE_MIGRATION_NAME);
 
     const applied = await getAppliedMigrations();
-    expect(applied).toContain(BASELINE_MIGRATION_NAME);
+    expect(applied.map((r: any) => r.migration_name)).toContain(BASELINE_MIGRATION_NAME);
   });
 
   test("migration idempotency: running migrations twice on the same database does not fail", async () => {

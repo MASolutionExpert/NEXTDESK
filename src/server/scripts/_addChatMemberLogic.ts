@@ -1,8 +1,13 @@
 import crypto from "node:crypto";
 
-export async function addChatMembers(dbApi: any, chat: any, rows: any[], { force = false }: any = {}) {
+export async function addChatMembers(
+  dbApi: any,
+  chat: any,
+  rows: any[],
+  { force = false }: any = {},
+) {
   const members = await dbApi.getAll(
-    "SELECT user_id FROM chat_members WHERE chat_id = $1 AND role = 'owner'",
+    "SELECT user_id FROM chat_members WHERE chat_id = ? AND role = 'owner'",
     [chat.id],
   );
   const existingOwnerIds = new Set(
@@ -14,7 +19,7 @@ export async function addChatMembers(dbApi: any, chat: any, rows: any[], { force
 
   for (const row of rows) {
     const existing = await dbApi.getRow(
-      "SELECT role FROM chat_members WHERE chat_id = $1 AND user_id = $2",
+      "SELECT role FROM chat_members WHERE chat_id = ? AND user_id = ?",
       [chat.id, row.id],
     );
     if (existing?.role) continue;
@@ -23,13 +28,13 @@ export async function addChatMembers(dbApi: any, chat: any, rows: any[], { force
       const priorLeft = await dbApi.getRow(
         `SELECT 1 AS prior_left
          FROM chat_left_members
-         WHERE chat_id = $1 AND user_id = $2
+         WHERE chat_id = ? AND user_id = ?
          UNION
          SELECT 1 AS prior_left
          FROM chat_messages
-         WHERE chat_id = $1 AND user_id = $2 AND body LIKE $3
+         WHERE chat_id = ? AND user_id = ? AND body LIKE ?
          LIMIT 1`,
-        [chat.id, row.id, "[[system:left:%"],
+        [chat.id, row.id, chat.id, row.id, "[[system:left:%"],
       );
       if (priorLeft?.prior_left) {
         skippedLeftCount += 1;
@@ -39,12 +44,12 @@ export async function addChatMembers(dbApi: any, chat: any, rows: any[], { force
 
     const role = existingOwnerIds.has(row.id) ? "owner" : "member";
     await dbApi.run(
-      "INSERT INTO chat_members (chat_id, user_id, role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+      "INSERT INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
       [chat.id, row.id, role],
     );
     if (chat.type === "group") {
       await dbApi.run(
-        "INSERT INTO chat_messages (id, chat_id, user_id, body) VALUES ($1, $2, $3, $4)",
+        "INSERT INTO chat_messages (id, chat_id, user_id, body) VALUES (?, ?, ?, ?)",
         [
           crypto.randomUUID(),
           chat.id,

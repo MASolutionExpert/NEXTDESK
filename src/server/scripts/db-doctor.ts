@@ -42,11 +42,14 @@ const section = (title: string) => line(`\n=== ${title} ===`);
 
 export async function collectDiagnostics() {
   const report: any = {
+    ok: false,
+    client: "postgres",
     engine: "postgres",
     orm: "prisma-7",
     target: describePgTarget(),
     dbServerVersion: null,
     appliedMigrations: [],
+    missingTables: [],
     findings: { ok: 0, warnings: 0, failures: 0 },
   };
   const record = (fn: (m: string) => void, msg: string) => {
@@ -58,11 +61,11 @@ export async function collectDiagnostics() {
 
   section("Configuration");
   record(ok, "Database engine: PostgreSQL (Prisma 7 + @prisma/adapter-pg)");
-  record(ok, `Target: ${report.target}`);
+  record(ok, `Target: ${report.target.host}:${report.target.port}/${report.target.database} (ssl=${report.target.ssl})`);
   const timeouts = getPostgresTimeouts();
   record(
     ok,
-    `Timeouts: connect=${timeouts.connectTimeoutMs}ms, statement=${timeouts.statementTimeoutMs}ms, lock=${timeouts.lockTimeoutMs}ms`,
+    `Timeouts: connect=${timeouts.connectionTimeoutMs}ms, statement=${timeouts.statementTimeoutMs}ms, idleInTx=${timeouts.idleInTransactionTimeoutMs}ms`,
   );
 
   section("Connectivity");
@@ -101,6 +104,7 @@ export async function collectDiagnostics() {
   }
 
   const missing = CRITICAL_TABLES.filter((t) => !tableSet.has(t));
+  report.missingTables = missing;
   if (missing.length === 0) {
     record(ok, `All ${CRITICAL_TABLES.length} critical tables present.`);
   } else {
@@ -129,6 +133,7 @@ export async function collectDiagnostics() {
     if (sz?.size) record(ok, `Database size: ${sz.size}`);
   } catch {}
 
+  report.ok = report.findings.failures === 0;
   return report;
 }
 

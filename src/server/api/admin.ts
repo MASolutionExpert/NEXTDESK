@@ -53,7 +53,6 @@ function registerAdminRoutes(app, deps) {
     adminGetAll,
     adminGetRow,
     adminRun,
-    adminTransaction,
     adminSave,
     adminTransaction,
     chunkArray,
@@ -1273,7 +1272,7 @@ function registerAdminRoutes(app, deps) {
                 : rawNickname;
             const assignedColor = setUserColor ? setUserColor() : null;
             await transactionRun(
-              "INSERT INTO users (id, username, nickname, avatar_url, color, status, password_hash, created_at, last_seen) VALUES (?, ?, ?, NULL, ?, ?, ?, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))",
+              `INSERT INTO users (id, username, nickname, avatar_url, color, status, password_hash, created_at, last_seen) VALUES (?, ?, ?, NULL, ?, ?, ?, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD`T"HH24:MI:SS"Z"'))",
               [generateUuid(), username, nickname, assignedColor, "online", passwordHash],
             );
             created += 1;
@@ -1802,7 +1801,7 @@ function registerAdminRoutes(app, deps) {
 
         if (pauseQueue) {
           await adminRun(
-            "UPDATE remote_channel_sources SET paused = 1, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
+            `UPDATE remote_channel_sources SET paused = 1, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?`,
             [chat.id],
           );
           adminSave();
@@ -1811,7 +1810,7 @@ function registerAdminRoutes(app, deps) {
 
         if (resumeQueue) {
           await adminRun(
-            "UPDATE remote_channel_sources SET paused = 0, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
+            `UPDATE remote_channel_sources SET paused = 0, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?`,
             [chat.id],
           );
           adminSave();
@@ -1858,7 +1857,7 @@ function registerAdminRoutes(app, deps) {
         if (disableRemote) {
           if (existing?.id) {
             await adminRun(
-              "UPDATE remote_channel_sources SET enabled = 0, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
+              `UPDATE remote_channel_sources SET enabled = 0, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?`,
               [chat.id],
             );
             adminSave();
@@ -1873,7 +1872,7 @@ function registerAdminRoutes(app, deps) {
             });
           }
           await adminRun(
-            "UPDATE remote_channel_sources SET enabled = 1, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
+            `UPDATE remote_channel_sources SET enabled = 1, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?`,
             [chat.id],
           );
           adminSave();
@@ -2013,7 +2012,7 @@ function registerAdminRoutes(app, deps) {
                 ? 0
                 : Number(existing.stream_media || 0);
           await adminRun(
-            "UPDATE remote_channel_sources SET sync_metadata = ?, stream_media = ?, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
+            `UPDATE remote_channel_sources SET sync_metadata = ?, stream_media = ?, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?`,
             [nextSyncMetadata, nextStreamMedia, chat.id],
           );
           adminSave();

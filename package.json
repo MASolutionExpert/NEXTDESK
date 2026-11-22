@@ -63,9 +63,9 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "postinstall": "prisma generate",
-    "db:generate": "prisma generate",
-    "db:migrate:status": "prisma migrate status",
-    "db:migrate:deploy": "prisma migrate deploy"
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:status": "prisma migrate status",
+    "prisma:migrate:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1173.0",

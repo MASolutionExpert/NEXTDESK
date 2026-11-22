@@ -30,7 +30,7 @@ describe("remote channel PostgreSQL queries (NULL params, UUID done-marker)", ()
       sourceVersion: 1,
     });
 
-    expect(id).toBe(42);
+    expect(id?.id).toBe(42);
     expect(querySpy).toHaveBeenCalled();
   });
 

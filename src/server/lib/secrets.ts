@@ -71,7 +71,7 @@ export async function ensureSystemSecrets({
     if (typeof dbGetRow !== "function") return null;
     try {
       const row = await dbGetRow(
-        "SELECT value FROM app_settings WHERE key = $1 LIMIT 1",
+        "SELECT value FROM app_settings WHERE key = ? LIMIT 1",
         [key],
       );
       return row?.value ? normalizeEnvSecret(row.value) : null;
@@ -84,7 +84,7 @@ export async function ensureSystemSecrets({
     if (typeof dbRun !== "function") return;
     try {
       await dbRun(
-        "INSERT INTO app_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+        "INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
         [key, value],
       );
     } catch (err) {

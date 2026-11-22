@@ -14,7 +14,7 @@ describe("backup-db CLI (PostgreSQL-only)", () => {
   test("loads dotenv configuration like sibling db:* scripts", () => {
     const source = fs.readFileSync(backupScriptPath, "utf8");
     expect(source).toMatch(/import dotenv from ["']dotenv["']/);
-    expect(source).toMatch(/dotenv.config(/);
+    expect(source).toMatch(/dotenv\.config\(/);
   });
 
   test("always targets PostgreSQL .dump archives and never creates .db files", () => {

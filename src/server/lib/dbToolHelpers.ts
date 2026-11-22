@@ -54,9 +54,10 @@ export function resolveUserRow(dbApi: any, selector: unknown) {
   const num = Number(raw);
   const isId = isValidUuid(raw) || (Number.isFinite(num) && num > 0);
   const sql = isId
-    ? "SELECT id, username, nickname, avatar_url, color, status, banned, verified FROM users WHERE id = $1 LIMIT 1"
-    : "SELECT id, username, nickname, avatar_url, color, status, banned, verified FROM users WHERE username = $1 LIMIT 1";
-  const params = isId ? [raw] : [raw.toLowerCase()];
+    ? "SELECT id, username, nickname, avatar_url, color, status, banned, verified FROM users WHERE id = ? LIMIT 1"
+    : "SELECT id, username, nickname, avatar_url, color, status, banned, verified FROM users WHERE username = ? LIMIT 1";
+  const idParam = isValidUuid(raw) ? raw : num;
+  const params = isId ? [idParam] : [raw.toLowerCase()];
 
   const result = dbApi.getRow(sql, params);
   if (result && typeof result.then === "function") {
@@ -80,13 +81,13 @@ export function resolveChatRow(dbApi: any, selector: unknown, options: any = {})
 
   if (isId) {
     sql = groupOnly
-      ? `SELECT ${selectCols} FROM chats WHERE id = $1 AND type IN ('group', 'channel') LIMIT 1`
-      : `SELECT ${selectCols} FROM chats WHERE id = $1 LIMIT 1`;
-    params = [raw];
+      ? `SELECT ${selectCols} FROM chats WHERE id = ? AND type IN ('group', 'channel') LIMIT 1`
+      : `SELECT ${selectCols} FROM chats WHERE id = ? LIMIT 1`;
+    params = [isValidUuid(raw) ? raw : num];
   } else {
     sql = groupOnly
-      ? `SELECT ${selectCols} FROM chats WHERE group_username IN ($1, $2) AND type IN ('group', 'channel') LIMIT 1`
-      : `SELECT ${selectCols} FROM chats WHERE group_username IN ($1, $2) LIMIT 1`;
+      ? `SELECT ${selectCols} FROM chats WHERE group_username IN (?, ?) AND type IN ('group', 'channel') LIMIT 1`
+      : `SELECT ${selectCols} FROM chats WHERE group_username IN (?, ?) LIMIT 1`;
     params = [normalizedUsername, `@${normalizedUsername}`];
   }
 

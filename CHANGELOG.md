@@ -2,6 +2,10 @@
 
 All notable changes to **NextDesk** are documented in this file.
 
+## 2.0.0-dev.2026112103
+
+- **PostgreSQL + Prisma 7 CI Stabilization**: fixed SQL template literal escaping for UTC ISO timestamps across admin routes and CLI scripts, removed duplicate `adminTransaction` destructuring, standardized `?` placeholders across unit-tested helpers (`secrets.ts`, `dbToolHelpers.ts`, `inspect.ts`, `_addChatMemberLogic.ts`), aligned `db-doctor.ts` diagnostics metadata, and moved Prisma CLI npm aliases to `prisma:*` to satisfy the privileged `db:*` launcher policy.
+
 ## 2.0.0-dev.2026112102
 
 - **Single-Database PostgreSQL + Prisma 7 ORM Architecture**: completely removed dual-database branching, SQLite (`better-sqlite3`, `sql.js`), `knex`, and `sqlNormalizer.ts`. NextDesk now runs exclusively on **PostgreSQL** via **Prisma 7** (`prisma@7.10.1`, `@prisma/client@7.10.1`, `@prisma/adapter-pg@7.10.1`, `pg@8.23.1`) with a pure-TypeScript, Rust-free generated client (`provider = "prisma-client"`) and `globalThis`-cached `pg.Pool` connection pooling.

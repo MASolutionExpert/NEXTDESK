@@ -158,7 +158,7 @@ async function main() {
       // Handle queue management actions
       if (pauseQueue) {
         await dbApi.run(
-          "UPDATE remote_channel_sources SET paused = 1, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
+          `UPDATE remote_channel_sources SET paused = 1, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?`,
           [chat.id],
         );
         await dbApi.save();
@@ -168,7 +168,7 @@ async function main() {
 
       if (resumeQueue) {
         await dbApi.run(
-          "UPDATE remote_channel_sources SET paused = 0, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
+          `UPDATE remote_channel_sources SET paused = 0, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?`,
           [chat.id],
         );
         await dbApi.save();
@@ -229,7 +229,7 @@ async function main() {
       if (disableRemote) {
         if (existing?.id) {
           await dbApi.run(
-            "UPDATE remote_channel_sources SET enabled = 0, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
+            `UPDATE remote_channel_sources SET enabled = 0, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?`,
             [chat.id],
           );
           await dbApi.save();
@@ -243,7 +243,7 @@ async function main() {
       if (enableRemote) {
         if (existing?.id) {
           await dbApi.run(
-            "UPDATE remote_channel_sources SET enabled = 1, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
+            `UPDATE remote_channel_sources SET enabled = 1, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?`,
             [chat.id],
           );
           await dbApi.save();
@@ -365,7 +365,7 @@ async function main() {
       } else {
         // Only update flags
         await dbApi.run(
-          "UPDATE remote_channel_sources SET sync_metadata = ?, stream_media = ?, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?",
+          `UPDATE remote_channel_sources SET sync_metadata = ?, stream_media = ?, updated_at = to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE chat_id = ?`,
           [nextSyncMetadata, nextStreamMedia, chat.id],
         );
       }

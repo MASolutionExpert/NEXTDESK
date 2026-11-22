@@ -159,7 +159,8 @@ describe("Prisma 7 ORM CRUD, Transactions & Non-Destructive Migrations", () => {
     });
 
     const after = await getMessages(chatId, {
-      afterCreatedAt: "2026-08-11T10:00:00.000Z",
+      afterId: msg2Id,
+      afterCreatedAt: "2026-08-11T10:05:00.000Z",
     });
     expect(after.messages.map((m) => m.id)).toEqual([msg2Id]);
   });

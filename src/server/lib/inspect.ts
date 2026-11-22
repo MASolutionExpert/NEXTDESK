@@ -50,7 +50,7 @@ export function createInspector({ fs, dataDir, adminGetRow, adminGetAll }: any) 
 
     if (mode === "all" || mode === "user") {
       snapshot.users = await adminGetAll(
-        "SELECT id, username, nickname, status, banned, avatar_url, created_at FROM users ORDER BY id ASC LIMIT $1",
+        "SELECT id, username, nickname, status, banned, avatar_url, created_at FROM users ORDER BY id ASC LIMIT ?",
         [safeLimit],
       );
     }
@@ -63,26 +63,26 @@ export function createInspector({ fs, dataDir, adminGetRow, adminGetAll }: any) 
                   c.created_at
            FROM chats c
            ORDER BY c.id ASC
-           LIMIT $1`,
+           LIMIT ?`,
           [safeLimit],
         )) || [];
-      const chatIds = chats.map((chat) => String(chat.id || "").trim()).filter(Boolean);
+      const chatIds = chats.map((chat) => chat.id).filter((v) => v !== null && v !== undefined && String(v).trim() !== "");
+      const placeholders = chatIds.map(() => "?").join(", ");
       const members: any[] = chatIds.length
         ? (await adminGetAll(
             `SELECT chat_id, user_id
              FROM chat_members
-             WHERE chat_id = ANY($1::text[])
+             WHERE chat_id IN (${placeholders})
              ORDER BY chat_id ASC, user_id ASC`,
-            [chatIds],
+            chatIds,
           )) || []
         : [];
-      const memberIdsByChat = new Map<string, string[]>();
+      const memberIdsByChat = new Map<string, any[]>();
       members.forEach((member) => {
-        const chatId = String(member.chat_id || "").trim();
-        const userId = String(member.user_id || "").trim();
-        if (!chatId || !userId) return;
+        const chatId = String(member.chat_id ?? "").trim();
+        if (!chatId || member.user_id === null || member.user_id === undefined) return;
         const memberIds = memberIdsByChat.get(chatId) || [];
-        memberIds.push(userId);
+        memberIds.push(member.user_id);
         memberIdsByChat.set(chatId, memberIds);
       });
       snapshot.chats = chats.map((chat) => {

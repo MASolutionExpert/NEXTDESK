@@ -110,7 +110,7 @@ function makeDb({
 
     run(sql, params: any = []) {
       const s = sql.replace(/\s+/g, " ").trim().toLowerCase();
-      if (s.startsWith("insert or ignore into chat_members")) {
+      if (s.startsWith("insert into chat_members") || s.startsWith("insert or ignore into chat_members")) {
         // INSERT OR IGNORE INTO chat_members (chat_id, user_id, role)
         const [chatId, userId, role] = params;
         const alreadyThere = insertedMembers.some(

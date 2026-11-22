@@ -13,10 +13,10 @@ describe("secrets.js", () => {
   });
 
   function makeDbMocks(dbStore) {
-    const mockGetRow = async (query) => {
+    const mockGetRow = async (query, params: any = []) => {
       const compiled =
         typeof query?.toSQL === "function" ? query.toSQL() : null;
-      const bindings = compiled?.bindings || query?.bindings || [];
+      const bindings = Array.isArray(params) && params.length ? params : (compiled?.bindings || query?.bindings || []);
       const key = bindings[0];
       if (dbStore[key]) {
         return { value: dbStore[key] };
@@ -24,10 +24,10 @@ describe("secrets.js", () => {
       return null;
     };
     const writtenKeys: any = [];
-    const mockRun = async (query) => {
+    const mockRun = async (query, params: any = []) => {
       const compiled =
         typeof query?.toSQL === "function" ? query.toSQL() : null;
-      const bindings = compiled?.bindings || query?.bindings || [];
+      const bindings = Array.isArray(params) && params.length ? params : (compiled?.bindings || query?.bindings || []);
       if (bindings.length >= 2) {
         dbStore[bindings[0]] = bindings[1];
         writtenKeys.push(bindings[0]);
@@ -55,11 +55,11 @@ describe("secrets.js", () => {
       WEBHOOK_SECRET: "db-webhook-secret",
     };
 
-    const mockGetRow = async (query) => {
+    const mockGetRow = async (query, params: any = []) => {
       const compiled =
         typeof query?.toSQL === "function" ? query.toSQL() : null;
       const sql = String(compiled?.sql || query?.sql || query || "");
-      const bindings = compiled?.bindings || query?.bindings || [];
+      const bindings = Array.isArray(params) && params.length ? params : (compiled?.bindings || query?.bindings || []);
       const key = bindings[0];
       if (dbStore[key]) {
         return { value: dbStore[key] };
@@ -97,10 +97,10 @@ describe("secrets.js", () => {
   test("ensureSystemSecrets generates new secrets when missing from process.env and DB", async () => {
     const dbStore: any = {};
     const mockGetRow = async () => null;
-    const mockRun = async (query) => {
+    const mockRun = async (query, params: any = []) => {
       const compiled =
         typeof query?.toSQL === "function" ? query.toSQL() : null;
-      const bindings = compiled?.bindings || query?.bindings || [];
+      const bindings = Array.isArray(params) && params.length ? params : (compiled?.bindings || query?.bindings || []);
       if (bindings.length >= 2) {
         dbStore[bindings[0]] = bindings[1];
       }
@@ -179,10 +179,10 @@ describe("secrets.js", () => {
 
     const dbStore: any = {};
     const mockGetRow = async () => null; // DB is empty
-    const mockRun = async (query) => {
+    const mockRun = async (query, params: any = []) => {
       const compiled =
         typeof query?.toSQL === "function" ? query.toSQL() : null;
-      const bindings = compiled?.bindings || query?.bindings || [];
+      const bindings = Array.isArray(params) && params.length ? params : (compiled?.bindings || query?.bindings || []);
       if (bindings.length >= 2) {
         dbStore[bindings[0]] = bindings[1];
       }
