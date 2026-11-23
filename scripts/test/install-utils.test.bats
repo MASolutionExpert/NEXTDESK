@@ -2197,3 +2197,45 @@ setup_test_git_repo() {
   [[ "$menu_body" == *"Database diagnostics (db:doctor)"* ]]
   [[ "$menu_body" == *"25) db_doctor"* ]]
 }
+
+@test "run_migrations: runs on NextDesk monolith layout (package.json + src/server) and prints root db:doctor hint" {
+  INSTALL_DIR="$TEST_DIR/monolith-install"
+  mkdir -p "$INSTALL_DIR/src/server"
+  printf '{"name":"nextdesk"}\n' > "$INSTALL_DIR/package.json"
+
+  run_in_install_dir_streaming() { return 1; }
+  export -f run_in_install_dir_streaming
+
+  run run_migrations
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"cd ${INSTALL_DIR} && npm run db:doctor"* ]]
+  [[ "$output" != *"/server && npm run db:doctor"* ]]
+}
+
+@test "resolve_offline_source_root: accepts NextDesk monolith archive layout (src/server + worker + package.json)" {
+  local staging="$TEST_DIR/monolith-zip/NEXTDESK-dev"
+  mkdir -p "$staging/src/server" "$staging/worker"
+  printf '{"name":"nextdesk"}\n' > "$staging/package.json"
+
+  run resolve_offline_source_root "$TEST_DIR/monolith-zip"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$staging" ]
+}
+
+@test "run_in_install_dir_streaming: does not fail with Permission denied when LOG_FILE is unwritable" {
+  INSTALL_DIR="$TEST_DIR/stream-install"
+  mkdir -p "$INSTALL_DIR"
+  LOG_FILE="$TEST_DIR/ro-logs/install.log"
+  mkdir -p "$TEST_DIR/ro-logs"
+  touch "$LOG_FILE"
+  chmod 444 "$LOG_FILE"
+  SUDO=""
+  run_as_root() { "$@"; }
+  export -f run_as_root
+
+  run run_in_install_dir_streaming "echo streaming-ok"
+  chmod 644 "$LOG_FILE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"streaming-ok"* ]]
+  [[ "$output" != *"Permission denied"* ]]
+}

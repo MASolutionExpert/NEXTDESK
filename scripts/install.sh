@@ -250,6 +250,17 @@ ensure_log_dir() {
     run_as_root mkdir -p "$log_dir" || return 1
     log "Created log directory: $log_dir"
   fi
+  if [[ ! -f "$LOG_FILE" ]]; then
+    run_as_root touch "$LOG_FILE" 2>/dev/null || true
+  fi
+  # When invoked through sudo, hand the install log to the invoking user so
+  # non-root redirects and streaming tee never hit "Permission denied".
+  if [[ -n "${SUDO_USER:-}" && "$SUDO_USER" != "root" && -f "$LOG_FILE" ]]; then
+    local sudo_group=""
+    sudo_group="$(id -gn "$SUDO_USER" 2>/dev/null || printf "%s" "$SUDO_USER")"
+    run_as_root chown "${SUDO_USER}:${sudo_group}" "$LOG_FILE" 2>/dev/null || true
+    run_as_root chmod 664 "$LOG_FILE" 2>/dev/null || true
+  fi
 }
 
 warn() {
@@ -677,10 +688,16 @@ run_in_install_dir_streaming() {
   fi
   local log_dir=""
   log_dir="$(dirname "$LOG_FILE")"
+  local q_log=""
+  local q_dir=""
+  local q_cmd=""
+  q_log="$(printf '%q' "$LOG_FILE")"
+  q_dir="$(printf '%q' "$INSTALL_DIR")"
+  q_cmd="$(printf '%q' "$*")"
   if [[ -d "$log_dir" ]]; then
-    run_as_root bash -lc "set -o pipefail; printf '[%s] Running: %s\n' \"\$(date '+%Y-%m-%d %H:%M:%S')\" $(printf '%q' "$*") >> $(printf '%q' "$LOG_FILE") 2>/dev/null || true; cd $(printf '%q' "$INSTALL_DIR") && ${path_export}$* 2>&1 | tee -a $(printf '%q' "$LOG_FILE")"
+    run_as_root bash -lc "set -o pipefail; log_file=${q_log}; log_dir=$(printf '%q' "$log_dir"); if [[ -w \"\$log_file\" ]] || [[ ! -e \"\$log_file\" && -w \"\$log_dir\" ]]; then printf '[%s] Running: %s\n' \"\$(date '+%Y-%m-%d %H:%M:%S')\" ${q_cmd} >> \"\$log_file\" 2>/dev/null || true; cd ${q_dir} && ${path_export}$* 2>&1 | tee -a \"\$log_file\"; elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then printf '[%s] Running: %s\n' \"\$(date '+%Y-%m-%d %H:%M:%S')\" ${q_cmd} | sudo -n tee -a \"\$log_file\" >/dev/null 2>&1 || true; cd ${q_dir} && ${path_export}$* 2>&1 | sudo -n tee -a \"\$log_file\"; else cd ${q_dir} && ${path_export}$*; fi"
   else
-    run_as_root bash -lc "cd $(printf '%q' "$INSTALL_DIR") && ${path_export}$*"
+    run_as_root bash -lc "cd ${q_dir} && ${path_export}$*"
   fi
 }
 
@@ -1991,9 +2008,15 @@ find_restore_backup_path() {
   return 1
 }
 
+is_valid_nextdesk_source_dir() {
+  local candidate="$1"
+  [[ -f "$candidate/package.json" && -d "$candidate/worker" ]] || return 1
+  [[ -d "$candidate/src/server" || ( -d "$candidate/server" && -d "$candidate/client" ) ]]
+}
+
 resolve_offline_source_root() {
   local tmp_dir="$1"
-  if [[ -f "$tmp_dir/package.json" && -d "$tmp_dir/server" && -d "$tmp_dir/client" && -d "$tmp_dir/worker" ]]; then
+  if is_valid_nextdesk_source_dir "$tmp_dir"; then
     printf "%s" "$tmp_dir"
     return 0
   fi
@@ -2001,7 +2024,7 @@ resolve_offline_source_root() {
   local dir=""
   while IFS= read -r dir; do
     [[ -z "$dir" ]] && continue
-    if [[ -f "$dir/package.json" && -d "$dir/server" && -d "$dir/client" && -d "$dir/worker" ]]; then
+    if is_valid_nextdesk_source_dir "$dir"; then
       if [[ -n "$match" ]]; then
         return 1
       fi
@@ -2048,7 +2071,7 @@ extract_offline_source_zip() {
   local source_root
   source_root="$(resolve_offline_source_root "$tmp_dir")" || {
     run_silent run_as_root rm -rf "$tmp_dir"
-    warn "Source zip does not appear to contain NextDesk (missing server/client/worker/package.json)."
+    warn "Source zip does not appear to contain NextDesk (missing src/server, worker, or package.json)."
     return 1
   }
 
@@ -2238,11 +2261,13 @@ install_nextdesk_dependencies() {
     npm_registry_arg="--registry $(printf '%q' "$MIRROR_NPM")"
   fi
 
-  log "Installing Next.js application dependencies..."
+  log "Installing NextDesk application dependencies..."
   run_in_install_dir "npm ${npm_registry_arg} install" || return 1
 
-  log "Installing server engine dependencies..."
-  run_in_install_dir "npm ${npm_registry_arg} --prefix server install" || return 1
+  if [[ -f "$INSTALL_DIR/server/package.json" ]]; then
+    log "Installing legacy server engine dependencies..."
+    run_in_install_dir "npm ${npm_registry_arg} --prefix server install" || return 1
+  fi
 
   log "Installing worker dependencies..."
   run_in_install_dir "npm ${npm_registry_arg} --prefix worker install" || return 1
@@ -2635,7 +2660,11 @@ ensure_vapid_keys() {
     rm -f "$stdout_file"
     return 1
   }
-  generate_command="cd '$INSTALL_DIR/server' && ${path_export}node --input-type=module -e \"import pkg from 'web-push'; const { generateVAPIDKeys } = pkg; const k = generateVAPIDKeys(); console.log(k.publicKey); console.log(k.privateKey);\""
+  local vapid_dir="$INSTALL_DIR"
+  if [[ ! -f "$INSTALL_DIR/package.json" && -d "$INSTALL_DIR/server" ]]; then
+    vapid_dir="$INSTALL_DIR/server"
+  fi
+  generate_command="cd '$vapid_dir' && ${path_export}node --input-type=module -e \"import pkg from 'web-push'; const { generateVAPIDKeys } = pkg; const k = generateVAPIDKeys(); console.log(k.publicKey); console.log(k.privateKey);\""
   if [[ -f "$LOG_FILE" ]]; then
     printf "[%s] Running: generate VAPID keys\n" "$(date '+%Y-%m-%d %H:%M:%S')" >> "$LOG_FILE" 2>/dev/null || true
   fi
@@ -3672,8 +3701,8 @@ restore_backup_if_provided() {
     warn "Backup file not found: $DB_BACKUP_PATH"
     return 1
   fi
-  if [[ ! -d "$INSTALL_DIR/server" ]]; then
-    warn "Server directory not found at ${INSTALL_DIR}/server. Cannot restore backup."
+  if ! has_nextdesk_app_layout "$INSTALL_DIR"; then
+    warn "NextDesk application directory not found at ${INSTALL_DIR}. Cannot restore backup."
     return 1
   fi
 
@@ -3692,9 +3721,14 @@ restore_backup_if_provided() {
   fi
 }
 
+has_nextdesk_app_layout() {
+  local root_dir="${1:-$INSTALL_DIR}"
+  [[ ( -f "$root_dir/package.json" && -d "$root_dir/src/server" ) || -d "$root_dir/server" ]]
+}
+
 backup_database() {
-  if [[ ! -d "$INSTALL_DIR/server" ]]; then
-    warn "Server directory not found; skipping DB backup."
+  if ! has_nextdesk_app_layout "$INSTALL_DIR"; then
+    warn "NextDesk application directory not found; skipping DB backup."
     return 0
   fi
   log "Backing up database before update..."
@@ -3709,8 +3743,8 @@ preserve_backup_and_restore_data() {
 }
 
 run_migrations() {
-  if [[ ! -d "$INSTALL_DIR/server" ]]; then
-    warn "Server directory not found; skipping DB migrations."
+  if ! has_nextdesk_app_layout "$INSTALL_DIR"; then
+    warn "NextDesk application directory not found; skipping DB migrations."
     return 0
   fi
   log "Running database migrations..."
@@ -3735,11 +3769,11 @@ run_migrations() {
   if [[ "$migration_rc" -eq 124 || "$migration_rc" -eq 137 ]]; then
     warn "Database migrations were force-stopped after ${migration_max_seconds}s (hard ceiling)."
     warn "A migration on a small database finishes in milliseconds — this is a database-layer problem, not a data-size problem."
-    warn "Diagnostics: cd ${INSTALL_DIR}/server && npm run db:doctor"
+    warn "Diagnostics: cd ${INSTALL_DIR} && npm run db:doctor"
     return 1
   elif [[ "$migration_rc" -ne 0 ]]; then
     warn "Database migrations FAILED with exit code ${migration_rc}. See the output above for the exact error."
-    warn "Diagnostics: cd ${INSTALL_DIR}/server && npm run db:doctor"
+    warn "Diagnostics: cd ${INSTALL_DIR} && npm run db:doctor"
     return 1
   fi
   return 0
@@ -5172,8 +5206,8 @@ db_restore() {
 }
 
 db_doctor() {
-  if [[ ! -d "$INSTALL_DIR/server" ]]; then
-    warn "Server directory not found."
+  if ! has_nextdesk_app_layout "$INSTALL_DIR"; then
+    warn "NextDesk application directory not found."
     press_enter_to_continue
     return 0
   fi
