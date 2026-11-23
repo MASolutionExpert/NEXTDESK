@@ -12,7 +12,7 @@ import {
 } from "./connectionConfig.ts";
 import { pgGetAll, pgGetRow, pgQuery, pgRun } from "./prisma.ts";
 
-export const BASELINE_MIGRATION_NAME = "20260101000000_init";
+export const BASELINE_MIGRATION_NAME = "0001_init";
 
 const dataDir = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)

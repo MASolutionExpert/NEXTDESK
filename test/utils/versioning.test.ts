@@ -173,21 +173,21 @@ describe("fetchLatestGitHubTag release channels", () => {
     const requestedPages: string[] = [];
     (global as any).fetch = async (url: string) => {
       requestedPages.push(url);
-      if (url.includes("page=1")) {
+      if (new URL(url).searchParams.get("page") === "1") {
         return {
           ok: true,
           json: async () =>
             Array.from({ length: 100 }, (_, i) => ({ name: `v0.1.${i}` })),
         };
       }
-      if (url.includes("page=2")) {
+      if (new URL(url).searchParams.get("page") === "2") {
         return {
           ok: true,
           json: async () =>
             Array.from({ length: 100 }, (_, i) => ({ name: `v0.2.${i}` })),
         };
       }
-      if (url.includes("page=3")) {
+      if (new URL(url).searchParams.get("page") === "3") {
         return {
           ok: true,
           json: async () => [

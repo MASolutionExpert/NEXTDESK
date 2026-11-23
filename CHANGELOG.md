@@ -2,7 +2,7 @@
 
 All notable changes to **NextDesk** are documented in this file.
 
-## 2.0.0-dev.2026112302
+## 2.0.0-dev.2026112303
 
 ### Fixed
 
