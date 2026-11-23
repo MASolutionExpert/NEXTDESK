@@ -145,6 +145,7 @@ export const admin = {
       unbanTitle: "Unban user",
     },
     chats: {
+      colChannel: "Message Channel",
       colChat: "Chat",
       colCreated: "Created",
       colMembers: "Members",
@@ -158,8 +159,12 @@ export const admin = {
       filters: {
         allPrivacy: "All privacy",
         allRemote: "All remote states",
+        allChannels: "All channels",
         allTypes: "All types",
         autoAdd: "Auto-Add New Users",
+        channel: "Message Channel",
+        channelDirect: "Direct messages",
+        channelSupport: "Support tickets",
         remote: "Remote Channel State",
         remoteActive: "Active",
         remoteNone: "No remote source",
@@ -593,6 +598,7 @@ export const admin = {
       unbanTitle: "رفع مسدودی کاربر",
     },
     chats: {
+      colChannel: "کانال پیام",
       colChat: "گفتگو",
       colCreated: "تاریخ ایجاد",
       colMembers: "اعضا",
@@ -606,8 +612,12 @@ export const admin = {
       filters: {
         allPrivacy: "همهٔ سطوح حریم خصوصی",
         allRemote: "همهٔ وضعیت‌های ریموت",
+        allChannels: "همهٔ کانال‌ها",
         allTypes: "همهٔ انواع",
         autoAdd: "افزودن خودکار کاربران جدید",
+        channel: "کانال پیام",
+        channelDirect: "پیام‌های مستقیم",
+        channelSupport: "تیکت‌های پشتیبانی",
         remote: "وضعیت کانال ریموت",
         remoteActive: "فعال",
         remoteNone: "بدون منبع ریموت",

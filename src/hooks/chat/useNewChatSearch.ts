@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 
+export function normalizeUserSearchQuery(raw: any): string {
+  return String(raw || "").trim().replace(/^@+/, "").trim().toLowerCase();
+}
+
 export function useNewChatSearch({
   user,
-  dmUsernamesRef,
   searchUsers,
   debounceMs,
   maxResults,
@@ -18,40 +21,36 @@ export function useNewChatSearch({
 
   useEffect(() => {
     if (!newChatOpen) return;
-    if (!newChatUsername.trim()) {
+    const cleaned = normalizeUserSearchQuery(newChatUsername);
+    if (!cleaned) {
       setNewChatResults([]);
       setNewChatSelection(null);
       return;
     }
+
     const handle = setTimeout(async () => {
       try {
         setNewChatLoading(true);
         const res = await searchUsers({
           exclude: user.username,
-          query: newChatUsername.trim().toLowerCase(),
+          query: cleaned,
         });
         const data = await res.json();
         if (!res.ok) {
           throw new Error(data?.error || "Unable to search users.");
         }
-        const dmUsernames = dmUsernamesRef.current;
-        const users = (data.users || [])
-          .filter(
-            (candidate) =>
-              !dmUsernames.has(String(candidate.username || "").toLowerCase()),
-          )
-          .slice(0, maxResults);
+        const users = (data.users || []).slice(0, maxResults);
         setNewChatResults(users);
-      } catch (err) {
-        setNewChatError(err.message);
+      } catch (err: any) {
+        setNewChatError(err?.message || "Unable to search users.");
       } finally {
         setNewChatLoading(false);
       }
     }, debounceMs);
+
     return () => clearTimeout(handle);
   }, [
     debounceMs,
-    dmUsernamesRef,
     maxResults,
     newChatOpen,
     newChatUsername,

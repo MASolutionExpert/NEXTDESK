@@ -44,6 +44,7 @@ const ADDITIVE_COLUMN_GUARDS: Array<[string, string, string]> = [
   ["chats", "verified", "INTEGER NOT NULL DEFAULT 0"],
   ["chats", "auto_add_new_users", "INTEGER NOT NULL DEFAULT 0"],
   ["chats", "department_id", "INTEGER"],
+  ["chats", "channel", "TEXT NOT NULL DEFAULT 'direct'"],
   ["chat_messages", "client_request_id", "TEXT"],
   ["chat_messages", "read_at", "TEXT"],
   ["chat_messages", "read_by_user_id", "TEXT"],

@@ -21,17 +21,36 @@ export function decryptMessageRow<T extends Record<string, any> | null>(row: T):
   return next as T;
 }
 
-export async function findDmChat(userId: string, otherUserId: string) {
+export async function findDmChat(
+  userId: string,
+  otherUserId: string,
+  options: { channel?: "direct" | "support" | null; departmentId?: number | string | null } = {},
+) {
   if (!userId || !otherUserId || userId === otherUserId) return null;
+  const clauses = [
+    "c.type = 'dm'",
+    "(SELECT COUNT(*) FROM chat_members m3 WHERE m3.chat_id = c.id) = 2",
+  ];
+  const params: any[] = [String(userId), String(otherUserId)];
+  const channel = options?.channel ? String(options.channel).toLowerCase() : null;
+  if (channel === "direct") {
+    clauses.push("COALESCE(c.channel, 'direct') = 'direct'");
+  } else if (channel === "support") {
+    clauses.push("COALESCE(c.channel, 'direct') = 'support'");
+  }
+  if (options?.departmentId !== undefined && options?.departmentId !== null) {
+    params.push(Number(options.departmentId));
+    clauses.push(`c.department_id = $${params.length}`);
+  }
   const row = await pgGetRow<{ id: string }>(
     `SELECT c.id
      FROM chats c
      JOIN chat_members m1 ON m1.chat_id = c.id AND m1.user_id = $1
      JOIN chat_members m2 ON m2.chat_id = c.id AND m2.user_id = $2
-     WHERE c.type = 'dm'
-       AND (SELECT COUNT(*) FROM chat_members m3 WHERE m3.chat_id = c.id) = 2
+     WHERE ${clauses.join(" AND ")}
+     ORDER BY c.created_at DESC, c.id ASC
      LIMIT 1`,
-    [String(userId), String(otherUserId)],
+    params,
   );
   return row?.id || null;
 }
@@ -85,6 +104,15 @@ export async function createChat(
         : 0;
   const createdAt = new Date().toISOString().replace("T", " ").slice(0, 19);
 
+  const normalizedChannel =
+    String(options.channel || "").toLowerCase() === "support"
+      ? "support"
+      : "direct";
+  const departmentId =
+    options.departmentId !== undefined && options.departmentId !== null
+      ? Number(options.departmentId)
+      : null;
+
   await prisma.chat.create({
     data: {
       id,
@@ -99,6 +127,8 @@ export async function createChat(
       groupAvatarUrl,
       verified,
       autoAddNewUsers,
+      channel: normalizedChannel,
+      departmentId,
       createdAt,
     },
   });
@@ -174,12 +204,22 @@ export async function addAllEligibleChatMembers(chatId: string) {
   };
 }
 
+function normalizePublicSearchTerm(query: string): string {
+  return String(query || "").trim().replace(/^@+/, "").trim();
+}
+
+function escapePublicLike(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
+
 export async function searchPublicGroups(
   query: string,
   viewerUserId: string,
   limit = 20,
 ) {
-  const like = `%${String(query || "").trim()}%`;
+  const cleaned = normalizePublicSearchTerm(query);
+  if (!cleaned) return [];
+  const like = `%${escapePublicLike(cleaned.toLowerCase())}%`;
   const safeLimit = Math.max(1, Math.min(100, Number(limit) || 20));
   return pgGetAll(
     `SELECT c.id, c.name, c.group_username, c.group_color, c.group_avatar_url,
@@ -192,8 +232,8 @@ export async function searchPublicGroups(
          c.group_visibility = 'public'
          OR EXISTS(SELECT 1 FROM chat_members vm WHERE vm.chat_id = c.id AND vm.user_id = $1)
        )
-       AND (c.name ILIKE $2 OR c.group_username ILIKE $2)
-     ORDER BY CASE WHEN c.group_username ILIKE $2 THEN 0 ELSE 1 END, c.name ASC
+       AND (LOWER(COALESCE(c.name, '')) LIKE $2 ESCAPE '\' OR LOWER(COALESCE(c.group_username, '')) LIKE $2 ESCAPE '\')
+     ORDER BY CASE WHEN LOWER(COALESCE(c.group_username, '')) LIKE $2 ESCAPE '\' THEN 0 ELSE 1 END, c.name ASC
      LIMIT $3`,
     [String(viewerUserId || ""), like, safeLimit],
   );
@@ -204,7 +244,9 @@ export async function searchPublicChannels(
   viewerUserId: string,
   limit = 20,
 ) {
-  const like = `%${String(query || "").trim()}%`;
+  const cleaned = normalizePublicSearchTerm(query);
+  if (!cleaned) return [];
+  const like = `%${escapePublicLike(cleaned.toLowerCase())}%`;
   const safeLimit = Math.max(1, Math.min(100, Number(limit) || 20));
   return pgGetAll(
     `SELECT c.id, c.name, c.group_username, c.group_color, c.group_avatar_url,
@@ -217,8 +259,8 @@ export async function searchPublicChannels(
          c.group_visibility = 'public'
          OR EXISTS(SELECT 1 FROM chat_members vm WHERE vm.chat_id = c.id AND vm.user_id = $1)
        )
-       AND (c.name ILIKE $2 OR c.group_username ILIKE $2)
-     ORDER BY CASE WHEN c.group_username ILIKE $2 THEN 0 ELSE 1 END, c.name ASC
+       AND (LOWER(COALESCE(c.name, '')) LIKE $2 ESCAPE '\' OR LOWER(COALESCE(c.group_username, '')) LIKE $2 ESCAPE '\')
+     ORDER BY CASE WHEN LOWER(COALESCE(c.group_username, '')) LIKE $2 ESCAPE '\' THEN 0 ELSE 1 END, c.name ASC
      LIMIT $3`,
     [String(viewerUserId || ""), like, safeLimit],
   );
@@ -333,7 +375,8 @@ export async function findChatById(chatId: string) {
   return pgGetRow(
     `SELECT id, name, type, group_username, group_visibility, invite_token,
             group_color, allow_member_invites, group_avatar_url,
-            created_by_user_id, verified, auto_add_new_users
+            created_by_user_id, verified, auto_add_new_users,
+            COALESCE(channel, 'direct') AS channel, department_id
      FROM chats
      WHERE id = $1
      LIMIT 1`,
@@ -776,6 +819,8 @@ export async function listChatsForUser(userId: string) {
        SELECT c.id, c.name, c.type, c.group_username, c.group_visibility,
               c.invite_token, c.group_color, c.allow_member_invites,
               c.group_avatar_url, c.created_by_user_id, c.created_at, c.verified,
+              COALESCE(c.channel, 'direct') AS channel,
+              c.department_id,
               COALESCE(mu.muted, 0) AS muted
        FROM chats c
        JOIN chat_members m ON m.chat_id = c.id AND m.user_id = $1
@@ -786,6 +831,7 @@ export async function listChatsForUser(userId: string) {
      SELECT mc.id, mc.name, mc.type, mc.group_username, mc.group_visibility,
             mc.invite_token, mc.group_color, mc.allow_member_invites,
             mc.group_avatar_url, mc.created_by_user_id, mc.verified, mc.muted,
+            mc.channel, mc.department_id, d.name AS department_name,
             COALESCE(rcs.enabled, 0) AS remote_channel_enabled,
             last_vm.id AS last_message_id,
             COALESCE(last_vm.edited_body, last_vm.body) AS last_message,
@@ -847,6 +893,7 @@ export async function listChatsForUser(userId: string) {
        ORDER BY outgoing_cm.created_at DESC, outgoing_cm.id DESC
        LIMIT 1
      ) outgoing_vm ON TRUE
+     LEFT JOIN departments d ON d.id = mc.department_id
      LEFT JOIN remote_channel_sources rcs ON rcs.chat_id = mc.id AND rcs.enabled = 1
      ORDER BY last_vm.created_at DESC NULLS LAST, last_vm.id DESC NULLS LAST, mc.created_at DESC`,
     [uid],

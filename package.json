@@ -36,6 +36,7 @@
     "db:help": "/bin/bash -p scripts/run-data-command.sh node src/server/scripts/db-help.ts",
     "db:migrate": "/bin/bash -p scripts/run-data-command.sh node src/server/scripts/migrate.ts",
     "db:doctor": "/bin/bash -p scripts/run-data-command.sh node src/server/scripts/db-doctor.ts",
+    "search:doctor": "/bin/bash -p scripts/run-data-command.sh node src/server/scripts/search-doctor.ts",
     "db:backfill": "/bin/bash -p scripts/run-data-command.sh node src/server/scripts/backfill-message-file-metadata.ts",
     "db:chat:create": "/bin/bash -p scripts/run-data-command.sh node src/server/scripts/create-chat.ts",
     "db:chat:add": "/bin/bash -p scripts/run-data-command.sh node src/server/scripts/add-chat-member.ts",

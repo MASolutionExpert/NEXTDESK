@@ -1561,6 +1561,7 @@ function registerMessageRoutes(app, deps) {
           emitSseEvent(user.username, {
             type: "chat_message",
             chatId,
+            chatChannel: String(chat?.channel || "direct"),
             messageId,
             username: user.username,
             userId: user.id,
@@ -1581,6 +1582,7 @@ function registerMessageRoutes(app, deps) {
           emitChatEvent(chatId, {
             type: "chat_message",
             chatId,
+            chatChannel: String(chat?.channel || "direct"),
             messageId,
             username: user.username,
             userId: user.id,
@@ -1761,8 +1763,13 @@ function registerMessageRoutes(app, deps) {
       deduped: result.deduped,
     });
 
+    const resolvedChannel = String(chat?.channel || "direct");
     result.sseEvents.forEach((ev) => {
-      emitChatEvent(ev.chatId, ev.payload);
+      const payload =
+        ev?.payload?.type === "chat_message" && !ev.payload.chatChannel
+          ? { ...ev.payload, chatChannel: resolvedChannel }
+          : ev.payload;
+      emitChatEvent(ev.chatId, payload);
     });
 
     if (result.deduped) {
@@ -2054,6 +2061,7 @@ function registerMessageRoutes(app, deps) {
       emitChatEvent(targetChatId, {
         type: "chat_message",
         chatId: targetChatId,
+        chatChannel: String(targetChat?.channel || "direct"),
         messageId: nextMessageId,
         username: user.username,
         userId: user.id,

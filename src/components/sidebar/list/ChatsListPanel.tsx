@@ -31,6 +31,7 @@ import {
 import { isMessageAuthoredByUser } from "../../../utils/messageOwnership.ts";
 import { formatCompactCount } from "../../../utils/chatFormat.ts";
 import Avatar from "../../common/Avatar.tsx";
+import ChannelBadge from "../../common/ChannelBadge.tsx";
 import UserRoleBadge from "../../common/UserRoleBadge.tsx";
 import VerifiedBadge from "../../common/VerifiedBadge.tsx";
 import Tooltip from "../../common/Tooltip.tsx";
@@ -662,6 +663,14 @@ export default function ChatsListPanel({
                     ) : null}
                     {conv.type === "dm" && !isDeletedDm && other ? (
                       <UserRoleBadge role={other.user_role} size={16} />
+                    ) : null}
+                    {conv.type === "dm" ? (
+                      <ChannelBadge
+                        channel={conv.channel}
+                        departmentName={conv.department_name}
+                        size="xs"
+                        className="ms-1"
+                      />
                     ) : null}
                     {conv.type !== "dm" && Boolean(conv.verified) ? (
                       <VerifiedBadge size={16} />

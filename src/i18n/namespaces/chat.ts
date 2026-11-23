@@ -93,6 +93,11 @@ export const chat = {
     message: {
       edited: "edited",
     },
+    channel: {
+      supportTooltip: "Support ticket channel",
+      supportTooltipDept: "Support ticket — {department}",
+      messengerTooltip: "Direct messenger chat",
+    },
     status: {
       sending: "Sending",
       sendFailed: "Failed to send",
@@ -313,6 +318,11 @@ export const chat = {
     },
     message: {
       edited: "ویرایش‌شده",
+    },
+    channel: {
+      supportTooltip: "کانال تیکت پشتیبانی",
+      supportTooltipDept: "تیکت پشتیبانی — {department}",
+      messengerTooltip: "گفتگوی مستقیم پیام‌رسان",
     },
     status: {
       sending: "در حال ارسال",

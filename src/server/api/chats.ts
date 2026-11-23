@@ -512,7 +512,9 @@ function registerChatRoutes(app, deps) {
       return res.status(404).json({ error: "User not found." });
     }
 
-    const rawExistingId: any = findDmChat(fromUser.id, toUser.id);
+    // Strictly scope direct-message creation to the "direct" channel so a
+    // plain DM never reuses or resurrects an existing support ticket thread.
+    const rawExistingId: any = findDmChat(fromUser.id, toUser.id, { channel: "direct" });
     const existingId = rawExistingId && typeof rawExistingId.then === "function" ? await rawExistingId : rawExistingId;
     if (existingId) {
       // Unhide the chat for both users (in case it was previously deleted)
@@ -521,10 +523,10 @@ function registerChatRoutes(app, deps) {
       const u2: any = unhideChat(toUser.id, existingId);
       if (u2 && typeof u2.then === "function") await u2;
 
-      return res.json({ id: existingId });
+      return res.json({ id: existingId, channel: "direct" });
     }
 
-    const rawChatId: any = createChat(null, "dm");
+    const rawChatId: any = createChat(null, "dm", { channel: "direct" });
     const chatId = rawChatId && typeof rawChatId.then === "function" ? await rawChatId : rawChatId;
     if (!chatId) {
       return res.status(500).json({ error: "Failed to create chat." });
@@ -535,7 +537,7 @@ function registerChatRoutes(app, deps) {
     const m2: any = addChatMember(chatId, toUser.id, "member");
     if (m2 && typeof m2.then === "function") await m2;
 
-    res.json({ id: chatId });
+    res.json({ id: chatId, channel: "direct" });
   });
 
   app.post("/api/chats", async (req, res) => {
@@ -1745,11 +1747,26 @@ function registerChatRoutes(app, deps) {
     if (!session) return;
 
     const exclude: any = req.query.exclude?.toString();
-    const query: any = req.query.query?.toString();
+    const rawQuery: any = req.query.query?.toString();
     if (exclude && !requireSessionUsernameMatch(res, session, exclude)) return;
 
-    const rawUsers = query ? searchUsers(query.toLowerCase(), exclude) : listUsers(exclude);
-    const userList = (rawUsers && typeof rawUsers.then === "function" ? await rawUsers : rawUsers) || [];
+    const startedAt = Date.now();
+    const hasQueryParam = typeof rawQuery === "string" && rawQuery.trim().length > 0;
+    const normalizedQuery = hasQueryParam
+      ? rawQuery.trim().replace(/^@+/, "").trim().toLowerCase()
+      : "";
+
+    let userList: any[] = [];
+    if (hasQueryParam) {
+      if (normalizedQuery) {
+        const rawUsers = searchUsers(normalizedQuery, exclude);
+        userList = (rawUsers && typeof rawUsers.then === "function" ? await rawUsers : rawUsers) || [];
+      }
+    } else {
+      const rawUsers = listUsers(exclude);
+      userList = (rawUsers && typeof rawUsers.then === "function" ? await rawUsers : rawUsers) || [];
+    }
+
     const users: any = userList.map(
       (item) => ({
         ...item,
@@ -1760,6 +1777,13 @@ function registerChatRoutes(app, deps) {
             : "offline",
       }),
     );
+
+    if (typeof getSetting === "function" && getSetting("APP_DEBUG")) {
+      const elapsedMs = Date.now() - startedAt;
+      console.info(
+        `[app-debug] api:users:search query=${JSON.stringify(rawQuery || "")} normalized=${JSON.stringify(normalizedQuery)} exclude=${JSON.stringify(exclude || "")} matched=${users.length} elapsedMs=${elapsedMs}`,
+      );
+    }
 
     res.json({ users });
   });
@@ -1845,7 +1869,8 @@ function registerChatRoutes(app, deps) {
       return res.status(404).json({ error: "User not found." });
     }
 
-    const rawSearchUsers: any = searchUsers(query.toLowerCase(), username);
+    const strippedQuery = query.replace(/^@+/, "").trim().toLowerCase();
+    const rawSearchUsers: any = strippedQuery ? searchUsers(strippedQuery, username) : [];
     const searchUsersList = (rawSearchUsers && typeof rawSearchUsers.then === "function" ? await rawSearchUsers : rawSearchUsers) || [];
     const users: any = searchUsersList
       .map((item) => ({
@@ -1858,7 +1883,7 @@ function registerChatRoutes(app, deps) {
       }))
       .slice(0, 20);
 
-    const rawSearchGroups: any = searchPublicGroups(query.toLowerCase(), user.id, 20);
+    const rawSearchGroups: any = strippedQuery ? searchPublicGroups(strippedQuery, user.id, 20) : [];
     const searchGroupsList = (rawSearchGroups && typeof rawSearchGroups.then === "function" ? await rawSearchGroups : rawSearchGroups) || [];
     const groups: any = searchGroupsList.map((group) => ({
       id: group.id,

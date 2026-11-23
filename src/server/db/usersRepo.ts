@@ -34,14 +34,25 @@ export async function findUserById(id: string) {
   );
 }
 
-export async function listUsers(excludeUserId?: string | null) {
-  if (excludeUserId) {
+export function normalizeSearchTerm(query: unknown): string {
+  return String(query || "")
+    .trim()
+    .replace(/^@+/, "")
+    .trim();
+}
+
+function escapeSearchLike(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
+
+export async function listUsers(excludeUserOrId?: string | null) {
+  if (excludeUserOrId) {
     return pgGetAll(
       `SELECT id, username, nickname, avatar_url, color, status, banned, role, verified, department_id, language
        FROM users
-       WHERE id != $1
+       WHERE id != $1 AND LOWER(username) != LOWER($1)
        ORDER BY username ASC`,
-      [String(excludeUserId)],
+      [String(excludeUserOrId)],
     );
   }
   return pgGetAll(
@@ -53,27 +64,30 @@ export async function listUsers(excludeUserId?: string | null) {
 
 export async function searchUsers(
   query: string,
-  excludeUserId?: string | null,
+  excludeUserOrId?: string | null,
   limit = 20,
 ) {
-  const like = `%${String(query || "").trim()}%`;
+  const cleaned = normalizeSearchTerm(query);
+  if (!cleaned) return [];
+  const like = `%${escapeSearchLike(cleaned.toLowerCase())}%`;
   const safeLimit = Math.max(1, Math.min(100, Number(limit) || 20));
-  if (excludeUserId) {
+  if (excludeUserOrId) {
     return pgGetAll(
       `SELECT id, username, nickname, avatar_url, color, status, banned, role, verified
        FROM users
        WHERE id != $1
-         AND (username ILIKE $2 OR nickname ILIKE $2)
-       ORDER BY CASE WHEN username ILIKE $2 THEN 0 ELSE 1 END, username ASC
+         AND LOWER(username) != LOWER($1)
+         AND (LOWER(username) LIKE $2 ESCAPE '\' OR LOWER(COALESCE(nickname, '')) LIKE $2 ESCAPE '\')
+       ORDER BY CASE WHEN LOWER(username) LIKE $2 ESCAPE '\' THEN 0 ELSE 1 END, username ASC
        LIMIT $3`,
-      [String(excludeUserId), like, safeLimit],
+      [String(excludeUserOrId), like, safeLimit],
     );
   }
   return pgGetAll(
     `SELECT id, username, nickname, avatar_url, color, status, banned, role, verified
      FROM users
-     WHERE username ILIKE $1 OR nickname ILIKE $1
-     ORDER BY CASE WHEN username ILIKE $1 THEN 0 ELSE 1 END, username ASC
+     WHERE LOWER(username) LIKE $1 ESCAPE '\' OR LOWER(COALESCE(nickname, '')) LIKE $1 ESCAPE '\'
+     ORDER BY CASE WHEN LOWER(username) LIKE $1 ESCAPE '\' THEN 0 ELSE 1 END, username ASC
      LIMIT $2`,
     [like, safeLimit],
   );

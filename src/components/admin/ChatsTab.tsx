@@ -7,6 +7,7 @@ import { LoadingRows, EmptyState, FilterPopover, SortTh, Pagination, TabToolbar,
 import AdminGroupModal from "./AdminGroupModal.tsx";
 import ConfirmModal from "../modals/ConfirmModal.tsx";
 import Avatar from "../common/Avatar.tsx";
+import ChannelBadge from "../common/ChannelBadge.tsx";
 import VerifiedBadge from "../common/VerifiedBadge.tsx";
 import Tooltip from "../common/Tooltip.tsx";
 import { hasPersian } from "../../utils/fontUtils.ts";
@@ -27,6 +28,7 @@ const ChatsTab = forwardRef<any, any>(function ChatsTab({ active = true, onMutat
   const [verifiedFilter, setVerifiedFilter]     = useState("");
   const [autoAddFilter, setAutoAddFilter]       = useState("");
   const [remoteFilter, setRemoteFilter]         = useState("");
+  const [channelFilter, setChannelFilter]       = useState("");
   const [sortBy, setSortBy]           = useState("id");
   const [sortDir, setSortDir]         = useState("ASC");
   const [editChat, setEditChat]       = useState<any>(null);
@@ -68,6 +70,7 @@ const ChatsTab = forwardRef<any, any>(function ChatsTab({ active = true, onMutat
     if (verifiedFilter) params.set("verified", verifiedFilter);
     if (autoAddFilter) params.set("auto_add", autoAddFilter);
     if (remoteFilter) params.set("remote", remoteFilter);
+    if (channelFilter) params.set("channel", channelFilter);
     try {
       const data = await api.get(`/api/admin/chats?${params.toString()}`);
       if (requestId !== requestIdRef.current) return;
@@ -80,7 +83,7 @@ const ChatsTab = forwardRef<any, any>(function ChatsTab({ active = true, onMutat
     } finally {
       if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [trimmedSearch, typeFilter, visibilityFilter, verifiedFilter, autoAddFilter, remoteFilter, sortBy, sortDir, pageSize]);
+  }, [trimmedSearch, typeFilter, visibilityFilter, verifiedFilter, autoAddFilter, remoteFilter, channelFilter, sortBy, sortDir, pageSize]);
 
   // Refetch (debounced) whenever the query or page changes while the tab is visible.
   useEffect(() => {
@@ -102,6 +105,7 @@ const ChatsTab = forwardRef<any, any>(function ChatsTab({ active = true, onMutat
   const changeVerifiedFilter = (value) => { setVerifiedFilter(value); setPage(1); };
   const changeAutoAddFilter = (value) => { setAutoAddFilter(value); setPage(1); };
   const changeRemoteFilter = (value) => { setRemoteFilter(value); setPage(1); };
+  const changeChannelFilter = (value) => { setChannelFilter(value); setPage(1); };
   const changePageSize = (value) => { setPageSize(value); setPage(1); };
   const toggleSort = (field) => {
     setPage(1);
@@ -123,6 +127,17 @@ const ChatsTab = forwardRef<any, any>(function ChatsTab({ active = true, onMutat
       value: typeFilter,
       onChange: changeTypeFilter,
       options: [["", t("admin.chats.filters.allTypes")], ["dm", t("admin.chats.filters.typeDm")], ["group", t("admin.chats.filters.typeGroup")], ["channel", t("admin.chats.filters.typeChannel")]],
+    },
+    {
+      id: "channel",
+      label: t("admin.chats.filters.channel"),
+      value: channelFilter,
+      onChange: changeChannelFilter,
+      options: [
+        ["", t("admin.chats.filters.allChannels")],
+        ["direct", t("admin.chats.filters.channelDirect")],
+        ["support", t("admin.chats.filters.channelSupport")],
+      ],
     },
     {
       id: "visibility",
@@ -166,6 +181,7 @@ const ChatsTab = forwardRef<any, any>(function ChatsTab({ active = true, onMutat
     setVerifiedFilter("");
     setAutoAddFilter("");
     setRemoteFilter("");
+    setChannelFilter("");
     setPage(1);
   };
 
@@ -233,6 +249,16 @@ const ChatsTab = forwardRef<any, any>(function ChatsTab({ active = true, onMutat
                         {c.type === "channel" ? <Megaphone size={12} className="text-emerald-500" /> : isDm ? <User size={12} className="text-emerald-500" /> : <Users size={12} className="text-emerald-500" />}
                         {isDm ? t("admin.chats.filters.typeDm") : c.type}
                       </span>
+                      {isDm && (
+                        <span className="flex items-center gap-1">
+                          <ChannelBadge channel={c.channel} departmentName={c.department_name} size="xs" />
+                          {c.channel === "support" && c.department_name ? (
+                            <span className={`truncate max-w-[120px] ${hasPersian(c.department_name) ? "font-fa" : ""}`} dir="auto">
+                              {c.department_name}
+                            </span>
+                          ) : null}
+                        </span>
+                      )}
                       {!isDm && (
                         <span className="flex items-center gap-1 capitalize">
                           {(c.group_visibility || "public") === "private" ? <Lock size={12} className="text-emerald-500" /> : <Globe size={12} className="text-emerald-500" />}
@@ -258,6 +284,7 @@ const ChatsTab = forwardRef<any, any>(function ChatsTab({ active = true, onMutat
                   <tr>
                     <SortTh field="name" sortBy={sortBy} sortDir={sortDir} onToggle={toggleSort}>{t("admin.chats.colChat")}</SortTh>
                     <SortTh field="type" sortBy={sortBy} sortDir={sortDir} onToggle={toggleSort}>{t("admin.chats.colType")}</SortTh>
+                    <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">{t("admin.chats.colChannel")}</th>
                     <SortTh field="group_visibility" sortBy={sortBy} sortDir={sortDir} onToggle={toggleSort}>{t("admin.chats.colPrivacy")}</SortTh>
                     <SortTh field="member_count" sortBy={sortBy} sortDir={sortDir} onToggle={toggleSort}>{t("admin.chats.colMembers")}</SortTh>
                     <SortTh field="message_count" sortBy={sortBy} sortDir={sortDir} onToggle={toggleSort}>{t("admin.chats.colMessages")}</SortTh>
@@ -296,6 +323,20 @@ const ChatsTab = forwardRef<any, any>(function ChatsTab({ active = true, onMutat
                           {c.type === "channel" ? <Megaphone size={13} className="text-emerald-500" /> : isDm ? <User size={13} className="text-emerald-500" /> : <Users size={13} className="text-emerald-500" />}
                           {isDm ? t("admin.chats.filters.typeDm") : c.type === "group" ? t("admin.chats.typeGroupSing") : c.type === "channel" ? t("admin.chats.typeChannelSing") : c.type}
                         </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-slate-600 dark:text-slate-300">
+                        {isDm ? (
+                          <div className="flex flex-col items-start gap-0.5">
+                            <ChannelBadge channel={c.channel} departmentName={c.department_name} size="xs" />
+                            {c.channel === "support" && c.department_name ? (
+                              <span className={`text-[11px] text-slate-500 dark:text-slate-400 ${hasPersian(c.department_name) ? "font-fa" : ""}`} dir="auto">
+                                {c.department_name}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 dark:text-slate-500">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-2.5 text-xs capitalize text-slate-600 dark:text-slate-300">
                         {isDm ? (

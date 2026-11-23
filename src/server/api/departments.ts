@@ -83,24 +83,28 @@ function registerDepartmentRoutes(app, deps) {
         });
       }
 
-      // Reuse the existing DM between this customer and this operator when
-      // the pair already has a support conversation (messenger-like threads).
-      let chatId = await awaitMaybe(findDmChat(customer.id, operator.id));
+      // Strictly reuse ONLY an existing support-channel thread for the SAME
+      // department. Never reuse or convert a direct messenger chat.
+      let chatId = await awaitMaybe(
+        findDmChat(customer.id, operator.id, {
+          channel: "support",
+          departmentId: Number(department.id),
+        }),
+      );
       let reused = false;
       if (chatId) {
-        const existingDept = await awaitMaybe(getChatDepartmentId(chatId));
-        if (existingDept === null || existingDept === Number(department.id)) {
-          reused = true;
-          if (existingDept === null) {
-            await awaitMaybe(markChatDepartment(chatId, department.id));
-          }
-          const u1 = await awaitMaybe(unhideChat(customer.id, chatId));
-          const u2 = await awaitMaybe(unhideChat(operator.id, chatId));
-        }
+        reused = true;
+        await awaitMaybe(unhideChat(customer.id, chatId));
+        await awaitMaybe(unhideChat(operator.id, chatId));
       }
 
       if (!reused) {
-        const rawChatId = await awaitMaybe(createChat(null, "dm"));
+        const rawChatId = await awaitMaybe(
+          createChat(null, "dm", {
+            channel: "support",
+            departmentId: Number(department.id),
+          }),
+        );
         chatId = rawChatId;
         if (!chatId) {
           return res.status(500).json({ error: "Failed to create chat." });
@@ -119,6 +123,9 @@ function registerDepartmentRoutes(app, deps) {
         emitChatEvent(chatId, {
           type: "chat_message",
           chatId,
+          chatChannel: "support",
+          departmentId: Number(department.id),
+          departmentName: department.name || null,
           messageId,
           username: customer.username,
           userId: customer.id,

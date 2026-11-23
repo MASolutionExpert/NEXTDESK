@@ -16,7 +16,7 @@ export function useDiscoverSearch({
   const [discoverSaved, setDiscoverSaved] = useState(false);
 
   useEffect(() => {
-    const query = String(chatsSearchQuery || "").trim();
+    const query = String(chatsSearchQuery || "").trim().replace(/^@+/, "").trim();
     if (!query) {
       setDiscoverLoading(false);
       setDiscoverUsers([]);

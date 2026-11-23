@@ -39,6 +39,7 @@ import { resolveMention, getCachedMention } from "../../../utils/mentions.ts";
 import { summarizeFiles } from "../../../utils/messagePreview.ts";
 import { resolveForwardedTarget } from "../../../utils/forwardOrigin.ts";
 import Avatar from "../../common/Avatar.tsx";
+import ChannelBadge from "../../common/ChannelBadge.tsx";
 import UserRoleBadge from "../../common/UserRoleBadge.tsx";
 import VerifiedBadge from "../../common/VerifiedBadge.tsx";
 import Tooltip from "../../common/Tooltip.tsx";
@@ -159,6 +160,8 @@ export const MessageItem: any = memo(function MessageItem({
   isGroupChat = false,
   isChannelChat = false,
   isSavedChat = false,
+  chatChannel = null,
+  chatDepartmentName = null,
   chatId = null,
   chatName = "",
   chatColor = null,
@@ -1441,6 +1444,13 @@ export const MessageItem: any = memo(function MessageItem({
                 <span className="inline-flex items-center gap-1">
                   <span>{msg._timeLabel || formatTime(msg.created_at)}</span>
                   {isEdited ? <span>{t("chat.message.edited")}</span> : null}
+                  {!isOwn && !isGroupChat && !isChannelChat && !isSavedChat && chatChannel ? (
+                    <ChannelBadge
+                      channel={chatChannel}
+                      departmentName={chatDepartmentName}
+                      size="xs"
+                    />
+                  ) : null}
                   {isOwn || isChannelChat ? (
                     <span
                       className={`inline-flex items-center gap-1 ${
@@ -1540,6 +1550,8 @@ export const MessageItem: any = memo(function MessageItem({
   if (prev.isMobileTouchDevice !== next.isMobileTouchDevice) return false;
   if (prev.isGroupChat !== next.isGroupChat) return false;
   if (prev.isChannelChat !== next.isChannelChat) return false;
+  if (prev.chatChannel !== next.chatChannel) return false;
+  if (prev.chatDepartmentName !== next.chatDepartmentName) return false;
   if (prev.chatName !== next.chatName) return false;
   if (prev.chatColor !== next.chatColor) return false;
   if (prev.seenCount !== next.seenCount) return false;

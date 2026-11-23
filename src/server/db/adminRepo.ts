@@ -220,6 +220,7 @@ function buildAdminChatWhere({
   verifiedFilter = null,
   autoAddFilter = null,
   remoteFilter = null,
+  channelFilter = null,
 }: any) {
   const clauses: string[] = [`c.type IN ('group', 'channel', 'dm')`];
   const params: any[] = [];
@@ -240,6 +241,11 @@ function buildAdminChatWhere({
   if (typeFilter === "group" || typeFilter === "channel" || typeFilter === "dm") {
     clauses.push(`c.type = ?`);
     params.push(typeFilter);
+  }
+
+  if (channelFilter === "direct" || channelFilter === "support") {
+    clauses.push(`COALESCE(c.channel, 'direct') = ?`);
+    params.push(channelFilter);
   }
 
   if (visibilityFilter === "public" || visibilityFilter === "private") {
@@ -286,6 +292,7 @@ export async function adminListChats({
   verifiedFilter = null,
   autoAddFilter = null,
   remoteFilter = null,
+  channelFilter = null,
 }: any = {}) {
   const safeLimit = Math.max(1, Math.min(500, Number(limit) || 200));
   const safeOffset = Math.max(0, Number(offset) || 0);
@@ -309,6 +316,7 @@ export async function adminListChats({
     verifiedFilter,
     autoAddFilter,
     remoteFilter,
+    channelFilter,
   });
 
   let orderSql = `c.${safeSortBy} ${safeSortDir}`;
@@ -323,6 +331,9 @@ export async function adminListChats({
   const rows = await pgGetAll(
     `SELECT c.id, c.name, c.type, c.group_username, c.group_visibility,
             c.group_color, c.group_avatar_url, c.created_at, c.verified, c.auto_add_new_users,
+            COALESCE(c.channel, 'direct') AS channel,
+            c.department_id,
+            dept.name AS department_name,
             (SELECT string_agg(pu.username, ', ' ORDER BY pu.username)
              FROM chat_members pcm
              JOIN users pu ON pu.id = pcm.user_id
@@ -343,6 +354,7 @@ export async function adminListChats({
      LEFT JOIN users owner ON owner.id = (
        SELECT user_id FROM chat_members WHERE chat_id = c.id AND role = 'owner' LIMIT 1
      )
+     LEFT JOIN departments dept ON dept.id = c.department_id
      LEFT JOIN remote_channel_sources rcs ON rcs.chat_id = c.id
      ${whereSql}
      ORDER BY ${orderSql}
@@ -763,9 +775,13 @@ export async function markChatDepartment(
   departmentId: number | string | null,
 ): Promise<boolean> {
   if (!chatId) return false;
+  const normalizedDeptId = departmentId ? Number(departmentId) : null;
   await prisma.chat.updateMany({
     where: { id: String(chatId) },
-    data: { departmentId: departmentId ? Number(departmentId) : null },
+    data: {
+      departmentId: normalizedDeptId,
+      channel: normalizedDeptId ? "support" : "direct",
+    },
   });
   return true;
 }

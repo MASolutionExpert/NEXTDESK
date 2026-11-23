@@ -21,6 +21,7 @@ import { hasPersian } from "../../utils/fontUtils.ts";
 import { getAvatarInitials } from "../../utils/avatarInitials.ts";
 import { formatCompactCount, formatDayLabel, parseServerDate } from "../../utils/chatFormat.ts";
 import Avatar from "../common/Avatar.tsx";
+import ChannelBadge from "../common/ChannelBadge.tsx";
 import UserRoleBadge from "../common/UserRoleBadge.tsx";
 import VerifiedBadge from "../common/VerifiedBadge.tsx";
 import Tooltip from "../common/Tooltip.tsx";
@@ -1042,6 +1043,8 @@ export default function ChatWindowPanel({
       isGroupChat={isGroupChat}
       isChannelChat={isChannelChat}
       isSavedChat={isSavedChat}
+      chatChannel={activeChat?.type === "dm" ? (activeChat?.channel || "direct") : null}
+      chatDepartmentName={activeChat?.department_name || null}
       chatId={activeChatId}
       chatName={activeFallbackTitle}
       chatColor={groupAvatarColor}
@@ -1270,6 +1273,14 @@ export default function ChatWindowPanel({
                       {Boolean(activeChat?.verified) && <VerifiedBadge size={17} />}
                       {!activeChat?.verified && Boolean(activeHeaderPeer?.user_verified) && <VerifiedBadge size={17} />}
                       <UserRoleBadge role={activeHeaderPeer?.user_role} size={17} />
+                      {activeChat?.type === "dm" ? (
+                        <ChannelBadge
+                          channel={activeChat?.channel}
+                          departmentName={activeChat?.department_name}
+                          size="sm"
+                          className="ms-1"
+                        />
+                      ) : null}
                     </button>
                   </Tooltip>
                 ) : (
@@ -1282,6 +1293,14 @@ export default function ChatWindowPanel({
                       {Boolean(activeChat?.verified) && <VerifiedBadge size={17} />}
                       {!activeChat?.verified && Boolean(activeHeaderPeer?.user_verified) && <VerifiedBadge size={17} />}
                       <UserRoleBadge role={activeHeaderPeer?.user_role} size={17} />
+                      {activeChat?.type === "dm" ? (
+                        <ChannelBadge
+                          channel={activeChat?.channel}
+                          departmentName={activeChat?.department_name}
+                          size="sm"
+                          className="ms-1"
+                        />
+                      ) : null}
                     </span>
                   </Tooltip>
                 )}

@@ -87,6 +87,7 @@ model Chat {
   verified           Int     @default(0)
   autoAddNewUsers    Int     @default(0) @map("auto_add_new_users")
   departmentId       Int?    @map("department_id")
+  channel            String  @default("direct")
   createdAt          String  @default(dbgenerated("(CURRENT_TIMESTAMP::text)")) @map("created_at")
 
   members             ChatMember[]
@@ -99,6 +100,7 @@ model Chat {
 
   @@index([type], map: "idx_chats_type")
   @@index([departmentId], map: "idx_chats_department")
+  @@index([channel], map: "idx_chats_channel")
   @@map("chats")
 }
 
