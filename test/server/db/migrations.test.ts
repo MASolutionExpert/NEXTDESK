@@ -8,8 +8,8 @@ import {
 describe("Prisma 7 PostgreSQL Migrations Integration", () => {
   test("applies baseline and records _prisma_migrations cleanly", async () => {
     const first = await runDatabaseMigrations({
-      autoBackup: false,
-      logger: { log: () => {}, warn: () => {}, error: console.error },
+      backupBeforeMigrate: false,
+      quiet: true,
     });
     expect(first.appliedMigrations).toContain(BASELINE_MIGRATION_NAME);
 
@@ -19,12 +19,12 @@ describe("Prisma 7 PostgreSQL Migrations Integration", () => {
 
   test("migration idempotency: running migrations twice on the same database does not fail", async () => {
     const first = await runDatabaseMigrations({
-      autoBackup: false,
-      logger: { log: () => {}, warn: () => {}, error: console.error },
+      backupBeforeMigrate: false,
+      quiet: true,
     });
     const second = await runDatabaseMigrations({
-      autoBackup: false,
-      logger: { log: () => {}, warn: () => {}, error: console.error },
+      backupBeforeMigrate: false,
+      quiet: true,
     });
     expect(second.appliedMigrations).toEqual(first.appliedMigrations);
   });

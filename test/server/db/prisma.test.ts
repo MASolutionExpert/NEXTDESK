@@ -129,8 +129,8 @@ describe("Prisma 7 ORM CRUD, Transactions & Non-Destructive Migrations", () => {
     });
 
     const result = await runDatabaseMigrations({
-      autoBackup: false,
-      logger: { log: () => {}, warn: () => {}, error: console.error },
+      backupBeforeMigrate: false,
+      quiet: true,
     });
     expect(result.appliedMigrations.length).toBeGreaterThanOrEqual(1);
 

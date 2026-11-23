@@ -70,7 +70,7 @@ export async function collectDiagnostics() {
 
   section("Connectivity");
   try {
-    await runPostgresPreflight({ quiet: true });
+    await runPostgresPreflight();
     record(ok, "PostgreSQL connectivity & credentials verified.");
   } catch (error: any) {
     record(fail, `Cannot connect to PostgreSQL: ${String(error?.message || error).slice(0, 400)}`);

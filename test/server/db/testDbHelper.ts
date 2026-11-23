@@ -6,8 +6,8 @@ let migrationsReadyPromise: Promise<void> | null = null;
 async function ensureSchemaReady(): Promise<void> {
   if (!migrationsReadyPromise) {
     migrationsReadyPromise = runDatabaseMigrations({
-      autoBackup: false,
-      logger: { log: () => {}, warn: () => {}, error: console.error },
+      backupBeforeMigrate: false,
+      quiet: true,
     }).then(() => undefined);
   }
   await migrationsReadyPromise;

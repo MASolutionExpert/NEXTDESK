@@ -26,7 +26,7 @@ try {
   const applied = await getAppliedMigrations().catch(() => []);
   console.log(
     `[db-migrations] Complete in ${((Date.now() - startedAt) / 1000).toFixed(1)}s. ` +
-      `Baseline applied: ${result.baselined ? "yes" : "no"}. ` +
+      `Baseline applied: ${result.baselinedLegacyDb ? "yes" : "no"}. ` +
       `Applied Prisma migrations: ${applied.length}.`,
   );
   await closeDatabase().catch(() => {});
