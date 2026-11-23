@@ -287,7 +287,7 @@ describe("POST /api/admin/db-tools database edits", () => {
       addedCount: 1,
     });
     expect(adminRun).toHaveBeenCalledWith(
-      "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)",
+      "INSERT INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
       [chat.id, user.id, "member"],
     );
   });

@@ -2,6 +2,10 @@
 
 All notable changes to **NextDesk** are documented in this file.
 
+## 2.0.0-dev.2026112106
+
+- **100% PostgreSQL Server Test Alignment**: updated the final legacy SQLite `INSERT OR IGNORE` assertion in `test/server/api/adminDbTools.test.ts` to PostgreSQL `ON CONFLICT DO NOTHING`, bringing all 112 server test suites (957 tests) to green against PostgreSQL 17 + Prisma 7.
+
 ## 2.0.0-dev.2026112105
 
 - **Async Admin Helper Fix**: marked `resolveUserId` as `async` and awaited its calls in `src/server/api/admin.ts` for PostgreSQL query compatibility under Node 24 native TypeScript execution.
