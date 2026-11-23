@@ -1,10 +1,18 @@
-export function normalizeVersion(value) {
+export function normalizeVersion(value: unknown): string {
   return String(value || "")
     .trim()
     .replace(/^v/i, "");
 }
 
-function parseVersion(value) {
+interface ParsedVersion {
+  normalized: string;
+  major: number;
+  minor: number;
+  patch: number;
+  prerelease: string;
+}
+
+function parseVersion(value: unknown): ParsedVersion | null {
   const normalized = normalizeVersion(value);
   const match = normalized.match(
     /^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([0-9A-Za-z.-]+))?$/,
@@ -19,7 +27,7 @@ function parseVersion(value) {
   };
 }
 
-function comparePrereleaseIdentifiers(left, right) {
+function comparePrereleaseIdentifiers(left: string, right: string): number {
   const leftParts = String(left || "").split(".").filter(Boolean);
   const rightParts = String(right || "").split(".").filter(Boolean);
   const maxLen = Math.max(leftParts.length, rightParts.length);
@@ -43,7 +51,7 @@ function comparePrereleaseIdentifiers(left, right) {
   return 0;
 }
 
-export function compareVersions(left, right) {
+export function compareVersions(left: unknown, right: unknown): number {
   const a = parseVersion(left);
   const b = parseVersion(right);
   if (!a && !b) return 0;
@@ -60,28 +68,58 @@ export function compareVersions(left, right) {
   return comparePrereleaseIdentifiers(a.prerelease, b.prerelease);
 }
 
-export async function fetchLatestGitHubTag({ owner, repo, channel }: any = {}) {
+const GITHUB_TAGS_PER_PAGE = 100;
+const GITHUB_TAGS_MAX_PAGES = 3;
+
+export async function fetchLatestGitHubTag({
+  owner,
+  repo,
+  channel,
+}: {
+  owner?: string;
+  repo?: string;
+  channel?: string;
+} = {}): Promise<{ rawTag: string; normalizedTag: string }> {
   if (!owner || !repo) {
     throw new Error("GitHub repository information is not configured.");
   }
 
-  const response = await fetch(
-    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/tags?per_page=100`,
-    {
-      headers: {
-        Accept: "application/vnd.github+json",
-      },
-    },
-  );
+  const seenRawTags = new Set<string>();
+  const allTags: Array<{ name?: string }> = [];
 
-  if (!response.ok) {
-    throw new Error(`GitHub responded with ${response.status}.`);
+  for (let page = 1; page <= GITHUB_TAGS_MAX_PAGES; page += 1) {
+    const response = await fetch(
+      `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/tags?per_page=${GITHUB_TAGS_PER_PAGE}&page=${page}`,
+      {
+        headers: {
+          Accept: "application/vnd.github+json",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      if (page === 1) {
+        throw new Error(`GitHub responded with ${response.status}.`);
+      }
+      break;
+    }
+
+    const tags = await response.json();
+    const pageList = Array.isArray(tags) ? tags : [];
+    for (const tag of pageList) {
+      const name = String(tag?.name || "").trim();
+      if (!name || seenRawTags.has(name)) continue;
+      seenRawTags.add(name);
+      allTags.push({ name });
+    }
+
+    if (pageList.length < GITHUB_TAGS_PER_PAGE) {
+      break;
+    }
   }
 
-  const tags = await response.json();
-  const tagList = Array.isArray(tags) ? tags : [];
   const isDevChannel = String(channel || "").trim().toLowerCase() === "dev";
-  const semverTags = tagList
+  const semverTags = allTags
     .map((tag) => {
       const rawTag = String(tag?.name || "").trim();
       const normalizedTag = normalizeVersion(rawTag);
@@ -89,7 +127,9 @@ export async function fetchLatestGitHubTag({ owner, repo, channel }: any = {}) {
         ? { rawTag, normalizedTag }
         : null;
     })
-    .filter(Boolean)
+    .filter((entry): entry is { rawTag: string; normalizedTag: string } =>
+      Boolean(entry),
+    )
     // Release channels must stay separate: a Stable-channel install is only
     // offered stable tags (no -dev prereleases), while a Test-channel install
     // may follow prereleases.

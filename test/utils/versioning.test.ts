@@ -162,4 +162,68 @@ describe("fetchLatestGitHubTag release channels", () => {
     });
     expect(latest.rawTag).toBe("v1.0.0");
   });
+
+  test("compares 10-digit sortable dev prereleases numerically", () => {
+    expect(compareVersions("2.0.0-dev.2026112302", "2.0.0-dev.2026112301")).toBe(1);
+    expect(compareVersions("2.0.0-dev.2026112301", "2.0.0-dev.2026112302")).toBe(-1);
+    expect(compareVersions("2.0.0", "2.0.0-dev.2026112302")).toBe(1);
+  });
+
+  test("paginates up to 3x100 GitHub tags so newer releases on later pages are not missed", async () => {
+    const requestedPages: string[] = [];
+    (global as any).fetch = async (url: string) => {
+      requestedPages.push(url);
+      if (url.includes("page=1")) {
+        return {
+          ok: true,
+          json: async () =>
+            Array.from({ length: 100 }, (_, i) => ({ name: `v0.1.${i}` })),
+        };
+      }
+      if (url.includes("page=2")) {
+        return {
+          ok: true,
+          json: async () =>
+            Array.from({ length: 100 }, (_, i) => ({ name: `v0.2.${i}` })),
+        };
+      }
+      if (url.includes("page=3")) {
+        return {
+          ok: true,
+          json: async () => [
+            ...Array.from({ length: 99 }, (_, i) => ({ name: `v0.3.${i}` })),
+            { name: "v2.0.0-dev.2026112302" },
+          ],
+        };
+      }
+      throw new Error(`Unexpected page requested: ${url}`);
+    };
+
+    const latest = await fetchLatestGitHubTag({
+      owner: "MASolutionExpert",
+      repo: "NEXTDESK",
+      channel: "dev",
+    });
+    expect(latest.rawTag).toBe("v2.0.0-dev.2026112302");
+    expect(requestedPages).toHaveLength(3);
+  });
+
+  test("stops paginating early when a page returns fewer than 100 tags", async () => {
+    let calls = 0;
+    (global as any).fetch = async () => {
+      calls += 1;
+      return {
+        ok: true,
+        json: async () => [{ name: "v1.1.0-dev.10" }, { name: "v1.1.0-dev.9" }],
+      };
+    };
+
+    const latest = await fetchLatestGitHubTag({
+      owner: "MASolutionExpert",
+      repo: "NEXTDESK",
+      channel: "dev",
+    });
+    expect(latest.rawTag).toBe("v1.1.0-dev.10");
+    expect(calls).toBe(1);
+  });
 });

@@ -40,13 +40,32 @@ const PG_TIMEOUT_DEFAULTS = {
   IDLE_IN_TRANSACTION_TIMEOUT_MS: 30_000,
 } as const;
 
+export const DEFAULT_MIGRATION_TIMEOUT_MS = 120_000;
+export const DEFAULT_BACKUP_TIMEOUT_MS = 120_000;
+
 type PgTimeoutKey = keyof typeof PG_TIMEOUT_DEFAULTS;
 
+export function resolveDurationTimeoutMs(
+  raw: string | undefined,
+  defaultMs: number,
+  options: { allowZero?: boolean; minPositiveMs?: number } = {},
+): number {
+  const { allowZero = false, minPositiveMs = 1 } = options;
+  if (raw === undefined || raw === null) return defaultMs;
+  const trimmed = String(raw).trim();
+  if (trimmed === "") return defaultMs;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0) return defaultMs;
+  if (parsed === 0) return allowZero ? 0 : defaultMs;
+  return Math.max(minPositiveMs, Math.trunc(parsed));
+}
+
 function pgTimeoutMs(key: PgTimeoutKey): number {
-  const raw = process.env[`DB_${key}`];
-  const parsed = Number(raw);
-  if (Number.isFinite(parsed) && parsed > 0) return parsed;
-  return PG_TIMEOUT_DEFAULTS[key];
+  return resolveDurationTimeoutMs(
+    process.env[`DB_${key}`],
+    PG_TIMEOUT_DEFAULTS[key],
+    { allowZero: false, minPositiveMs: 1 },
+  );
 }
 
 export function getPostgresTimeouts(): PostgresTimeouts {
@@ -57,6 +76,45 @@ export function getPostgresTimeouts(): PostgresTimeouts {
     statementTimeoutMs: pgTimeoutMs("STATEMENT_TIMEOUT_MS"),
     idleInTransactionTimeoutMs: pgTimeoutMs("IDLE_IN_TRANSACTION_TIMEOUT_MS"),
   };
+}
+
+/**
+ * Per-migration watchdog timeout in milliseconds.
+ * - Unset or blank -> 120,000ms (2 minutes default; blank never disables watchdog).
+ * - Explicit "0"   -> 0 (disables watchdog as documented).
+ * - Positive int   -> exact timeout in ms (minimum 1,000ms).
+ */
+export function getMigrationTimeoutMs(): number {
+  return resolveDurationTimeoutMs(
+    process.env.DB_MIGRATION_TIMEOUT_MS,
+    DEFAULT_MIGRATION_TIMEOUT_MS,
+    { allowZero: true, minPositiveMs: 1_000 },
+  );
+}
+
+/**
+ * Hard timeout for pre-migration pg_dump backups in milliseconds.
+ * Default 120,000ms (2 minutes); cannot be disabled to prevent updater freezes.
+ */
+export function getBackupTimeoutMs(): number {
+  return resolveDurationTimeoutMs(
+    process.env.DB_BACKUP_TIMEOUT_MS,
+    DEFAULT_BACKUP_TIMEOUT_MS,
+    { allowZero: false, minPositiveMs: 5_000 },
+  );
+}
+
+export function hasExplicitSslMode(url: string): boolean {
+  return /[?&]sslmode=/i.test(url);
+}
+
+function extractExplicitSslMode(url: string): string | null {
+  const match = url.match(/[?&]sslmode=([^&#]+)/i);
+  return match ? decodeURIComponent(match[1]).trim().toLowerCase() : null;
+}
+
+export function shouldUseFallbackSslForUrl(url: string): boolean {
+  return process.env.POSTGRES_SSL === "true" && !hasExplicitSslMode(url);
 }
 
 export function resolveDatabaseUrl(): string {
@@ -94,13 +152,20 @@ export function describePgTarget(): PgTargetDescription {
   if (explicitUrl) {
     try {
       const parsed = new URL(explicitUrl);
+      const explicitSslMode = extractExplicitSslMode(explicitUrl);
+      const sslEnabled =
+        explicitSslMode !== null
+          ? ["require", "verify-ca", "verify-full", "prefer"].includes(
+              explicitSslMode,
+            )
+          : process.env.POSTGRES_SSL === "true";
       return {
         mode: "url",
         host: parsed.hostname,
         port: parsed.port || "5432",
         database: parsed.pathname.replace(/^\//, "") || "(default)",
         user: parsed.username || "(default)",
-        ssl: /sslmode=(require|verify-ca|verify-full)/i.test(explicitUrl),
+        ssl: sslEnabled,
       };
     } catch {
       return {
@@ -109,7 +174,7 @@ export function describePgTarget(): PgTargetDescription {
         port: "?",
         database: "?",
         user: "?",
-        ssl: false,
+        ssl: process.env.POSTGRES_SSL === "true",
       };
     }
   }
@@ -147,10 +212,13 @@ export function buildPgPoolConfig(): PoolConfig {
   };
 
   if (explicitUrl) {
+    // Honor POSTGRES_SSL=true for self-signed Postgres servers when the URL
+    // does not specify an explicit sslmode=; an explicit sslmode= in the URL
+    // always takes precedence.
     return {
       ...sharedOptions,
       connectionString: explicitUrl,
-      ...(process.env.POSTGRES_SSL === "true"
+      ...(shouldUseFallbackSslForUrl(explicitUrl)
         ? { ssl: { rejectUnauthorized: false } }
         : {}),
     };
