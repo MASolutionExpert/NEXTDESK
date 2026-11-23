@@ -25,13 +25,13 @@ PUSH_PROXY_URL="http://your-proxy-server:3128"
 **2. Restart service**
 
 ```bash
-sudo systemctl restart chatdesk
+sudo systemctl restart nextdesk
 ```
 
 **3. Verify in logs**
 
 ```bash
-journalctl -u chatdesk -f | grep push
+journalctl -u nextdesk -f | grep push
 # Should show: [push] Using proxy: http://your-proxy-server:3128
 ```
 

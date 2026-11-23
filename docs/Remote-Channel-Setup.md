@@ -12,7 +12,7 @@ On first enable, NextDesk initializes the source at the latest post and does not
 | Server flag | `REMOTE_CHANNEL=true` | `REMOTE_CHANNEL=true` |
 | Source format | Public channel invite link | `@channelname`, `t.me` link, or numeric id |
 | Target restriction | Target must be a public channel on a server with `SIGN_UP=true` | Source must be a Telegram channel |
-| Optional proxy | `REMOTE_CHANNEL_CHATDESK_PROXY_URL` | `REMOTE_CHANNEL_TELEGRAM_PROXY_URL` |
+| Optional proxy | `REMOTE_CHANNEL_NEXTDESK_PROXY_URL` | `REMOTE_CHANNEL_TELEGRAM_PROXY_URL` |
 
 ## NextDesk source
 
@@ -24,7 +24,7 @@ To mirror from another NextDesk server, create or edit a **public channel**, ena
 - The target channel must be public.
 - The target server must be running the same or a newer version of NextDesk that includes the public channel polling endpoints.
 
-No extra credentials are needed. Set `REMOTE_CHANNEL=true` on this server and optionally `REMOTE_CHANNEL_CHATDESK_PROXY_URL` if your server needs a proxy to reach the target.
+No extra credentials are needed. Set `REMOTE_CHANNEL=true` on this server and optionally `REMOTE_CHANNEL_NEXTDESK_PROXY_URL` if your server needs a proxy to reach the target.
 
 ## Telegram source
 
@@ -57,16 +57,16 @@ You can later use the **Test connection** button to confirm your connection or u
 <summary>CLI alternative (<code>remote:configure</code>)</summary>
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 npm run remote:configure
 ```
 
 For Docker:
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 touch .env
-docker compose run --rm -v "$PWD/.env:/app/.env" chatdesk npm --prefix /app/server run remote:configure
+docker compose run --rm -v "$PWD/.env:/app/.env" nextdesk npm --prefix /app/server run remote:configure
 ```
 
 Keep the generated session value private. It authorizes NextDesk to read Telegram channels that the logged-in Telegram account can access.
@@ -101,7 +101,7 @@ Real-time mirroring needs the app awake: by default the poll loops and the Teleg
 
    ```bash
    curl -X POST https://your-app.onrender.com/api/internal/remote-channel/tick \
-     -H "x-chatdesk-cron-secret: <secret-from-settings>"
+     -H "x-nextdesk-cron-secret: <secret-from-settings>"
    ```
 
    Each tick wakes the app, mirrors everything since the last mirrored message, drains the queue, then disconnects Telegram so the app can sleep again.

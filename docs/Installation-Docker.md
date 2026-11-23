@@ -57,8 +57,8 @@ docker run hello-world
 ## 2. Clone repository
 
 ```bash
-sudo mkdir -p /opt/chatdesk
-cd /opt/chatdesk
+sudo mkdir -p /opt/nextdesk
+cd /opt/nextdesk
 git clone https://github.com/MASolutionExpert/NEXTDESK.git .
 ```
 
@@ -93,7 +93,7 @@ See [SSL Certificates](./SSL-Certificates.md) for the available options.
 Pull the pre-built image and start the containers:
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 docker compose up -d
 ```
 
@@ -120,43 +120,43 @@ docker compose restart nginx
 
 ## Runtime User and Persistent Data
 
-Docker deployments do not use `chatdesk.service`. NextDesk runs as the user configured for the container (root in the current image unless Compose `user:` overrides it), and database commands run as that same container UID/GID:
+Docker deployments do not use `nextdesk.service`. NextDesk runs as the user configured for the container (root in the current image unless Compose `user:` overrides it), and database commands run as that same container UID/GID:
 
 ```bash
-docker compose exec chatdesk npm --prefix /app/server run db:inspect
+docker compose exec nextdesk npm --prefix /app/server run db:inspect
 ```
 
 To run the container as a specific non-root UID/GID, configure `user:` in your Compose service:
 
 ```yaml
 services:
-  chatdesk:
-    user: "chatdesk:chatdesk"
+  nextdesk:
+    user: "nextdesk:nextdesk"
 ```
 
 When using a bind mount instead of the default named volume, make the host directory writable by that same UID:GID before starting NextDesk. NextDesk does not change host bind-mount ownership automatically:
 
 ```bash
 mkdir -p ./data
-sudo chown -R chatdesk:chatdesk ./data
+sudo chown -R nextdesk:nextdesk ./data
 ```
 
 ## Admin panel service control
 
-The admin panel's **Restart service** and **Stop service** actions work in Docker deployments by calling the Docker Engine API through the mounted socket (`/var/run/docker.sock`). The compose file sets `CHATDESK_CONTAINER_NAME=chatdesk` so the app knows which container to target.
+The admin panel's **Restart service** and **Stop service** actions work in Docker deployments by calling the Docker Engine API through the mounted socket (`/var/run/docker.sock`). The compose file sets `NEXTDESK_CONTAINER_NAME=nextdesk` so the app knows which container to target.
 
 If you rename the container or use a custom name, set the env var to match:
 
 ```yaml
 # docker-compose.yaml
 environment:
-  CHATDESK_CONTAINER_NAME: my-custom-name
+  NEXTDESK_CONTAINER_NAME: my-custom-name
 ```
 
 If you do not need service control from the admin panel, you can remove the socket mount from `docker-compose.yaml`:
 
 ```yaml
-# Remove or comment out this line under chatdesk volumes:
+# Remove or comment out this line under nextdesk volumes:
 # - /var/run/docker.sock:/var/run/docker.sock
 ```
 
@@ -165,7 +165,7 @@ If you do not need service control from the admin panel, you can remove the sock
 Pull the latest image and restart:
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 docker compose pull
 docker compose up -d
 ```

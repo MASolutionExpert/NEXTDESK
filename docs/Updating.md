@@ -4,7 +4,7 @@ How you update or downgrade depends on how you installed NextDesk.
 
 | Install method | Update / Downgrade path |
 |---|---|
-| Deployment script | Run `chatdesk-deploy` and choose **Update NextDesk** (handles database backup, git pull or checkout, rebuild, migrations, and service restart). |
+| Deployment script | Run `nextdesk-deploy` and choose **Update NextDesk** (handles database backup, git pull or checkout, rebuild, migrations, and service restart). |
 | Docker | Git pull/checkout target tag or commit + `docker compose up -d --build`. |
 | Manual (systemd) | Git pull/checkout target tag or commit + rebuild client/server + restart service. |
 
@@ -13,10 +13,10 @@ How you update or downgrade depends on how you installed NextDesk.
 Always backup your database before updating or downgrading:
 
 ```bash
-cd /opt/chatdesk/server
+cd /opt/nextdesk/server
 npm run db:backup
 # Or use this for Docker:
-docker compose exec chatdesk npm --prefix /app/server run db:backup
+docker compose exec nextdesk npm --prefix /app/server run db:backup
 ```
 
 :::
@@ -27,14 +27,14 @@ The [Deployment Script](./Deployment-Script.md) handles both updates and downgra
 
 :::
 
-## Deployment script (chatdesk-deploy)
+## Deployment script (nextdesk-deploy)
 
 The interactive deployment script is the easiest way to update or downgrade your NextDesk instance.
 
 Run the tool:
 
 ```bash
-chatdesk-deploy
+nextdesk-deploy
 ```
 
 Choose option **2** (**Update NextDesk**).
@@ -58,7 +58,7 @@ When newer commits are available on the `main` branch, the script automatically:
 3. Ensures VAPID keys and security credentials remain configured.
 4. Executes database schema migrations (`npm run db:migrate`).
 5. Fixes file permissions and systemd service files.
-6. Restarts `chatdesk.service` (and `chatdesk-worker.service` if present) and reloads Nginx.
+6. Restarts `nextdesk.service` (and `nextdesk-worker.service` if present) and reloads Nginx.
 
 ### 3. Downgrading (GitHub mode)
 
@@ -82,7 +82,7 @@ If you select `yes`:
 
 When choosing **Offline** mode with a local source zip archive:
 
-- **Update**: If the `VERSION` in the archive is higher than `/opt/chatdesk/VERSION`, the script updates the instance.
+- **Update**: If the `VERSION` in the archive is higher than `/opt/nextdesk/VERSION`, the script updates the instance.
 - **Downgrade**: If the `VERSION` in the archive is lower than the installed version, the script asks:
 
   ```txt
@@ -93,9 +93,9 @@ When choosing **Offline** mode with a local source zip archive:
 
 ### 5. Updating the deployment menu
 
-To update the `chatdesk-deploy` CLI command itself:
+To update the `nextdesk-deploy` CLI command itself:
 
-1. Run `chatdesk-deploy`.
+1. Run `nextdesk-deploy`.
 2. Choose option **7** (**Update menu**).
 3. The script checks GitHub for newer installer releases and updates the global command automatically (or offers to reinstall if already current).
 
@@ -104,7 +104,7 @@ To update the `chatdesk-deploy` CLI command itself:
 ### Updating to latest
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 git pull origin main
 docker compose -f docker-compose.yaml up -d --build
 sudo systemctl reload nginx
@@ -113,7 +113,7 @@ sudo systemctl reload nginx
 ### Downgrading to a specific version
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 git fetch --all --tags
 git checkout v0.11.4 # Replace with your target tag or commit hash
 docker compose -f docker-compose.yaml up -d --build
@@ -125,7 +125,7 @@ sudo systemctl reload nginx
 ### Updating to latest
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 git pull origin main
 cd client
 npm install
@@ -133,14 +133,14 @@ npm run build
 cd ../server
 npm install
 npm run db:migrate
-sudo systemctl restart chatdesk
+sudo systemctl restart nextdesk
 sudo systemctl reload nginx
 ```
 
 ### Downgrading to a specific version
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 git fetch --all --tags
 git checkout v0.11.4 # Replace with your target tag or commit hash
 cd client
@@ -149,7 +149,7 @@ npm run build
 cd ../server
 npm install
 npm run db:migrate
-sudo systemctl restart chatdesk
+sudo systemctl restart nextdesk
 sudo systemctl reload nginx
 ```
 

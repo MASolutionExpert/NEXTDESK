@@ -2,6 +2,11 @@
 
 All notable changes to **NextDesk** are documented in this file.
 
+## 2.0.0-dev.2026112301
+
+- **100% Pure NextDesk Brand & Codebase Independence**: removed all remaining legacy brand references (`ChatDesk`, `Songbird` / `سانگبرد`) across backend, frontend, media worker, tests, installer/CLI (`nextdesk-deploy`, `# nextdesk-deploy-version:`), Docker/Nginx/Ansible/Railway/Render configs, GitHub workflows, and English/Persian documentation.
+- **License Cleanup**: removed the legacy `LICENSE` file and legacy MIT license metadata from `package.json`, `worker/package.json`, and README files.
+
 ## 2.0.0-dev.2026112107
 
 - **Clean TypeScript Build (`tsc --noEmit`)**: aligned `runDatabaseMigrations` option types (`backupBeforeMigrate`, `quiet`), `MigrateDatabaseResult.baselinedLegacyDb`, and `runPostgresPreflight()` signature across scripts and DB integration tests.

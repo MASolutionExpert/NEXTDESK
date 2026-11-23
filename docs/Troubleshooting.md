@@ -6,11 +6,11 @@ This page collects common issues and how to diagnose them. Start by checking the
 
 | Source | Command | Use it for |
 |---|---|---|
-| Service logs (systemd) | `sudo journalctl -u chatdesk -f` | App crashes, startup errors, runtime exceptions. |
+| Service logs (systemd) | `sudo journalctl -u nextdesk -f` | App crashes, startup errors, runtime exceptions. |
 | Docker logs | `docker compose -f docker-compose.yaml logs -f` | Same as above, for Docker installs. |
 | Nginx error log | `sudo tail -f /var/log/nginx/error.log` | 502/504 errors, proxy and TLS problems. |
 | Nginx access log | `sudo tail -f /var/log/nginx/access.log` | Confirm requests reach the server and their status codes. |
-| Deploy script log | `cat /opt/chatdesk/logs/install.log` | Failures during install/update via `chatdesk-deploy`. |
+| Deploy script log | `cat /opt/nextdesk/logs/install.log` | Failures during install/update via `nextdesk-deploy`. |
 
 :::tip
 
@@ -115,8 +115,8 @@ A `502` from Nginx almost always means the Node server is not reachable on the e
 1. Confirm the service is running:
 
    ```bash
-   sudo systemctl status chatdesk
-   sudo journalctl -u chatdesk -n 100 --no-pager
+   sudo systemctl status nextdesk
+   sudo journalctl -u nextdesk -n 100 --no-pager
    ```
 
 2. Confirm the proxy target matches `SERVER_PORT`. Nginx's `proxy_pass` port must equal `SERVER_PORT` in `.env`.
@@ -209,7 +209,7 @@ Other checks:
 |---|---|
 | Browser warns about invalid cert | Confirm `ssl_certificate` / `ssl_certificate_key` paths in Nginx point to valid files. |
 | Certbot renewal fails | Run `sudo certbot renew --dry-run` and check DNS/port 80 reachability. |
-| IP-based cert expired | The IP certificate flow uses short-lived (6-day) certs auto-renewed by a timer; confirm the `chatdesk-lego-renew` timer is active. |
+| IP-based cert expired | The IP certificate flow uses short-lived (6-day) certs auto-renewed by a timer; confirm the `nextdesk-lego-renew` timer is active. |
 | Self-signed warning (Docker default) | Expected with the default self-signed cert. Replace with real certs for production. |
 
 See [SSL Certificates](./SSL-Certificates.md) for the full setup options.
@@ -245,11 +245,11 @@ Provide the provider's CA certificate to Node.js via the `NODE_EXTRA_CA_CERTS` e
      ```
 
 3. **On Docker / VPS:**
-   - Save the CA certificate to disk (e.g., `/opt/chatdesk/certs/ca.pem` or mount it into the container).
+   - Save the CA certificate to disk (e.g., `/opt/nextdesk/certs/ca.pem` or mount it into the container).
    - In `.env` or container environment, set:
 
      ```txt
-     NODE_EXTRA_CA_CERTS=/opt/chatdesk/certs/ca.pem
+     NODE_EXTRA_CA_CERTS=/opt/nextdesk/certs/ca.pem
      ```
 
 ## Remote Channel not mirroring
@@ -280,24 +280,24 @@ If you encounter any of the issues mentioned below, reinstalling the app via the
 **Systemd deployments:**
 
 - The service user needs `sudo` privileges for `systemctl` commands
-- Create a sudoers file for the chatdesk user:
+- Create a sudoers file for the nextdesk user:
 
   ```bash
-  sudo visudo -f /etc/sudoers.d/chatdesk
+  sudo visudo -f /etc/sudoers.d/nextdesk
   ```
 
-- Add these lines (replace `chatdesk` if using a different service user):
+- Add these lines (replace `nextdesk` if using a different service user):
 
   ```txt
-  chatdesk ALL=(ALL) NOPASSWD: /bin/systemctl restart chatdesk.service
-  chatdesk ALL=(ALL) NOPASSWD: /bin/systemctl stop chatdesk.service
-  chatdesk ALL=(ALL) NOPASSWD: /bin/systemctl status chatdesk.service
+  nextdesk ALL=(ALL) NOPASSWD: /bin/systemctl restart nextdesk.service
+  nextdesk ALL=(ALL) NOPASSWD: /bin/systemctl stop nextdesk.service
+  nextdesk ALL=(ALL) NOPASSWD: /bin/systemctl status nextdesk.service
   ```
 
 - Save and ensure permissions are correct:
 
   ```bash
-  sudo chmod 0440 /etc/sudoers.d/chatdesk
+  sudo chmod 0440 /etc/sudoers.d/nextdesk
   ```
 
 **PM2 deployments:**
@@ -314,19 +314,19 @@ If you encounter any of the issues mentioned below, reinstalling the app via the
 - Add the user to the `systemd-journal` group:
 
   ```bash
-  sudo usermod -a -G systemd-journal chatdesk
+  sudo usermod -a -G systemd-journal nextdesk
   ```
 
 - Add the user to the `adm` group:
 
   ```bash
-  sudo usermod -a -G adm chatdesk
+  sudo usermod -a -G adm nextdesk
   ```
 
 - Restart the service:
 
   ```bash
-  sudo systemctl restart chatdesk
+  sudo systemctl restart nextdesk
   ```
 
 **Docker:**

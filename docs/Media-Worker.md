@@ -41,7 +41,7 @@ Whether deployed as a built-in background process or as a standalone cloud micro
 2. **Dispatch**: NextDesk dispatches a `POST /transcode` request to the Media Worker containing the file identifier, storage key, encryption settings, and optional callback URLs.
 3. **Queueing**: The worker immediately acknowledges receipt with `202 Accepted` and enqueues the job in its asynchronous queue (`AsyncQueue`), strictly governed by `WORKER_CONCURRENCY`.
 4. **Processing**: The worker retrieves the raw media, decrypts it in memory if envelope encryption is active, inspects codecs, performs transcoding/faststart copy with FFmpeg, and creates a JPEG thumbnail.
-5. **Callback Notification**: The worker posts the completed status, dimensions, duration, and processed storage keys back to NextDesk via `POST /api/uploads/webhook/processed` (authenticated via `x-chatdesk-webhook-secret`).
+5. **Callback Notification**: The worker posts the completed status, dimensions, duration, and processed storage keys back to NextDesk via `POST /api/uploads/webhook/processed` (authenticated via `x-nextdesk-webhook-secret`).
 6. **Real-time Broadcast**: NextDesk updates the database record to `ready` and broadcasts an SSE/WebSocket update to all participants in the chat.
 
 ## Media Processing Modes (`STORAGE_PROCESSING_MODE`)
@@ -64,9 +64,9 @@ Configure these variables in the worker's environment (`.env` in `worker/` or co
 |---|---|---:|---|
 | `WORKER_PORT` | `integer` | `8080` | HTTP port the Media Worker listens on. |
 | `WORKER_CONCURRENCY` | `integer` | `2` | Maximum number of concurrent FFmpeg transcode jobs. |
-| `WEBHOOK_SECRET` | `string` | `""` | Secret token to authenticate incoming dispatch requests and outgoing webhook callbacks (`x-chatdesk-webhook-secret`). Must match NextDesk's `WEBHOOK_SECRET`. |
+| `WEBHOOK_SECRET` | `string` | `""` | Secret token to authenticate incoming dispatch requests and outgoing webhook callbacks (`x-nextdesk-webhook-secret`). Must match NextDesk's `WEBHOOK_SECRET`. |
 | `STORAGE_DRIVER` | `string` | `local` | Storage driver (`local` for local disk or `remote` / `s3` for object storage). |
-| `DATA_DIR` | `string` | `/opt/chatdesk/data` | Path to NextDesk data directory (used when `STORAGE_DRIVER=local`). |
+| `DATA_DIR` | `string` | `/opt/nextdesk/data` | Path to NextDesk data directory (used when `STORAGE_DRIVER=local`). |
 | `STORAGE_BUCKET` | `string` | `""` | S3 / R2 bucket name. |
 | `STORAGE_ENDPOINT` | `string` | `""` | S3 / R2 endpoint URL (e.g., `https://<account-id>.r2.cloudflarestorage.com`). |
 | `STORAGE_REGION` | `string` | `auto` | S3 / R2 region (e.g., `us-east-1` or `auto`). |
@@ -85,7 +85,7 @@ Configure these variables in the NextDesk backend `.env`:
 | `WORKER_PORT` | `integer` | `8080` | Port for the local Media Worker service. NextDesk uses this to construct `http://127.0.0.1:WORKER_PORT`. |
 | `STORAGE_PROCESSING_MODE` | `string` | `auto` | Media processing strategy (`auto`, `local`, or `remote`). |
 | `STORAGE_PROCESSING_TIMEOUT_MS` | `integer` | `120000` | Total retry timeout in milliseconds when dispatching transcode jobs to the remote worker before falling back to local processing in `auto` mode or failing the dispatch in `remote` mode. |
-| `WEBHOOK_URL` | `string` | `""` | Public NextDesk webhook callback URL sent to external workers (e.g., `https://chatdesk.example.com/api/uploads/webhook/processed`). Fallback: `WEBHOOK_CALLBACK_URL`. |
+| `WEBHOOK_URL` | `string` | `""` | Public NextDesk webhook callback URL sent to external workers (e.g., `https://nextdesk.example.com/api/uploads/webhook/processed`). Fallback: `WEBHOOK_CALLBACK_URL`. |
 | `WEBHOOK_SECRET` | `string` | *(Auto-generated)* | Shared secret token used to authenticate webhook communications. Generated automatically on startup if omitted. |
 | `FILE_UPLOAD_TRANSCODE_VIDEOS` | `boolean` | `true` | When set to `false`, completely disables video transcoding, skips sending any transcode dispatch calls (`POST /transcode`) to either remote or local Media Workers, and prevents spawning or probing the local Media Worker process. |
 
@@ -120,7 +120,7 @@ This dedicated Alpine Linux-based image (~120 MB) comes pre-configured with Node
 
 ```bash
 docker run -d \
-  --name chatdesk-media-worker \
+  --name nextdesk-media-worker \
   --restart unless-stopped \
   -p 8080:8080 \
   -e WORKER_PORT=8080 \
@@ -128,7 +128,7 @@ docker run -d \
   -e WEBHOOK_SECRET=your-secure-webhook-secret \
   -e STORAGE_DRIVER=remote \
   -e STORAGE_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com \
-  -e STORAGE_BUCKET=my-chatdesk-bucket \
+  -e STORAGE_BUCKET=my-nextdesk-bucket \
   -e STORAGE_REGION=auto \
   -e STORAGE_ACCESS_KEY_ID=your-access-key \
   -e STORAGE_SECRET_ACCESS_KEY=your-secret-key \
@@ -143,7 +143,7 @@ To run the Media Worker on a dedicated server optimized for media processing (e.
 **1. Create or navigate to `worker/`:**
 
 ```bash
-cd /opt/chatdesk/worker
+cd /opt/nextdesk/worker
 ```
 
 **2. Configure the worker `.env`:**
@@ -154,7 +154,7 @@ WORKER_CONCURRENCY=4
 WEBHOOK_SECRET=your-secure-webhook-secret
 STORAGE_DRIVER=remote
 STORAGE_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
-STORAGE_BUCKET=my-chatdesk-bucket
+STORAGE_BUCKET=my-nextdesk-bucket
 STORAGE_REGION=auto
 STORAGE_ACCESS_KEY_ID=your-access-key
 STORAGE_SECRET_ACCESS_KEY=your-secret-key
@@ -190,14 +190,14 @@ You can deploy the Media Worker as a standalone Web Service on any cloud contain
 5. On your NextDesk server `.env`, configure:
    ```txt
    WORKER_URL=https://your-media-worker.onrender.com
-   WEBHOOK_URL=https://chatdesk.example.com/api/uploads/webhook/processed
+   WEBHOOK_URL=https://nextdesk.example.com/api/uploads/webhook/processed
    WEBHOOK_SECRET=your-secure-webhook-secret
    STORAGE_PROCESSING_MODE=remote
    ```
 
 #### Railway / Fly.io
 
-- **Automated Deployment (Railway IaC)**: NextDesk includes a ready-to-use Infrastructure as Code configuration at `.railway/railway.ts` that automatically provisions the `chatdesk-worker` service alongside the main application, PostgreSQL, and object storage bucket with zero manual configuration. See the [Cloud Deployment Guide](./Cloud-Deployment.md#railway-infrastructure-as-code) for full details.
+- **Automated Deployment (Railway IaC)**: NextDesk includes a ready-to-use Infrastructure as Code configuration at `.railway/railway.ts` that automatically provisions the `nextdesk-worker` service alongside the main application, PostgreSQL, and object storage bucket with zero manual configuration. See the [Cloud Deployment Guide](./Cloud-Deployment.md#railway-infrastructure-as-code) for full details.
 - **Manual Setup (Railway / Fly.io)**: Build from `worker/Dockerfile` with root directory context `worker`. Expose the HTTP port defined in `WORKER_PORT` (`8080`). Ensure the worker service has outbound Internet access to reach your object storage endpoint and NextDesk `WEBHOOK_URL`.
 
 ### 4. Manual Systemd Service (Linux VPS)
@@ -214,11 +214,11 @@ sudo apt install -y ffmpeg nodejs
 **2. Install worker dependencies:**
 
 ```bash
-cd /opt/chatdesk/worker
+cd /opt/nextdesk/worker
 npm ci --omit=dev
 ```
 
-**3. Create systemd unit file `/etc/systemd/system/chatdesk-worker.service`:**
+**3. Create systemd unit file `/etc/systemd/system/nextdesk-worker.service`:**
 
 ```ini
 [Unit]
@@ -227,13 +227,13 @@ After=network.target
 
 [Service]
 Type=simple
-User=chatdesk
-WorkingDirectory=/opt/chatdesk/worker
+User=nextdesk
+WorkingDirectory=/opt/nextdesk/worker
 ExecStart=/usr/bin/node index.js
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
-EnvironmentFile=/opt/chatdesk/.env
+EnvironmentFile=/opt/nextdesk/.env
 
 [Install]
 WantedBy=multi-user.target
@@ -243,8 +243,8 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now chatdesk-worker
-sudo systemctl status chatdesk-worker
+sudo systemctl enable --now nextdesk-worker
+sudo systemctl status nextdesk-worker
 ```
 
 ## API Reference & Endpoints
@@ -264,7 +264,7 @@ curl http://localhost:8080/health
 ```json
 {
   "status": "ok",
-  "service": "chatdesk-media-worker",
+  "service": "nextdesk-media-worker",
   "queue": {
     "pending": 0,
     "queued": 0,
@@ -281,7 +281,7 @@ Dispatches a media file for asynchronous processing.
 
 **Headers:**
 - `Content-Type: application/json`
-- `x-chatdesk-webhook-secret: <WEBHOOK_SECRET>`
+- `x-nextdesk-webhook-secret: <WEBHOOK_SECRET>`
 
 **Request Body Schema:**
 
@@ -292,7 +292,7 @@ Dispatches a media file for asynchronous processing.
   "storedName": "original-video.mov",
   "mimeType": "video/quicktime",
   "encryptionType": "none",
-  "callbackUrl": "https://chatdesk.example.com/api/uploads/webhook/processed",
+  "callbackUrl": "https://nextdesk.example.com/api/uploads/webhook/processed",
   "webhookSecret": "your-webhook-secret"
 }
 ```
@@ -317,7 +317,7 @@ Sent by the worker to NextDesk upon completion.
 **Headers:**
 
 - `Content-Type: application/json`
-- `x-chatdesk-webhook-secret: <WEBHOOK_SECRET>`
+- `x-nextdesk-webhook-secret: <WEBHOOK_SECRET>`
 
 **Payload on Success (`status: "ready"`):**
 
@@ -353,7 +353,7 @@ Remote Channel Telegram mirroring reuses this worker for heavy media work and of
 
 ## Security & Best Practices
 
-1. **Synchronize `WEBHOOK_SECRET`**: Always set an identical, high-entropy `WEBHOOK_SECRET` string on both the NextDesk server and Media Worker. Requests lacking a matching `x-chatdesk-webhook-secret` header are rejected with `401 Unauthorized`.
+1. **Synchronize `WEBHOOK_SECRET`**: Always set an identical, high-entropy `WEBHOOK_SECRET` string on both the NextDesk server and Media Worker. Requests lacking a matching `x-nextdesk-webhook-secret` header are rejected with `401 Unauthorized`.
 2. **Private Network Isolation**: When deploying across dedicated cloud instances or internal VPCs, bind the Media Worker to internal private IPs or protect it behind a firewall (e.g. UFW or security groups) so that only NextDesk server nodes can access `POST /transcode`.
 3. **Concurrency & Resource Allocation**:
    - Transcoding is CPU and RAM intensive.
@@ -370,7 +370,7 @@ Remote Channel Telegram mirroring reuses this worker for heavy media work and of
 
 ### NextDesk never receives webhook callbacks
 
-- Confirm `WEBHOOK_URL` on NextDesk points to an externally accessible URL reachable from the worker instance (e.g., `https://chatdesk.example.com/api/uploads/webhook/processed`).
+- Confirm `WEBHOOK_URL` on NextDesk points to an externally accessible URL reachable from the worker instance (e.g., `https://nextdesk.example.com/api/uploads/webhook/processed`).
 - When using loopback or private hostnames (`localhost`, `127.0.0.1`), ensure the worker is running on the same host or network namespace.
 - Inspect worker logs for retry attempts (`[worker] Callback webhook returned HTTP ...`).
 
@@ -383,7 +383,7 @@ Remote Channel Telegram mirroring reuses this worker for heavy media work and of
   ```
 - Check worker logs for detailed FFmpeg error output:
   ```bash
-  journalctl -u chatdesk-worker -f
+  journalctl -u nextdesk-worker -f
   # or for Docker
   docker compose -f worker/docker-compose.yaml logs -f
   ```

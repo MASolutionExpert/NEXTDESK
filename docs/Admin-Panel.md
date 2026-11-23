@@ -23,7 +23,7 @@ There are two primary ways to grant an account **owner** or **admin** privileges
 1. Create or edit a user and give them the **owner** or **admin** role (prompted on fresh install, or later via the [Deployment Script](./Deployment-Script.md)):
 
   ```bash
-  chatdesk-deploy
+  nextdesk-deploy
   # Navigate to "Manage Database" submenu
   # Select "Create user" or "Edit user"
   # Follow prompts and select either "owner" or "admin" role
@@ -31,7 +31,7 @@ There are two primary ways to grant an account **owner** or **admin** privileges
   :::info You can also use [database commands](./Database-Commands.md) if you prefer:
 
    ```bash
-   cd /opt/chatdesk/server
+   cd /opt/nextdesk/server
    # If you want to create a new user
    npm run db:user:create
    # Or if you want to promote a user
@@ -265,7 +265,7 @@ Perform system administration tasks:
 
 Service control (restart/stop) requires the right setup depending on deployment:
 
-- **Docker**: The `chatdesk` container must have the Docker socket mounted (`/var/run/docker.sock`). This is included in the default `docker-compose.yaml`. The `CHATDESK_CONTAINER_NAME` environment variable tells the app which container to target (defaults to `chatdesk`). See [Install via Docker](./Installation-Docker.md#admin-panel-service-control).
+- **Docker**: The `nextdesk` container must have the Docker socket mounted (`/var/run/docker.sock`). This is included in the default `docker-compose.yaml`. The `NEXTDESK_CONTAINER_NAME` environment variable tells the app which container to target (defaults to `nextdesk`). See [Install via Docker](./Installation-Docker.md#admin-panel-service-control).
 - **Systemd**: The service user must have `sudo` privileges for `systemctl`. See [Troubleshooting](./Troubleshooting.md#admin-panel-issues).
 
 :::
@@ -316,7 +316,7 @@ When disabled:
 Most admin operations can still be performed via CLI:
 
 ```bash
-cd /opt/chatdesk/server
+cd /opt/nextdesk/server
 
 # User management
 npm run db:user:create

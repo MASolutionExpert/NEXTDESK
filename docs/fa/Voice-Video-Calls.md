@@ -137,7 +137,7 @@ lt-cred-mech
 
 # نام دامنه یا قلمرو (Realm) و اطلاعات کاربری ثابت
 realm=your-domain.com
-user=chatdesk:YourSecurePassword123
+user=nextdesk:YourSecurePassword123
 
 # تنظیم IP عمومی سرور
 # اگر سرور شما مستقیماً دارای IP عمومی روی کارت شبکه است:
@@ -172,22 +172,22 @@ sudo systemctl status coturn
 sudo ss -ulpn | grep 3478
 ```
 
-### ۵. تنظیم در فایل `.env` سانگبرد
+### ۵. تنظیم در فایل `.env` NextDesk
 
-مقادیر زیر را در فایل `.env` سرور سانگبرد وارد کنید:
+مقادیر زیر را در فایل `.env` سرور NextDesk وارد کنید:
 
 ```txt
 TURN_STUN_URL="stun:your-domain.com:3478"
 TURN_URL="turn:your-domain.com:3478"
-TURN_USERNAME="chatdesk"
+TURN_USERNAME="nextdesk"
 TURN_CREDENTIAL="YourSecurePassword123"
 ```
 
-سپس سرور سانگبرد را بازنشانی (Restart) نمایید تا تنظیمات اعمال شوند.
+سپس سرور NextDesk را بازنشانی (Restart) نمایید تا تنظیمات اعمال شوند.
 
 ### ۶. اعتبارسنجی و تست
 
-- **پنل مدیریت سانگبرد:** به **پنل مدیریت** ← تب **سرویس ها** مراجعه کرده و وضعیت اتصال و تاخیر سرور TURN را بررسی نمایید.
+- **پنل مدیریت NextDesk:** به **پنل مدیریت** ← تب **سرویس ها** مراجعه کرده و وضعیت اتصال و تاخیر سرور TURN را بررسی نمایید.
 - **تست مستقل WebRTC:** از ابزار آنلاین [WebRTC Trickle ICE test](https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/) استفاده کنید؛ در صورت کارکرد صحیح سرور، نامزدهای اتصالی با نوع `relay` نمایش داده خواهند شد.
 
 ## قابلیت‌ها

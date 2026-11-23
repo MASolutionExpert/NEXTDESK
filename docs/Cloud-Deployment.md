@@ -53,7 +53,7 @@ For stateless, zero-downtime PaaS deployments:
 1. Provision a managed **PostgreSQL** database and configure database credentials:
    ```txt
    DB_CLIENT=postgres
-   POSTGRES_URL=postgres://user:password@host:5432/chatdesk
+   POSTGRES_URL=postgres://user:password@host:5432/nextdesk
    ```
 
    :::tip Managed PostgreSQL with SSL & Custom CA (Aiven, AWS RDS, etc.)
@@ -81,7 +81,7 @@ For stateless, zero-downtime PaaS deployments:
    ```txt
    STORAGE_DRIVER=remote
    STORAGE_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
-   STORAGE_BUCKET=chatdesk-uploads
+   STORAGE_BUCKET=nextdesk-uploads
    STORAGE_ACCESS_KEY_ID=your_access_key
    STORAGE_SECRET_ACCESS_KEY=your_secret_key
    STORAGE_REGION=auto
@@ -93,13 +93,13 @@ NextDesk includes an automated **Infrastructure as Code (IaC)** configuration at
 
 #### Architecture & Resources Provisioned
 
-The Railway IaC configuration programmatically creates and interconnects a full-stack NextDesk topology under a single `"chatdesk"` project group:
+The Railway IaC configuration programmatically creates and interconnects a full-stack NextDesk topology under a single `"nextdesk"` project group:
 
 ```txt
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        Railway Project Canvas                          │
 │                                                                        │
-│   ┌─────────────────────────── "chatdesk" Group ──────────────────┐    │
+│   ┌─────────────────────────── "nextdesk" Group ──────────────────┐    │
 │   │                                                               │    │
 │   │   ┌──────────────────┐               ┌────────────────────┐   │    │
 │   │   │  PostgreSQL      │◀──────────────│  NextDesk App      │   │    │
@@ -164,7 +164,7 @@ railway up
 
 By default, Railway services run within private networking. To make NextDesk accessible to users:
 
-1. In the [Railway Dashboard](https://railway.com/dashboard), click on the **chatdesk-server** service.
+1. In the [Railway Dashboard](https://railway.com/dashboard), click on the **nextdesk-server** service.
 
 2. Navigate to **Settings** > **Networking** > **Public Networking**.
 
@@ -173,16 +173,16 @@ By default, Railway services run within private networking. To make NextDesk acc
 Alternatively, generate a domain using the CLI:
 
 ```bash
-railway domain --service chatdesk-server
+railway domain --service nextdesk-server
 ```
 
 ### Render (Blueprint)
 
-NextDesk ships a [Render Blueprint](https://render.com/docs/blueprints) at `render.yaml`: a single Docker web service (`chatdesk`) backed by managed PostgreSQL. Unlike the Railway topology there is no separate worker service — the container entrypoint auto-starts an in-container Media Worker (`WORKER_PORT=8080`) next to the app, which itself listens on Render's `PORT`, so the two never collide.
+NextDesk ships a [Render Blueprint](https://render.com/docs/blueprints) at `render.yaml`: a single Docker web service (`nextdesk`) backed by managed PostgreSQL. Unlike the Railway topology there is no separate worker service — the container entrypoint auto-starts an in-container Media Worker (`WORKER_PORT=8080`) next to the app, which itself listens on Render's `PORT`, so the two never collide.
 
 #### What Gets Provisioned
 
-- **`chatdesk` web service** — built from the root `Dockerfile` (Vite frontend + Express backend), health check at `/api/health`.
+- **`nextdesk` web service** — built from the root `Dockerfile` (Vite frontend + Express backend), health check at `/api/health`.
 - **Managed PostgreSQL** — connect it via `POSTGRES_URL` (use the database's *internal* connection string) with `POSTGRES_SSL=true`.
 
 #### Setup
@@ -247,9 +247,9 @@ Set `DB_CLIENT=postgres` pointing to a managed PostgreSQL cluster (such as AWS R
 DB_CLIENT=postgres
 POSTGRES_HOST=postgres.internal
 POSTGRES_PORT=5432
-POSTGRES_USER=chatdesk
+POSTGRES_USER=nextdesk
 POSTGRES_PASSWORD=secure_password
-POSTGRES_DB=chatdesk
+POSTGRES_DB=nextdesk
 ```
 
 #### 2. Shared File Storage
@@ -257,7 +257,7 @@ Set `STORAGE_DRIVER=remote` pointing to S3-compatible object storage so media up
 ```txt
 STORAGE_DRIVER=remote
 STORAGE_ENDPOINT=https://s3.us-east-1.amazonaws.com
-STORAGE_BUCKET=my-chatdesk-bucket
+STORAGE_BUCKET=my-nextdesk-bucket
 STORAGE_ACCESS_KEY_ID=AWS_ACCESS_KEY
 STORAGE_SECRET_ACCESS_KEY=AWS_SECRET_KEY
 STORAGE_REGION=us-east-1
@@ -268,7 +268,7 @@ NextDesk offloads video transcoding and thumbnail extraction to the standalone H
 :::
 
 #### 3. Redis Event Synchronization (Pub/Sub)
-Configure `REDIS_URL` or `REDIS_HOST`. When Redis is enabled, NextDesk automatically uses Redis Pub/Sub (channel `chatdesk:events`) to synchronize real-time WebSocket and SSE events across all container nodes:
+Configure `REDIS_URL` or `REDIS_HOST`. When Redis is enabled, NextDesk automatically uses Redis Pub/Sub (channel `nextdesk:events`) to synchronize real-time WebSocket and SSE events across all container nodes:
 ```txt
 REDIS_URL=redis://:password@redis.internal:6379
 ```

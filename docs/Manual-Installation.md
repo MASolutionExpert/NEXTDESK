@@ -45,8 +45,8 @@ volta install node@24.22.1 npm@11.6.4
 ## 2. Clone repository
 
 ```bash
-sudo mkdir -p /opt/chatdesk
-cd /opt/chatdesk
+sudo mkdir -p /opt/nextdesk
+cd /opt/nextdesk
 git clone https://github.com/MASolutionExpert/NEXTDESK.git .
 ```
 
@@ -64,17 +64,17 @@ nvm use
 ## 3. Install dependencies
 
 ```bash
-cd /opt/chatdesk/server
+cd /opt/nextdesk/server
 npm install
 
-cd /opt/chatdesk/client
+cd /opt/nextdesk/client
 npm install
 npm run build
 ```
 
 ## 4. Create systemd service
 
-Create `/etc/systemd/system/chatdesk.service` with the following:
+Create `/etc/systemd/system/nextdesk.service` with the following:
 
 ```ini
 [Unit]
@@ -83,8 +83,8 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/chatdesk/server
-ExecStart=/usr/bin/env node /opt/chatdesk/server/index.js
+WorkingDirectory=/opt/nextdesk/server
+ExecStart=/usr/bin/env node /opt/nextdesk/server/index.js
 Restart=on-failure
 RestartSec=5
 
@@ -121,39 +121,39 @@ Due to security concerns, it is recommended to create a dedicated system user an
 1. Add these lines to systemd service file:
 
 ```ini
-User=chatdesk
-Group=chatdesk
+User=nextdesk
+Group=nextdesk
 ```
 
 2. Create a dedicated system user:
 
 ```bash
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin chatdesk
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin nextdesk
 ```
 
 3. Change ownership of the project directory:
 
 ```bash
-sudo chown -R chatdesk:chatdesk /opt/chatdesk
-git config --global --add safe.directory /opt/chatdesk
+sudo chown -R nextdesk:nextdesk /opt/nextdesk
+git config --global --add safe.directory /opt/nextdesk
 ```
 
 4. Grant the service user permission to control its own unit and read system logs (required for service restart/stop and the Logs tab in the admin panel):
 
 ```bash
-sudo tee /etc/sudoers.d/chatdesk > /dev/null <<'EOF'
+sudo tee /etc/sudoers.d/nextdesk > /dev/null <<'EOF'
 # NextDesk — allow the service user to control its own unit
 # and read privileged logs without a password.
-chatdesk ALL=(root) NOPASSWD: /usr/bin/systemctl restart chatdesk.service
-chatdesk ALL=(root) NOPASSWD: /usr/bin/systemctl stop chatdesk.service
-chatdesk ALL=(root) NOPASSWD: /usr/bin/journalctl -u chatdesk *
-chatdesk ALL=(root) NOPASSWD: /usr/bin/journalctl -u chatdesk-worker *
-chatdesk ALL=(root) NOPASSWD: /usr/bin/cat /var/log/nginx/error.log
-chatdesk ALL=(root) NOPASSWD: /usr/bin/cat /var/log/nginx/access.log
-chatdesk ALL=(root) NOPASSWD: /usr/bin/nginx -t
-chatdesk ALL=(root) NOPASSWD: /usr/bin/systemctl reload nginx
+nextdesk ALL=(root) NOPASSWD: /usr/bin/systemctl restart nextdesk.service
+nextdesk ALL=(root) NOPASSWD: /usr/bin/systemctl stop nextdesk.service
+nextdesk ALL=(root) NOPASSWD: /usr/bin/journalctl -u nextdesk *
+nextdesk ALL=(root) NOPASSWD: /usr/bin/journalctl -u nextdesk-worker *
+nextdesk ALL=(root) NOPASSWD: /usr/bin/cat /var/log/nginx/error.log
+nextdesk ALL=(root) NOPASSWD: /usr/bin/cat /var/log/nginx/access.log
+nextdesk ALL=(root) NOPASSWD: /usr/bin/nginx -t
+nextdesk ALL=(root) NOPASSWD: /usr/bin/systemctl reload nginx
 EOF
-sudo chmod 0440 /etc/sudoers.d/chatdesk
+sudo chmod 0440 /etc/sudoers.d/nextdesk
 ```
 
 Without this step the **Restart service** and **Stop service** buttons in the admin panel will fail with a permissions error, and system logs (service journal, nginx) will not be visible in the Logs tab.
@@ -162,5 +162,5 @@ Without this step the **Restart service** and **Stop service** buttons in the ad
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now chatdesk.service
+sudo systemctl enable --now nextdesk.service
 ```

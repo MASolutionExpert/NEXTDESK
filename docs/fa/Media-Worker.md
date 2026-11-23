@@ -64,9 +64,9 @@
 |---|---|---:|---|
 | `WORKER_PORT` | `integer` | `8080` | پورت HTTP که ورکر روی آن به درخواست ها گوش میدهد. |
 | `WORKER_CONCURRENCY` | `integer` | `2` | حداکثر تعداد پردازش های ویدیویی همزمان FFmpeg. |
-| `WEBHOOK_SECRET` | `string` | `""` | توکن امنیتی برای اعتبارسنجی درخواست های ورودی و فراخوانی Webhook خروجی (`x-chatdesk-webhook-secret`). باید با `WEBHOOK_SECRET` سرور NextDesk یکسان باشد. |
+| `WEBHOOK_SECRET` | `string` | `""` | توکن امنیتی برای اعتبارسنجی درخواست های ورودی و فراخوانی Webhook خروجی (`x-nextdesk-webhook-secret`). باید با `WEBHOOK_SECRET` سرور NextDesk یکسان باشد. |
 | `STORAGE_DRIVER` | `string` | `local` | درایور ذخیره سازی (`local` برای دیسک محلی یا `remote` / `s3` برای ذخیره سازی ابری). |
-| `DATA_DIR` | `string` | `/opt/chatdesk/data` | مسیر دایرکتوری داده محلی (هنگام استفاده از `STORAGE_DRIVER=local`). |
+| `DATA_DIR` | `string` | `/opt/nextdesk/data` | مسیر دایرکتوری داده محلی (هنگام استفاده از `STORAGE_DRIVER=local`). |
 | `STORAGE_BUCKET` | `string` | `""` | نام باکت ذخیره سازی S3 / R2. |
 | `STORAGE_ENDPOINT` | `string` | `""` | نشانی URL سرویس ذخیره سازی ابری (مانند `https://<account-id>.r2.cloudflarestorage.com`). |
 | `STORAGE_REGION` | `string` | `auto` | منطقه جغرافیایی باکت (مانند `us-east-1` یا `auto`). |
@@ -85,7 +85,7 @@
 | `WORKER_PORT` | `integer` | `8080` | پورت ورکر محلی. NextDesk از این پورت برای ساخت نشانی `http://127.0.0.1:WORKER_PORT` استفاده میکند. |
 | `STORAGE_PROCESSING_MODE` | `string` | `auto` | استراتژی پردازش رسانه (`auto`، `local` یا `remote`). |
 | `STORAGE_PROCESSING_TIMEOUT_MS` | `integer` | `120000` | مهلت زمانی تلاش مجدد به میلی ثانیه برای ارسال به ورکر ریموت پیش از انتقال به پردازش محلی در حالت `auto` یا عدم موفقیت در حالت `remote`. |
-| `WEBHOOK_URL` | `string` | `""` | نشانی عمومی فراخوانی Webhook سرور NextDesk که به ورکر ارسال میشود (مثلاً `https://chatdesk.example.com/api/uploads/webhook/processed`). نام جایگزین: `WEBHOOK_CALLBACK_URL`. |
+| `WEBHOOK_URL` | `string` | `""` | نشانی عمومی فراخوانی Webhook سرور NextDesk که به ورکر ارسال میشود (مثلاً `https://nextdesk.example.com/api/uploads/webhook/processed`). نام جایگزین: `WEBHOOK_CALLBACK_URL`. |
 | `WEBHOOK_SECRET` | `string` | *(تولید خودکار)* | توکن مشترک برای احراز هویت درخواست های Webhook. در صورت خالی بودن در اولین اجرا به طور خودکار تولید میشود. |
 | `FILE_UPLOAD_TRANSCODE_VIDEOS` | `boolean` | `true` | در صورت تنظیم روی `false`، فرآیند ترنسکد ویدیو کاملاً غیرفعال شده، ارسال درخواست های ترنسکد (`POST /transcode`) به ورکرهای محلی و ریموت متوقف شده و از اجرای پروسه ورکر محلی جلوگیری میشود. |
 
@@ -120,7 +120,7 @@ MASolutionExpert/NEXTDESK-worker:latest
 
 ```bash
 docker run -d \
-  --name chatdesk-media-worker \
+  --name nextdesk-media-worker \
   --restart unless-stopped \
   -p 8080:8080 \
   -e WORKER_PORT=8080 \
@@ -128,7 +128,7 @@ docker run -d \
   -e WEBHOOK_SECRET=your-secure-webhook-secret \
   -e STORAGE_DRIVER=remote \
   -e STORAGE_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com \
-  -e STORAGE_BUCKET=my-chatdesk-bucket \
+  -e STORAGE_BUCKET=my-nextdesk-bucket \
   -e STORAGE_REGION=auto \
   -e STORAGE_ACCESS_KEY_ID=your-access-key \
   -e STORAGE_SECRET_ACCESS_KEY=your-secret-key \
@@ -143,7 +143,7 @@ docker run -d \
 **۱. ورود به مسیر `worker/`:**
 
 ```bash
-cd /opt/chatdesk/worker
+cd /opt/nextdesk/worker
 ```
 
 **۲. ساخت و تنظیم فایل `.env` برای ورکر:**
@@ -154,7 +154,7 @@ WORKER_CONCURRENCY=4
 WEBHOOK_SECRET=your-secure-webhook-secret
 STORAGE_DRIVER=remote
 STORAGE_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
-STORAGE_BUCKET=my-chatdesk-bucket
+STORAGE_BUCKET=my-nextdesk-bucket
 STORAGE_REGION=auto
 STORAGE_ACCESS_KEY_ID=your-access-key
 STORAGE_SECRET_ACCESS_KEY=your-secret-key
@@ -194,14 +194,14 @@ docker compose -f docker-compose.yaml up -d
 ۵. در فایل `.env` سرور اصلی NextDesk مقادیر زیر را قرار دهید:
    ```txt
    WORKER_URL=https://your-media-worker.onrender.com
-   WEBHOOK_URL=https://chatdesk.example.com/api/uploads/webhook/processed
+   WEBHOOK_URL=https://nextdesk.example.com/api/uploads/webhook/processed
    WEBHOOK_SECRET=your-secure-webhook-secret
    STORAGE_PROCESSING_MODE=remote
    ```
 
 #### پلتفرم های Railway / Fly.io
 
-- **استقرار خودکار (Railway IaC)**: پروژه NextDesk دارای پیکربندی آماده زیرساخت به عنوان کد در مسیر `.railway/railway.ts` است که سرویس `chatdesk-worker` را به صورت کاملاً خودکار در کنار برنامه اصلی، پایگاه داده PostgreSQL و باکت ذخیره سازی فایل مستقر و متصل میکند. برای جزئیات کامل به [راهنمای استقرار ابری](./Cloud-Deployment.md#استقرار-خودکار-با-railway-زیرساخت-به-عنوان-کد-iac) مراجعه کنید.
+- **استقرار خودکار (Railway IaC)**: پروژه NextDesk دارای پیکربندی آماده زیرساخت به عنوان کد در مسیر `.railway/railway.ts` است که سرویس `nextdesk-worker` را به صورت کاملاً خودکار در کنار برنامه اصلی، پایگاه داده PostgreSQL و باکت ذخیره سازی فایل مستقر و متصل میکند. برای جزئیات کامل به [راهنمای استقرار ابری](./Cloud-Deployment.md#استقرار-خودکار-با-railway-زیرساخت-به-عنوان-کد-iac) مراجعه کنید.
 - **راهاندازی دستی (Railway / Fly.io)**: ساخت مستقیم از `worker/Dockerfile` با دایرکتوری ریشه `worker`. پورت تعریف شده در `WORKER_PORT` (`8080`) را در معرض دسترسی قرار دهید و مطمئن شوید ورکر امکان دسترسی به Endpoint باکت S3 و `WEBHOOK_URL` سرور چت را دارد.
 
 ### ۴. استقرار به عنوان سرویس Systemd (سرور VPS لینوکس)
@@ -218,11 +218,11 @@ sudo apt install -y ffmpeg nodejs
 **۲. نصب وابستگی های ورکر:**
 
 ```bash
-cd /opt/chatdesk/worker
+cd /opt/nextdesk/worker
 npm ci --omit=dev
 ```
 
-**۳. ایجاد فایل سرویس در مسیر `/etc/systemd/system/chatdesk-worker.service`:**
+**۳. ایجاد فایل سرویس در مسیر `/etc/systemd/system/nextdesk-worker.service`:**
 
 ```ini
 [Unit]
@@ -231,13 +231,13 @@ After=network.target
 
 [Service]
 Type=simple
-User=chatdesk
-WorkingDirectory=/opt/chatdesk/worker
+User=nextdesk
+WorkingDirectory=/opt/nextdesk/worker
 ExecStart=/usr/bin/node index.js
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
-EnvironmentFile=/opt/chatdesk/.env
+EnvironmentFile=/opt/nextdesk/.env
 
 [Install]
 WantedBy=multi-user.target
@@ -247,8 +247,8 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now chatdesk-worker
-sudo systemctl status chatdesk-worker
+sudo systemctl enable --now nextdesk-worker
+sudo systemctl status nextdesk-worker
 ```
 
 ## مستندات API و Endpointها
@@ -268,7 +268,7 @@ curl http://localhost:8080/health
 ```json
 {
   "status": "ok",
-  "service": "chatdesk-media-worker",
+  "service": "nextdesk-media-worker",
   "queue": {
     "pending": 0,
     "queued": 0,
@@ -285,7 +285,7 @@ curl http://localhost:8080/health
 
 **هدرها (Headers):**
 - `Content-Type: application/json`
-- `x-chatdesk-webhook-secret: <WEBHOOK_SECRET>`
+- `x-nextdesk-webhook-secret: <WEBHOOK_SECRET>`
 
 **نمونه بدنه درخواست (Request Body):**
 
@@ -296,7 +296,7 @@ curl http://localhost:8080/health
   "storedName": "original-video.mov",
   "mimeType": "video/quicktime",
   "encryptionType": "none",
-  "callbackUrl": "https://chatdesk.example.com/api/uploads/webhook/processed",
+  "callbackUrl": "https://nextdesk.example.com/api/uploads/webhook/processed",
   "webhookSecret": "your-webhook-secret"
 }
 ```
@@ -320,7 +320,7 @@ curl http://localhost:8080/health
 
 **هدرها:**
 - `Content-Type: application/json`
-- `x-chatdesk-webhook-secret: <WEBHOOK_SECRET>`
+- `x-nextdesk-webhook-secret: <WEBHOOK_SECRET>`
 
 **بدنه درخواست در صورت موفقیت (`status: "ready"`):**
 
@@ -376,7 +376,7 @@ curl http://localhost:8080/health
 
 ### عدم دریافت نتیجه Webhook در سرور NextDesk
 
-- اطمینان حاصل کنید که `WEBHOOK_URL` در سرور NextDesk به یک آدرس عمومی و در دسترس ورکر اشاره دارد (مثلاً `https://chatdesk.example.com/api/uploads/webhook/processed`).
+- اطمینان حاصل کنید که `WEBHOOK_URL` در سرور NextDesk به یک آدرس عمومی و در دسترس ورکر اشاره دارد (مثلاً `https://nextdesk.example.com/api/uploads/webhook/processed`).
 - اگر از آدرس های محلی (`localhost` یا `127.0.0.1`) استفاده میکنید، مطمئن شوید هر دو سرویس روی یک هاست و شبکه اجرا میشوند.
 - لاگ های ورکر را برای مشاهده خطاهای تلاش مجدد بررسی کنید (`[worker] Callback webhook returned HTTP ...`).
 
@@ -389,7 +389,7 @@ curl http://localhost:8080/health
   ```
 - لاگ های دقیق خروجی را بررسی کنید:
   ```bash
-  journalctl -u chatdesk-worker -f
+  journalctl -u nextdesk-worker -f
   # یا برای Docker
   docker compose -f worker/docker-compose.yaml logs -f
   ```

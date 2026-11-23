@@ -23,7 +23,7 @@
 1. یک کاربر ایجاد یا ویرایش کنید و نقش **مالک** یا **مدیر** به آن‌ها بدهید (در نصب جدید درخواست می‌شود، یا بعداً از طریق [اسکریپت نصب](./Deployment-Script.md)):
 
   ```bash
-  chatdesk-deploy
+  nextdesk-deploy
   # به زیرمنوی "Manage Database" بروید
   # "Create user" یا "Edit user" را انتخاب کنید
   # دستورات را دنبال کرده و نقش "owner" یا "admin" را انتخاب کنید
@@ -31,7 +31,7 @@
   :::info اگر ترجیح می‌دهید می‌توانید از [دستورات دیتابیس](./Database-Commands.md) نیز استفاده کنید:
 
    ```bash
-   cd /opt/chatdesk/server
+   cd /opt/nextdesk/server
    # اگر می‌خواهید کاربر جدید ایجاد کنید
    npm run db:user:create
    # یا اگر می‌خواهید کاربری را ارتقا دهید
@@ -276,7 +276,7 @@
 
 کنترل سرویس (ریستارت/توقف) بسته به نوع استقرار به راه‌اندازی مناسب نیاز دارد:
 
-- **Docker**: کانتینر `chatdesk` باید سوکت Docker را mount کرده باشد (`/var/run/docker.sock`). این در `docker-compose.yaml` پیش‌فرض گنجانده شده است. متغیر محیطی `CHATDESK_CONTAINER_NAME` به اپلیکیشن می‌گوید کدام کانتینر را هدف قرار دهد (پیش‌فرض: `chatdesk`). به [نصب از طریق Docker](./Installation-Docker.md#کنترل-سرویس-در-پنل-مدیریت) مراجعه کنید.
+- **Docker**: کانتینر `nextdesk` باید سوکت Docker را mount کرده باشد (`/var/run/docker.sock`). این در `docker-compose.yaml` پیش‌فرض گنجانده شده است. متغیر محیطی `NEXTDESK_CONTAINER_NAME` به اپلیکیشن می‌گوید کدام کانتینر را هدف قرار دهد (پیش‌فرض: `nextdesk`). به [نصب از طریق Docker](./Installation-Docker.md#کنترل-سرویس-در-پنل-مدیریت) مراجعه کنید.
 - **Systemd**: کاربر سرویس باید مجوزهای `sudo` برای `systemctl` داشته باشد. به [عیب‌یابی](./Troubleshooting.md#مشکلات-پنل-مدیریت) مراجعه کنید.
 
 :::
@@ -327,7 +327,7 @@ ADMIN_PANEL=false
 اکثر عملیات مدیریتی هنوز می‌توانند از طریق CLI انجام شوند:
 
 ```bash
-cd /opt/chatdesk/server
+cd /opt/nextdesk/server
 
 # مدیریت کاربر
 npm run db:user:create

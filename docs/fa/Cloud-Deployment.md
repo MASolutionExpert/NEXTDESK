@@ -53,7 +53,7 @@
 1. یک پایگاه داده مدیریت شده **PostgreSQL** راه اندازی کرده و مشخصات اتصال آن را تنظیم کنید:
    ```txt
    DB_CLIENT=postgres
-   POSTGRES_URL=postgres://user:password@host:5432/chatdesk
+   POSTGRES_URL=postgres://user:password@host:5432/nextdesk
    ```
 
    :::tip پایگاه داده مدیریت شده با SSL و CA سفارشی (Aiven, AWS RDS و غیره)
@@ -81,7 +81,7 @@
    ```txt
    STORAGE_DRIVER=remote
    STORAGE_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
-   STORAGE_BUCKET=chatdesk-uploads
+   STORAGE_BUCKET=nextdesk-uploads
    STORAGE_ACCESS_KEY_ID=your_access_key
    STORAGE_SECRET_ACCESS_KEY=your_secret_key
    STORAGE_REGION=auto
@@ -93,13 +93,13 @@
 
 #### معماری و منابع ایجاد شده
 
-پیکربندی IaC در Railway به صورت برنامه ریزی شده تمام اجزای کامل NextDesk را در قالب یک گروه با نام `"chatdesk"` ایجاد و به یکدیگر متصل میکند:
+پیکربندی IaC در Railway به صورت برنامه ریزی شده تمام اجزای کامل NextDesk را در قالب یک گروه با نام `"nextdesk"` ایجاد و به یکدیگر متصل میکند:
 
 ```txt
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        Railway Project Canvas                          │
 │                                                                        │
-│   ┌─────────────────────────── "chatdesk" Group ──────────────────┐    │
+│   ┌─────────────────────────── "nextdesk" Group ──────────────────┐    │
 │   │                                                               │    │
 │   │   ┌──────────────────┐               ┌────────────────────┐   │    │
 │   │   │  PostgreSQL      │◀──────────────│  NextDesk App      │   │    │
@@ -164,7 +164,7 @@ railway up
 
 به صورت پیشفرض، سرویس های Railway روی شبکه خصوصی اجرا میشوند. برای دسترسی کاربران به رابط کاربری وب NextDesk:
 
-۱. در [داشبورد Railway](https://railway.com/dashboard) روی سرویس **chatdesk-server** کلیک کنید.
+۱. در [داشبورد Railway](https://railway.com/dashboard) روی سرویس **nextdesk-server** کلیک کنید.
 
 ۲. به بخش **Settings** > **Networking** > **Public Networking** بروید.
 
@@ -173,16 +173,16 @@ railway up
 همچنین میتوانید از طریق CLI دامنه عمومی ایجاد کنید:
 
 ```bash
-railway domain --service chatdesk-server
+railway domain --service nextdesk-server
 ```
 
 ### استقرار روی Render (Blueprint)
 
-پروژه NextDesk شامل [Blueprint آماده Render](https://render.com/docs/blueprints) در فایل `render.yaml` است: یک وب سرویس Docker (`chatdesk`) به همراه PostgreSQL مدیریت شده. بر خلاف معماری Railway در اینجا سرویس ورکر جداگانه وجود ندارد — نقطه ورود کانتینر به صورت خودکار یک Media Worker داخلی (`WORKER_PORT=8080`) را در کنار برنامه اجرا میکند و خود برنامه روی `PORT` اختصاص یافته توسط Render گوش میدهد، پس این دو هرگز با هم تداخل ندارند.
+پروژه NextDesk شامل [Blueprint آماده Render](https://render.com/docs/blueprints) در فایل `render.yaml` است: یک وب سرویس Docker (`nextdesk`) به همراه PostgreSQL مدیریت شده. بر خلاف معماری Railway در اینجا سرویس ورکر جداگانه وجود ندارد — نقطه ورود کانتینر به صورت خودکار یک Media Worker داخلی (`WORKER_PORT=8080`) را در کنار برنامه اجرا میکند و خود برنامه روی `PORT` اختصاص یافته توسط Render گوش میدهد، پس این دو هرگز با هم تداخل ندارند.
 
 #### چه چیزهایی ساخته میشود
 
-- **وب سرویس `chatdesk`** — ساخته شده از `Dockerfile` اصلی (فرانت اند Vite و بک اند Express) با بررسی سلامت در مسیر `/api/health`.
+- **وب سرویس `nextdesk`** — ساخته شده از `Dockerfile` اصلی (فرانت اند Vite و بک اند Express) با بررسی سلامت در مسیر `/api/health`.
 - **PostgreSQL مدیریت شده** — با `POSTGRES_URL` متصل کنید (از connection string *داخلی* دیتابیس استفاده کنید) و `POSTGRES_SSL=true` باشد.
 
 #### مراحل راه اندازی
@@ -250,9 +250,9 @@ railway domain --service chatdesk-server
 DB_CLIENT=postgres
 POSTGRES_HOST=postgres.internal
 POSTGRES_PORT=5432
-POSTGRES_USER=chatdesk
+POSTGRES_USER=nextdesk
 POSTGRES_PASSWORD=secure_password
-POSTGRES_DB=chatdesk
+POSTGRES_DB=nextdesk
 ```
 
 #### ۲. فضای ذخیره سازی فایل مشترک
@@ -260,7 +260,7 @@ POSTGRES_DB=chatdesk
 ```txt
 STORAGE_DRIVER=remote
 STORAGE_ENDPOINT=https://s3.us-east-1.amazonaws.com
-STORAGE_BUCKET=my-chatdesk-bucket
+STORAGE_BUCKET=my-nextdesk-bucket
 STORAGE_ACCESS_KEY_ID=AWS_ACCESS_KEY
 STORAGE_SECRET_ACCESS_KEY=AWS_SECRET_KEY
 STORAGE_REGION=us-east-1
@@ -271,7 +271,7 @@ NextDesk ترنسکد ویدیو و استخراج thumbnail را به **Media W
 :::
 
 #### ۳. همگام سازی رویدادها با Redis (Pub/Sub)
-متغیر `REDIS_URL` یا `REDIS_HOST` را تنظیم کنید. با فعال شدن Redis، سرویس NextDesk به طور خودکار از قابلیت Redis Pub/Sub (کانال `chatdesk:events`) برای همگام سازی همزمان رویدادهای WebSocket و SSE بین تمامی کانتینرها استفاده میکند:
+متغیر `REDIS_URL` یا `REDIS_HOST` را تنظیم کنید. با فعال شدن Redis، سرویس NextDesk به طور خودکار از قابلیت Redis Pub/Sub (کانال `nextdesk:events`) برای همگام سازی همزمان رویدادهای WebSocket و SSE بین تمامی کانتینرها استفاده میکند:
 ```txt
 REDIS_URL=redis://:password@redis.internal:6379
 ```

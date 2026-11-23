@@ -1,6 +1,6 @@
 # Running behind a domain + subpath
 
-By default NextDesk is served from the root of a domain (e.g. `https://chat.example.com/`). If you instead want to host it under a subpath (e.g. `https://example.com/chatdesk/`), you need to align three things: the Vite build `base`, the client asset references, and the Nginx location block.
+By default NextDesk is served from the root of a domain (e.g. `https://chat.example.com/`). If you instead want to host it under a subpath (e.g. `https://example.com/nextdesk/`), you need to align three things: the Vite build `base`, the client asset references, and the Nginx location block.
 
 :::info
 
@@ -25,7 +25,7 @@ In `client/vite.config.js`, add a `base` option matching your subpath (note the 
 export default defineConfig(({ mode }) => {
   // ...
   return {
-    base: "/chatdesk/",
+    base: "/nextdesk/",
     // ...plugins, build, server config unchanged
   };
 });
@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => {
 Then rebuild the client:
 
 ```bash
-cd /opt/chatdesk/client
+cd /opt/nextdesk/client
 npm run build
 ```
 
@@ -47,7 +47,7 @@ npm run build
 Proxy the subpath to the Node server. The SSE endpoint still needs its own buffering-disabled block. Adapt the [base Nginx config](./Nginx-Configuration.md) like this:
 
 ```nginx
-location /chatdesk/api/events {
+location /nextdesk/api/events {
   proxy_pass http://127.0.0.1:5174;
   proxy_http_version 1.1;
   proxy_set_header Host $host;
@@ -61,7 +61,7 @@ location /chatdesk/api/events {
   add_header X-Accel-Buffering no;
 }
 
-location /chatdesk/ {
+location /nextdesk/ {
   proxy_pass http://127.0.0.1:5174/;
   proxy_http_version 1.1;
   proxy_set_header Upgrade $http_upgrade;
@@ -83,6 +83,6 @@ sudo systemctl reload nginx
 
 :::info
 
-The trailing slash on `proxy_pass http://127.0.0.1:5174/;` strips the `/chatdesk/` prefix before forwarding to the Node server. Keep the `base` in Vite and the `location` prefix in Nginx in sync; a mismatch is the most common cause of broken assets or blank pages on subpath setups.
+The trailing slash on `proxy_pass http://127.0.0.1:5174/;` strips the `/nextdesk/` prefix before forwarding to the Node server. Keep the `base` in Vite and the `location` prefix in Nginx in sync; a mismatch is the most common cause of broken assets or blank pages on subpath setups.
 
 :::

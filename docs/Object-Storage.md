@@ -170,14 +170,14 @@ Cloudflare R2 is an S3-compatible object storage service with zero egress fees, 
 1. Log in to the [Cloudflare Dashboard](https://dash.cloudflare.com/).
 2. Navigate to **R2 Object Storage** in the sidebar.
 3. Click **Create bucket**.
-4. Enter a bucket name (e.g. `chatdesk-media`) and click **Create Bucket**.
+4. Enter a bucket name (e.g. `nextdesk-media`) and click **Create Bucket**.
 
 ### Step 2: Generate Credentials & API Tokens
 
 1. On the R2 Overview page, click **Manage R2 API Tokens** (in the right panel).
 2. Click **Create API Token**.
 3. Under **Permissions**, select **Object Read & Write** (or Admin Read & Write).
-4. Under **Apply to specific buckets**, select your bucket (`chatdesk-media`) or choose **Apply to all buckets**.
+4. Under **Apply to specific buckets**, select your bucket (`nextdesk-media`) or choose **Apply to all buckets**.
 5. Click **Create API Token**.
 6. Save the generated credentials securely:
    - **Access Key ID** &rarr; `STORAGE_ACCESS_KEY_ID`
@@ -197,7 +197,7 @@ Add the following configuration to your `.env` file:
 ```txt
 STORAGE_DRIVER=remote
 STORAGE_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
-STORAGE_BUCKET=chatdesk-media
+STORAGE_BUCKET=nextdesk-media
 STORAGE_REGION=auto
 STORAGE_ACCESS_KEY_ID=<R2_ACCESS_KEY_ID>
 STORAGE_SECRET_ACCESS_KEY=<R2_SECRET_ACCESS_KEY>
@@ -220,7 +220,7 @@ STORAGE_PUBLIC_URL=https://media.example.com
 ```txt
 STORAGE_DRIVER=remote
 STORAGE_ENDPOINT=https://s3.us-east-1.amazonaws.com
-STORAGE_BUCKET=my-chatdesk-bucket
+STORAGE_BUCKET=my-nextdesk-bucket
 STORAGE_REGION=us-east-1
 STORAGE_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
 STORAGE_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
@@ -232,7 +232,7 @@ STORAGE_FORCE_PATH_STYLE=false
 ```txt
 STORAGE_DRIVER=remote
 STORAGE_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
-STORAGE_BUCKET=my-chatdesk-bucket
+STORAGE_BUCKET=my-nextdesk-bucket
 STORAGE_REGION=auto
 STORAGE_ACCESS_KEY_ID=<R2_ACCESS_KEY_ID>
 STORAGE_SECRET_ACCESS_KEY=<R2_SECRET_ACCESS_KEY>
@@ -245,7 +245,7 @@ STORAGE_FORCE_PATH_STYLE=true
 ```txt
 STORAGE_DRIVER=remote
 STORAGE_ENDPOINT=http://minio.internal:9000
-STORAGE_BUCKET=chatdesk-media
+STORAGE_BUCKET=nextdesk-media
 STORAGE_REGION=us-east-1
 STORAGE_ACCESS_KEY_ID=minioadmin
 STORAGE_SECRET_ACCESS_KEY=minioadmin
@@ -257,7 +257,7 @@ STORAGE_FORCE_PATH_STYLE=true
 ```txt
 STORAGE_DRIVER=remote
 STORAGE_ENDPOINT=https://s3.ir-thr-at1.arvanstorage.ir
-STORAGE_BUCKET=my-chatdesk-bucket
+STORAGE_BUCKET=my-nextdesk-bucket
 STORAGE_REGION=ir-thr-at1
 STORAGE_ACCESS_KEY_ID=<ARVAN_ACCESS_KEY>
 STORAGE_SECRET_ACCESS_KEY=<ARVAN_SECRET_KEY>

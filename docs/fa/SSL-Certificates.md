@@ -43,7 +43,7 @@ ssl_certificate_key /path/to/privkey.pem;
 
 ## گزینه C: استفاده از اسکریپت نصب
 
-[اسکریپت نصب](./Deployment-Script.md) (`chatdesk-deploy`) می‌تواند Nginx را برای شما پیکربندی کند و همچنین راه‌اندازی SSL را انجام دهد. اگر نمی‌خواهید مراحل Nginx و گواهی‌نامه را به‌صورت دستی مدیریت کنید، این ساده‌ترین مسیر برای نصب‌های bare-metal است.
+[اسکریپت نصب](./Deployment-Script.md) (`nextdesk-deploy`) می‌تواند Nginx را برای شما پیکربندی کند و همچنین راه‌اندازی SSL را انجام دهد. اگر نمی‌خواهید مراحل Nginx و گواهی‌نامه را به‌صورت دستی مدیریت کنید، این ساده‌ترین مسیر برای نصب‌های bare-metal است.
 
 ## گزینه D: گواهی‌نامه self-signed (توصیه‌نشده برای محیط تولید)
 
@@ -55,7 +55,7 @@ bash scripts/gen-certs.sh
 bash scripts/gen-certs.sh example.com
 ```
 
-[اسکریپت نصب](./Deployment-Script.md) (`chatdesk-deploy`) نیز این گزینه را به‌عنوان **Certificate Mode → Self-signed** در هنگام نصب ارائه می‌دهد، بنابراین برای نصب‌های bare-metal نیازی به اجرای دستی اسکریپت ندارید.
+[اسکریپت نصب](./Deployment-Script.md) (`nextdesk-deploy`) نیز این گزینه را به‌عنوان **Certificate Mode → Self-signed** در هنگام نصب ارائه می‌دهد، بنابراین برای نصب‌های bare-metal نیازی به اجرای دستی اسکریپت ندارید.
 
 :::danger محدودیت‌های گواهی‌نامه خودامضا
 

@@ -2,7 +2,7 @@
 
 NextDesk serves both the built frontend and the API from the Node server, so Nginx only needs to proxy one upstream: `http://127.0.0.1:SERVER_PORT`.
 
-Create `/etc/nginx/sites-available/chatdesk`:
+Create `/etc/nginx/sites-available/nextdesk`:
 
 :::info
 
@@ -114,7 +114,7 @@ server {
 Enable the site:
 
 ```bash
-sudo ln -sf /etc/nginx/sites-available/chatdesk /etc/nginx/sites-enabled/chatdesk
+sudo ln -sf /etc/nginx/sites-available/nextdesk /etc/nginx/sites-enabled/nextdesk
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx

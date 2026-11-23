@@ -57,8 +57,8 @@ docker run hello-world
 ## ۲. کلون‌کردن مخزن
 
 ```bash
-sudo mkdir -p /opt/chatdesk
-cd /opt/chatdesk
+sudo mkdir -p /opt/nextdesk
+cd /opt/nextdesk
 git clone https://github.com/MASolutionExpert/NEXTDESK.git .
 ```
 
@@ -93,7 +93,7 @@ nano .env
 ایمیج از پیش ساخته‌شده را دریافت و کانتینرها را اجرا کنید:
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 docker compose up -d
 ```
 
@@ -120,43 +120,43 @@ docker compose restart nginx
 
 ## کاربر runtime و داده پایدار
 
-استقرارهای Docker از `chatdesk.service` استفاده نمیکنند. NextDesk با کاربر پیکربندی شده برای container اجرا میشود (در image فعلی root است، مگر آنکه `user:` در Compose آن را override کند) و دستورهای پایگاه داده با همان UID/GID ‏container اجرا میشوند:
+استقرارهای Docker از `nextdesk.service` استفاده نمیکنند. NextDesk با کاربر پیکربندی شده برای container اجرا میشود (در image فعلی root است، مگر آنکه `user:` در Compose آن را override کند) و دستورهای پایگاه داده با همان UID/GID ‏container اجرا میشوند:
 
 ```bash
-docker compose exec chatdesk npm --prefix /app/server run db:inspect
+docker compose exec nextdesk npm --prefix /app/server run db:inspect
 ```
 
 برای اجرای container با یک UID/GID غیر root مشخص، `user:` را در service ‏Compose پیکربندی کنید:
 
 ```yaml
 services:
-  chatdesk:
-    user: "chatdesk:chatdesk"
+  nextdesk:
+    user: "nextdesk:nextdesk"
 ```
 
 اگر به جای named volume پیشفرض از bind mount استفاده میکنید، پیش از راه اندازی NextDesk، پوشه host را برای همان UID:GID قابل نوشتن کنید. NextDesk مالکیت bind mount روی host را به صورت خودکار تغییر نمیدهد:
 
 ```bash
 mkdir -p ./data
-sudo chown -R chatdesk:chatdesk ./data
+sudo chown -R nextdesk:nextdesk ./data
 ```
 
 ## کنترل سرویس در پنل مدیریت
 
-اقدامات **ریستارت سرویس** و **توقف سرویس** در پنل مدیریت برای استقرار Docker با فراخوانی Docker Engine API از طریق سوکت mount‌شده (`/var/run/docker.sock`) کار می‌کنند. فایل compose متغیر `CHATDESK_CONTAINER_NAME=chatdesk` را تنظیم می‌کند تا اپلیکیشن بداند کدام کانتینر را هدف قرار دهد.
+اقدامات **ریستارت سرویس** و **توقف سرویس** در پنل مدیریت برای استقرار Docker با فراخوانی Docker Engine API از طریق سوکت mount‌شده (`/var/run/docker.sock`) کار می‌کنند. فایل compose متغیر `NEXTDESK_CONTAINER_NAME=nextdesk` را تنظیم می‌کند تا اپلیکیشن بداند کدام کانتینر را هدف قرار دهد.
 
 اگر نام کانتینر را تغییر دادید یا از نام سفارشی استفاده می‌کنید، متغیر env را به‌روز کنید:
 
 ```yaml
 # docker-compose.yaml
 environment:
-  CHATDESK_CONTAINER_NAME: my-custom-name
+  NEXTDESK_CONTAINER_NAME: my-custom-name
 ```
 
 اگر به کنترل سرویس از پنل مدیریت نیاز ندارید، می‌توانید mount سوکت را از `docker-compose.yaml` حذف کنید:
 
 ```yaml
-# این خط را در بخش volumes مربوط به chatdesk حذف یا کامنت کنید:
+# این خط را در بخش volumes مربوط به nextdesk حذف یا کامنت کنید:
 # - /var/run/docker.sock:/var/run/docker.sock
 ```
 
@@ -165,7 +165,7 @@ environment:
 ایمیج جدید را دریافت و مجدداً راه‌اندازی کنید:
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 docker compose pull
 docker compose up -d
 ```

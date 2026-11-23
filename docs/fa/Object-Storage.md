@@ -71,7 +71,7 @@ STORAGE_DRIVER=remote
 |---|---|---:|---|
 | `STORAGE_DRIVER` | `string` | `local` | برای فعالسازی ذخیره سازی ابری، روی `remote` تنظیم کنید. |
 | `STORAGE_ENDPOINT` | `string` | `""` | نشانی URL پایه API سرویس ذخیره سازی ابری (مانند `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` برای Cloudflare R2). |
-| `STORAGE_BUCKET` | `string` | `""` | نام باکت (Bucket) ذخیره سازی شما (مانند `chatdesk-media`). |
+| `STORAGE_BUCKET` | `string` | `""` | نام باکت (Bucket) ذخیره سازی شما (مانند `nextdesk-media`). |
 | `STORAGE_REGION` | `string` | `auto` | منطقه جغرافیایی باکت (پیش فرض `auto` برای Cloudflare R2، MinIO، ArvanCloud؛ کاربران AWS S3 منطقه خود مانند `us-east-1` را تنظیم کنند). |
 | `STORAGE_ACCESS_KEY_ID` | `string` | `""` | کلید دسترسی (Access Key ID) برای احراز هویت باکت. |
 | `STORAGE_SECRET_ACCESS_KEY` | `string` | `""` | کلید سرّی (Secret Access Key) برای احراز هویت باکت. |
@@ -170,14 +170,14 @@ AWS_SECRET_ACCESS_KEY=<SECRET_ACCESS_KEY> \
 1. وارد [داشبورد Cloudflare](https://dash.cloudflare.com/) شوید.
 2. از منوی کناری به بخش **R2 Object Storage** بروید.
 3. روی **Create bucket** کلیک کنید.
-4. نام باکت (مانند `chatdesk-media`) را وارد کرده و روی **Create Bucket** کلیک کنید.
+4. نام باکت (مانند `nextdesk-media`) را وارد کرده و روی **Create Bucket** کلیک کنید.
 
 ### گام 2: ساخت کلیدها و توکن های API
 
 1. در صفحه R2 Overview روی **Manage R2 API Tokens** کلیک کنید.
 2. روی **Create API Token** کلیک کنید.
 3. در بخش **Permissions** گزینه **Object Read & Write** را انتخاب کنید.
-4. در بخش **Apply to specific buckets** باکت خود (`chatdesk-media`) را انتخاب کنید.
+4. در بخش **Apply to specific buckets** باکت خود (`nextdesk-media`) را انتخاب کنید.
 5. روی **Create API Token** کلیک کنید.
 6. کلیدهای تولیدشده را در مکان امن ذخیره کنید:
    - **Access Key ID** &rarr; `STORAGE_ACCESS_KEY_ID`
@@ -197,7 +197,7 @@ AWS_SECRET_ACCESS_KEY=<SECRET_ACCESS_KEY> \
 ```txt
 STORAGE_DRIVER=remote
 STORAGE_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
-STORAGE_BUCKET=chatdesk-media
+STORAGE_BUCKET=nextdesk-media
 STORAGE_REGION=auto
 STORAGE_ACCESS_KEY_ID=<R2_ACCESS_KEY_ID>
 STORAGE_SECRET_ACCESS_KEY=<R2_SECRET_ACCESS_KEY>
@@ -220,7 +220,7 @@ STORAGE_PUBLIC_URL=https://media.example.com
 ```txt
 STORAGE_DRIVER=remote
 STORAGE_ENDPOINT=https://s3.us-east-1.amazonaws.com
-STORAGE_BUCKET=my-chatdesk-bucket
+STORAGE_BUCKET=my-nextdesk-bucket
 STORAGE_REGION=us-east-1
 STORAGE_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
 STORAGE_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
@@ -232,7 +232,7 @@ STORAGE_FORCE_PATH_STYLE=false
 ```txt
 STORAGE_DRIVER=remote
 STORAGE_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
-STORAGE_BUCKET=my-chatdesk-bucket
+STORAGE_BUCKET=my-nextdesk-bucket
 STORAGE_REGION=auto
 STORAGE_ACCESS_KEY_ID=<R2_ACCESS_KEY_ID>
 STORAGE_SECRET_ACCESS_KEY=<R2_SECRET_ACCESS_KEY>
@@ -245,7 +245,7 @@ STORAGE_FORCE_PATH_STYLE=true
 ```txt
 STORAGE_DRIVER=remote
 STORAGE_ENDPOINT=http://minio.internal:9000
-STORAGE_BUCKET=chatdesk-media
+STORAGE_BUCKET=nextdesk-media
 STORAGE_REGION=us-east-1
 STORAGE_ACCESS_KEY_ID=minioadmin
 STORAGE_SECRET_ACCESS_KEY=minioadmin
@@ -257,7 +257,7 @@ STORAGE_FORCE_PATH_STYLE=true
 ```txt
 STORAGE_DRIVER=remote
 STORAGE_ENDPOINT=https://s3.ir-thr-at1.arvanstorage.ir
-STORAGE_BUCKET=my-chatdesk-bucket
+STORAGE_BUCKET=my-nextdesk-bucket
 STORAGE_REGION=ir-thr-at1
 STORAGE_ACCESS_KEY_ID=<ARVAN_ACCESS_KEY>
 STORAGE_SECRET_ACCESS_KEY=<ARVAN_SECRET_KEY>

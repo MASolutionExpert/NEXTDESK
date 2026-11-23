@@ -12,7 +12,7 @@
 | پرچم سرور | `REMOTE_CHANNEL=true` | `REMOTE_CHANNEL=true` |
 | قالب منبع | پیوند دعوت کانال عمومی | `@channelname`، پیوند `t.me`، یا شناسه عددی |
 | محدودیت مقصد | مقصد باید یک کانال عمومی روی سروری با `SIGN_UP=true` باشد | منبع باید یک کانال Telegram باشد |
-| پراکسی اختیاری | `REMOTE_CHANNEL_CHATDESK_PROXY_URL` | `REMOTE_CHANNEL_TELEGRAM_PROXY_URL` |
+| پراکسی اختیاری | `REMOTE_CHANNEL_NEXTDESK_PROXY_URL` | `REMOTE_CHANNEL_TELEGRAM_PROXY_URL` |
 
 ## منبع NextDesk
 
@@ -24,7 +24,7 @@
 - کانال مقصد باید عمومی باشد.
 - سرور مقصد باید همان نسخه یا نسخه‌ای جدیدتر از NextDesk را اجرا کند که شامل نقاط پایانی polling کانال عمومی باشد.
 
-به هیچ اعتبارنامه اضافه‌ای نیاز نیست. روی این سرور `REMOTE_CHANNEL=true` و در صورت نیاز سرورتان به پراکسی برای دسترسی به مقصد، به‌صورت اختیاری `REMOTE_CHANNEL_CHATDESK_PROXY_URL` را تنظیم کنید.
+به هیچ اعتبارنامه اضافه‌ای نیاز نیست. روی این سرور `REMOTE_CHANNEL=true` و در صورت نیاز سرورتان به پراکسی برای دسترسی به مقصد، به‌صورت اختیاری `REMOTE_CHANNEL_NEXTDESK_PROXY_URL` را تنظیم کنید.
 
 ## منبع Telegram
 
@@ -57,16 +57,16 @@
 <summary>روش جایگزین با CLI (<code>remote:configure</code>)</summary>
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 npm run remote:configure
 ```
 
 برای Docker:
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 touch .env
-docker compose run --rm -v "$PWD/.env:/app/.env" chatdesk npm --prefix /app/server run remote:configure
+docker compose run --rm -v "$PWD/.env:/app/.env" nextdesk npm --prefix /app/server run remote:configure
 ```
 
 مقدار session تولیدشده را خصوصی نگه دارید. این مقدار به NextDesk اجازه می‌دهد کانال‌های Telegram را که حساب Telegram واردشده به آن‌ها دسترسی دارد بخواند.
@@ -107,7 +107,7 @@ docker compose run --rm -v "$PWD/.env:/app/.env" chatdesk npm --prefix /app/serv
 
    ```bash
    curl -X POST https://your-app.onrender.com/api/internal/remote-channel/tick \
-     -H "x-chatdesk-cron-secret: <secret-از-بخش-secrets>"
+     -H "x-nextdesk-cron-secret: <secret-از-بخش-secrets>"
    ```
 
    هر tick برنامه را بیدار می‌کند، همه پیام‌های جدید از آخرین پیام بازتاب شده به بعد را بازتاب می‌دهد، صف را خالی می‌کند، سپس اتصال Telegram را قطع می‌کند تا برنامه دوباره sleep شود.

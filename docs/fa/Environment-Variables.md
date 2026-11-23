@@ -9,7 +9,7 @@
 می‌توانید متغیرهای محیطی را برای سفارشی‌سازی رفتار اپلیکیشن پیکربندی کنید.
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 cp .env.example .env
 nano .env
 ```
@@ -27,7 +27,7 @@ nano .env
 | `POSTGRES_PORT` | `integer` | `5432` | پورت پایگاه داده PostgreSQL. |
 | `POSTGRES_USER` | `string` | `postgres` | نام کاربری پایگاه داده PostgreSQL. |
 | `POSTGRES_PASSWORD` | `string` | `postgres` | رمز عبور پایگاه داده PostgreSQL. |
-| `POSTGRES_DB` | `string` | `chatdesk` | نام پایگاه داده PostgreSQL. |
+| `POSTGRES_DB` | `string` | `nextdesk` | نام پایگاه داده PostgreSQL. |
 | `POSTGRES_URL` | `string` | `null` | رشته اتصال اختیاری کامل برای PostgreSQL. |
 | `POSTGRES_SSL` | `boolean` | `false` | فعالسازی SSL برای اتصالات PostgreSQL. |
 | `NODE_EXTRA_CA_CERTS` | `string` | `""` | مسیر مطلق به یک فایل گواهی ریشه مورد اعتماد اضافی با فرمت PEM (الزامی برای پایگاه های داده مدیریت شده مانند Aiven یا AWS RDS که از CA اختصاصی/سلف سایند استفاده میکنند). |
@@ -59,8 +59,8 @@ nano .env
 | `WORKER_PORT` | `integer` | `8080` | پورت سرویس Media Worker مستقل (`worker/`). در صورت خالی بودن `WORKER_URL`، پلتفرم NextDesk از این مقدار برای ساخت آدرس پیشفرض ورکر محلی (`http://127.0.0.1:8080`) استفاده میکند. |
 | `STORAGE_PROCESSING_MODE` | `string` | `auto` | حالت گردش کار پردازش مدیا (`auto`، `local`، `remote`). |
 | `STORAGE_PROCESSING_TIMEOUT_MS` | `integer` | `120000` | مهلت زمانی تلاش مجدد به میلی ثانیه برای ارسال کارهای ترنسکد به ورکر ریموت پیش از انتقال به ورکر محلی (در حالت `auto`) یا عدم موفقیت ارسال (در حالت `remote`). |
-| `WEBHOOK_SECRET` | `string` | *(تولید خودکار)* | توکن امنیتی هدر `x-chatdesk-webhook-secret` برای احراز هویت ارتباطات میان NextDesk و Media Worker. |
-| `WEBHOOK_URL` | `string` | `""` | آدرس بازخوانی (Callback) عمومی Webhook سرور NextDesk ارسالی به workerها (مانند `https://chatdesk.example.com/api/uploads/webhook/processed`). |
+| `WEBHOOK_SECRET` | `string` | *(تولید خودکار)* | توکن امنیتی هدر `x-nextdesk-webhook-secret` برای احراز هویت ارتباطات میان NextDesk و Media Worker. |
+| `WEBHOOK_URL` | `string` | `""` | آدرس بازخوانی (Callback) عمومی Webhook سرور NextDesk ارسالی به workerها (مانند `https://nextdesk.example.com/api/uploads/webhook/processed`). |
 | `STORAGE_ENCRYPTION_MODE` | `string` | `remote` | استراتژی رمزنگاری ذخیره سازی (`remote` برای سمت ارائه دهنده، `local` برای رمزنگاری سمت اپلیکیشن). |
 | `MESSAGE_FILE_RETENTION` | `integer` | `7` | حذف خودکار فایل‌های پیام آپلودشده پس از N روز (`0` غیرفعال می‌کند). |
 | `MESSAGE_TEXT_RETENTION` | `integer` | `0` | حذف خودکار پیام‌های فقط‌متنی پس از N روز (`0` غیرفعال می‌کند). |
@@ -72,7 +72,7 @@ nano .env
 | `REMOTE_CHANNEL_TELEGRAM_API_HASH` | `string` | `""` | API hash مربوط به Telegram. |
 | `REMOTE_CHANNEL_TELEGRAM_SESSION_STRING` | `string` | `""` | StringSession مربوط به Telegram. با آن مانند یک رمز عبور رفتار کنید. |
 | `REMOTE_CHANNEL_TELEGRAM_PROXY_URL` | `string` | `""` | نشانی پراکسی MTProto مربوط به Telegram. (`REMOTE_CHANNEL_PROXY_URL` به‌عنوان جایگزین قدیمی پشتیبانی می‌شود.) |
-| `REMOTE_CHANNEL_CHATDESK_PROXY_URL` | `string` | `""` | پراکسی HTTP/HTTPS برای درخواست‌های خروجی از این سرور به سرورهای ریموت NextDesk. |
+| `REMOTE_CHANNEL_NEXTDESK_PROXY_URL` | `string` | `""` | پراکسی HTTP/HTTPS برای درخواست‌های خروجی از این سرور به سرورهای ریموت NextDesk. |
 | `REMOTE_CHANNEL_TICK_MODE` | `boolean` | `false` | وقتی `true` باشد، حلقه‌های poll پس‌زمینه خاموش می‌مانند تا میزبان serverless بتواند sleep شود.  |
 | `REMOTE_CHANNEL_CRON_SECRET` | `string` | *(تولید خودکار)* | secret مشترک برای endpoint مربوط به tick. |
 | `REMOTE_CHANNEL_POLL_INTERVAL_MS` | `integer` | `5000` | فاصله زمانی بررسی منابع فعال کانال ریموت توسط poller (`1000`-`900000`). |
@@ -138,16 +138,16 @@ nano .env
 **۱. نصب با Docker:**
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 # Apply updated runtime env vars from .env
-docker compose -f docker-compose.yaml up -d --force-recreate chatdesk
+docker compose -f docker-compose.yaml up -d --force-recreate nextdesk
 ```
 
 اگر تغییر شما روی مقادیر کلاینت در زمان بیلد تأثیر می‌گذارد، تصویر (image) را نیز دوباره بسازید:
 
 ```bash
-cd /opt/chatdesk
-docker compose -f docker-compose.yaml up -d --build --force-recreate chatdesk
+cd /opt/nextdesk
+docker compose -f docker-compose.yaml up -d --build --force-recreate nextdesk
 ```
 
 **۲. نصب دستی (systemd):**
@@ -155,14 +155,14 @@ docker compose -f docker-compose.yaml up -d --build --force-recreate chatdesk
 بازسازی کلاینت:
 
 ```bash
-cd /opt/chatdesk/client
+cd /opt/nextdesk/client
 npm run build
 ```
 
 راه‌اندازی مجدد سرویس systemd:
 
 ```bash
-sudo systemctl restart chatdesk
+sudo systemctl restart nextdesk
 ```
 
 **۳. بارگذاری مجدد Nginx:**

@@ -6,11 +6,11 @@
 
 | منبع | دستور | برای چه چیزی |
 |---|---|---|
-| لاگ های سرویس (systemd) | `sudo journalctl -u chatdesk -f` | کرش اپلیکیشن، خطاهای راه اندازی، استثناهای زمان اجرا. |
+| لاگ های سرویس (systemd) | `sudo journalctl -u nextdesk -f` | کرش اپلیکیشن، خطاهای راه اندازی، استثناهای زمان اجرا. |
 | لاگ های Docker | `docker compose -f docker-compose.yaml logs -f` | همانند بالا، برای نصب های Docker. |
 | لاگ خطای Nginx | `sudo tail -f /var/log/nginx/error.log` | خطاهای 502/504، مشکلات پراکسی و TLS. |
 | لاگ دسترسی Nginx | `sudo tail -f /var/log/nginx/access.log` | تأیید رسیدن درخواست ها به سرور و کدهای وضعیت آنها. |
-| لاگ اسکریپت نصب | `cat /opt/chatdesk/logs/install.log` | شکست ها در حین نصب/به روزرسانی از طریق `chatdesk-deploy`. |
+| لاگ اسکریپت نصب | `cat /opt/nextdesk/logs/install.log` | شکست ها در حین نصب/به روزرسانی از طریق `nextdesk-deploy`. |
 
 :::tip
 
@@ -74,12 +74,12 @@
 ```bash
 # 1. وضعیت بکاند را بررسی کنید
 # استقرار Systemd:
-sudo systemctl status chatdesk
-sudo journalctl -u chatdesk -n 50 --no-pager
+sudo systemctl status nextdesk
+sudo journalctl -u nextdesk -n 50 --no-pager
 
 # استقرار Docker:
 docker compose -f docker-compose.yaml ps
-docker compose -f docker-compose.yaml logs --tail=50 chatdesk
+docker compose -f docker-compose.yaml logs --tail=50 nextdesk
 
 # 2. بررسی کنید بکاند روی پورت مورد انتظار گوش میدهد (پیشفرض: 5174)
 ss -tulpn | grep 5174
@@ -92,7 +92,7 @@ sudo tail -n 50 /var/log/nginx/error.log
 
 - **تداخل پورت**: سرویس دیگری از قبل روی پورت 5174 گوش میدهد. `SERVER_PORT` را در `.env` تغییر دهید و بلوک `proxy_pass` در Nginx را همسو کنید.
 - **Node.js پشتیبانی نشده**: نسخه Node را تأیید کنید (`node -v` — به Node.js 24+ نیاز دارد).
-- **مجوزهای دایرکتوری data**: مطمئن شوید کاربر سرویس مالک `data/` است (`sudo chown -R chatdesk:chatdesk /opt/chatdesk/data`).
+- **مجوزهای دایرکتوری data**: مطمئن شوید کاربر سرویس مالک `data/` است (`sudo chown -R nextdesk:nextdesk /opt/nextdesk/data`).
 - **فایل `.env` نامعتبر**: خطاهای نحوی، کاراکترهای نقل قول نامعتبر یا متغیرهای گمشده در `.env`.
 - **کانفیگ Nginx به پورت اشتباه اشاره میکند**: پورت `proxy_pass` در کانفیگ Nginx را با `SERVER_PORT` مقایسه کنید.
 
@@ -196,7 +196,7 @@ docker compose -f docker-compose.yaml build --no-cache --progress=plain
 |---|---|
 | مرورگر درباره گواهینامه نامعتبر هشدار میدهد | تأیید کنید که مسیرهای `ssl_certificate` / `ssl_certificate_key` در Nginx به فایل های معتبر اشاره میکنند. |
 | تمدید Certbot شکست میخورد | `sudo certbot renew --dry-run` را اجرا کنید و قابلیت دسترسی DNS/پورت 80 را بررسی کنید. |
-| گواهینامه مبتنی بر IP منقضی شده | روند گواهینامه IP از گواهینامه های کوتاه مدت (۶ روزه) استفاده میکند که توسط یک تایمر به طور خودکار تمدید میشوند؛ فعال بودن تایمر `chatdesk-lego-renew` را تأیید کنید. |
+| گواهینامه مبتنی بر IP منقضی شده | روند گواهینامه IP از گواهینامه های کوتاه مدت (۶ روزه) استفاده میکند که توسط یک تایمر به طور خودکار تمدید میشوند؛ فعال بودن تایمر `nextdesk-lego-renew` را تأیید کنید. |
 | هشدار خودامضا (پیشفرض Docker) | با گواهینامه خودامضای پیشفرض موردانتظار است. برای محیط تولید با گواهینامه های واقعی جایگزین کنید. |
 
 برای گزینه های کامل راه اندازی به [گواهینامه های SSL](./SSL-Certificates.md) مراجعه کنید.
@@ -232,11 +232,11 @@ Acquire connection error: Error: self-signed certificate in certificate chain
      ```
 
 3. **در Docker یا VPS:**
-   - فایل گواهی CA را روی دیسک ذخیره کنید (مثلاً `/opt/chatdesk/certs/ca.pem` یا آن را درون کانتینر mount کنید).
+   - فایل گواهی CA را روی دیسک ذخیره کنید (مثلاً `/opt/nextdesk/certs/ca.pem` یا آن را درون کانتینر mount کنید).
    - در فایل `.env` یا متغیرهای کانتینر مقدار زیر را تنظیم کنید:
 
      ```txt
-     NODE_EXTRA_CA_CERTS=/opt/chatdesk/certs/ca.pem
+     NODE_EXTRA_CA_CERTS=/opt/nextdesk/certs/ca.pem
      ```
 
 ## کانال ریموت بازتاب نمیدهد {#remote-channel-not-mirroring}
@@ -267,24 +267,24 @@ Acquire connection error: Error: self-signed certificate in certificate chain
 **استقرارهای Systemd:**
 
 - کاربر سرویس به مجوزهای `sudo` برای دستورات `systemctl` نیاز دارد
-- یک فایل sudoers برای کاربر chatdesk ایجاد کنید:
+- یک فایل sudoers برای کاربر nextdesk ایجاد کنید:
 
   ```bash
-  sudo visudo -f /etc/sudoers.d/chatdesk
+  sudo visudo -f /etc/sudoers.d/nextdesk
   ```
 
-- این خطوط را اضافه کنید (اگر از کاربر سرویس متفاوتی استفاده میکنید `chatdesk` را جایگزین کنید):
+- این خطوط را اضافه کنید (اگر از کاربر سرویس متفاوتی استفاده میکنید `nextdesk` را جایگزین کنید):
 
   ```txt
-  chatdesk ALL=(ALL) NOPASSWD: /bin/systemctl restart chatdesk.service
-  chatdesk ALL=(ALL) NOPASSWD: /bin/systemctl stop chatdesk.service
-  chatdesk ALL=(ALL) NOPASSWD: /bin/systemctl status chatdesk.service
+  nextdesk ALL=(ALL) NOPASSWD: /bin/systemctl restart nextdesk.service
+  nextdesk ALL=(ALL) NOPASSWD: /bin/systemctl stop nextdesk.service
+  nextdesk ALL=(ALL) NOPASSWD: /bin/systemctl status nextdesk.service
   ```
 
 - ذخیره کنید و مطمئن شوید مجوزها صحیح هستند:
 
   ```bash
-  sudo chmod 0440 /etc/sudoers.d/chatdesk
+  sudo chmod 0440 /etc/sudoers.d/nextdesk
   ```
 
 **استقرارهای PM2:**
@@ -301,19 +301,19 @@ Acquire connection error: Error: self-signed certificate in certificate chain
 - کاربر را به گروه `systemd-journal` اضافه کنید:
 
   ```bash
-  sudo usermod -a -G systemd-journal chatdesk
+  sudo usermod -a -G systemd-journal nextdesk
   ```
 
 - کاربر را به گروه `adm` اضافه کنید:
 
   ```bash
-  sudo usermod -a -G adm chatdesk
+  sudo usermod -a -G adm nextdesk
   ```
 
 - سرویس را راه اندازی مجدد کنید:
 
   ```bash
-  sudo systemctl restart chatdesk
+  sudo systemctl restart nextdesk
   ```
 
 **Docker:**

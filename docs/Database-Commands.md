@@ -3,12 +3,12 @@
 NextDesk supports both SQLite (default) and PostgreSQL database engines, and ships a set of `npm` scripts for managing the database, users, chats, files, and backups from the command line. Run them from the `server/` directory:
 
 ```bash
-cd /opt/chatdesk/server
+cd /opt/nextdesk/server
 ```
 
 :::tip
 
-You can also run every database command interactively via the [Deployment Script](./Deployment-Script.md) (`chatdesk-deploy`).
+You can also run every database command interactively via the [Deployment Script](./Deployment-Script.md) (`nextdesk-deploy`).
 
 :::
 
@@ -28,11 +28,11 @@ A few rules apply across all commands:
 
 Supported database commands use a pre-Node launcher and follow NextDesk's runtime account:
 
-- **Docker:** The command runs as the container's current UID/GID. Docker does not use `chatdesk.service`.
-- **systemd:** The command follows the effective `User=` and `Group=` of `chatdesk.service`, including systemd overrides. A missing `Group=` uses the service user's primary group. When root invokes a command for a non-root service account, the launcher repairs only this installation's `data/` directory and then switches to that configured account.
+- **Docker:** The command runs as the container's current UID/GID. Docker does not use `nextdesk.service`.
+- **systemd:** The command follows the effective `User=` and `Group=` of `nextdesk.service`, including systemd overrides. A missing `Group=` uses the service user's primary group. When root invokes a command for a non-root service account, the launcher repairs only this installation's `data/` directory and then switches to that configured account.
 - **Manual/no-systemd:** The command uses the caller's current account. It does not create an account or attempt ownership repair.
 
-If `User=` is missing or `User=root`, the systemd command remains root: it does not run `chown` or change users. An explicit `Group=` is still preserved, so `User=root` and `Group=appgroup` executes as `root:appgroup`. For safety, the root/non-root-systemd repair path accepts only the deployed instance's own `data/` directory next to the launcher (`/opt/chatdesk/data` in the standard installation); it rejects an overridden `DATA_DIR` rather than recursively changing an arbitrary path.
+If `User=` is missing or `User=root`, the systemd command remains root: it does not run `chown` or change users. An explicit `Group=` is still preserved, so `User=root` and `Group=appgroup` executes as `root:appgroup`. For safety, the root/non-root-systemd repair path accepts only the deployed instance's own `data/` directory next to the launcher (`/opt/nextdesk/data` in the standard installation); it rejects an overridden `DATA_DIR` rather than recursively changing an arbitrary path.
 
 `DATA_DIR` contains NextDesk-managed SQLite data, uploads, and backups. PostgreSQL server data is managed externally by PostgreSQL and is not stored in, or changed by, this directory.
 
@@ -80,8 +80,8 @@ Do not run individual scripts with `sudo node` or `sudo npm`. Those direct invoc
 
 Creates a timestamped, engine-native backup in `data/backups/`:
 
-- **SQLite:** copies `PostgreSQL database` to `chatdesk-backup-<timestamp>.db`.
-- **PostgreSQL:** creates `chatdesk-backup-<timestamp>.dump` with `pg_dump --format=custom`.
+- **SQLite:** copies `PostgreSQL database` to `nextdesk-backup-<timestamp>.db`.
+- **PostgreSQL:** creates `nextdesk-backup-<timestamp>.dump` with `pg_dump --format=custom`.
 
 ```bash
 # PostgreSQL; the extension is selected from DB_CLIENT
@@ -106,8 +106,8 @@ Restores the newest matching backup or an explicitly selected file. SQLite accep
 | `-y`, `--yes` | No | Skip the confirmation prompt. |
 
 ```bash
-npm run db:restore -- -y --file /path/to/chatdesk-backup.db
-npm run db:restore -- -y --file /path/to/chatdesk-backup.dump
+npm run db:restore -- -y --file /path/to/nextdesk-backup.db
+npm run db:restore -- -y --file /path/to/nextdesk-backup.dump
 ```
 
 :::warning PostgreSQL must be offline
@@ -154,15 +154,15 @@ sudo apt-get install -y pgloader
 #### 3. Run migration with pgloader
 
 ```bash
-pgloader ./data/PostgreSQL database postgresql://chatdesk:password@localhost:5432/chatdesk
+pgloader ./data/PostgreSQL database postgresql://nextdesk:password@localhost:5432/nextdesk
 ```
 
-Or using a `chatdesk.load` configuration file for fine-grained control:
+Or using a `nextdesk.load` configuration file for fine-grained control:
 
 ```lisp
 LOAD DATABASE
      FROM sqlite://./data/PostgreSQL database
-     INTO postgresql://chatdesk:password@localhost:5432/chatdesk
+     INTO postgresql://nextdesk:password@localhost:5432/nextdesk
 
  WITH include drop, create tables, create indexes, reset sequences
 
@@ -170,7 +170,7 @@ LOAD DATABASE
 ```
 
 ```bash
-pgloader chatdesk.load
+pgloader nextdesk.load
 ```
 
 ### `db:migrate`
@@ -254,10 +254,10 @@ Creates a single user. Accepts named flags or three positional arguments (`nickn
 | `--role <owner\|admin\|user>` | 4th | No | User role. |
 
 ```bash
-npm run db:user:create -- --nickname "NextDesk Sage" --username chatdesk.sage --password "12345678"
+npm run db:user:create -- --nickname "NextDesk Sage" --username nextdesk.sage --password "12345678"
 
 # positional form:
-npm run db:user:create -- "NextDesk Sage" chatdesk.sage "12345678"
+npm run db:user:create -- "NextDesk Sage" nextdesk.sage "12345678"
 ```
 
 ### `db:user:generate`
@@ -291,8 +291,8 @@ Edits a user profile. The first positional argument is the user selector (id or 
 | `--role <owner\|admin\|user>` | No | User role. |
 
 ```bash
-npm run db:user:edit -- chatdesk.sage --nickname "NextDesk Sage" --color "#ff6b6b"
-npm run db:user:edit -- 1 --username chatdesk.admin --status invisible
+npm run db:user:edit -- nextdesk.sage --nickname "NextDesk Sage" --color "#ff6b6b"
+npm run db:user:edit -- 1 --username nextdesk.admin --status invisible
 ```
 
 ### `db:user:ban`
@@ -305,9 +305,9 @@ Toggles a user's ban state. Running it again unbans. Banning also expires all of
 | `-y`, `--yes` | No | Skip the confirmation prompt. |
 
 ```bash
-npm run db:user:ban -- chatdesk.sage
+npm run db:user:ban -- nextdesk.sage
 # run again to unban:
-npm run db:user:ban -- chatdesk.sage
+npm run db:user:ban -- nextdesk.sage
 ```
 
 ### `db:user:verify`
@@ -319,9 +319,9 @@ Toggles a user's verified status. Run the command again for the same user to rem
 | `<user-id-or-username>` | Yes | The user to verify or unverify. |
 
 ```bash
-npm run db:user:verify -- chatdesk.sage
+npm run db:user:verify -- nextdesk.sage
 # run again to unverify:
-npm run db:user:verify -- chatdesk.sage
+npm run db:user:verify -- nextdesk.sage
 ```
 
 ### `db:user:delete`
@@ -335,7 +335,7 @@ Deletes one, many, or all users along with their sessions and messages. Owned ch
 | `-y`, `--yes` | No | Skip the confirmation prompt. |
 
 ```bash
-npm run db:user:delete -- chatdesk.sage -y
+npm run db:user:delete -- nextdesk.sage -y
 npm run db:user:delete -- --all -y
 ```
 
@@ -359,9 +359,9 @@ Creates a group or channel. Channels can optionally be configured as a Remote Ch
 | `--stream-media` | No | Download source media into NextDesk uploads. |
 
 ```bash
-npm run db:chat:create -- --type group --name "Core Team" --owner chatdesk.sage --username core.team --visibility private --users chatdesk.sage2,chatdesk.sage3
+npm run db:chat:create -- --type group --name "Core Team" --owner nextdesk.sage --username core.team --visibility private --users nextdesk.sage2,nextdesk.sage3
 
-npm run db:chat:create -- --type channel --name "Announcements" --owner chatdesk.sage --username announcements
+npm run db:chat:create -- --type channel --name "Announcements" --owner nextdesk.sage --username announcements
 
 # Channel with a Remote Channel source:
 npm run db:chat:create -- --type channel --name "My Channel" --owner alice --username my_channel --remote-channel @telegram_source --sync-metadata --stream-media
@@ -379,7 +379,7 @@ Adds members to a group or channel. The first positional argument is the chat se
 | `--force` | No | Re-add users who previously left the chat. |
 
 ```bash
-npm run db:chat:add -- core.team chatdesk.sage2 chatdesk.sage3
+npm run db:chat:add -- core.team nextdesk.sage2 nextdesk.sage3
 npm run db:chat:add -- 1 --all
 npm run db:chat:add -- 1 --all --force
 ```
@@ -418,7 +418,7 @@ Edits a chat profile, transfers ownership, or manages its Remote Channel. The fi
 
 ```bash
 npm run db:chat:edit -- core.team --name "Core Team HQ" --visibility public --color "#14b8a6"
-npm run db:chat:edit -- 1 --owner chatdesk.sage2
+npm run db:chat:edit -- 1 --owner nextdesk.sage2
 
 # Remote Channel:
 npm run db:chat:edit -- my_channel --remote-channel @new_telegram_source
@@ -493,8 +493,8 @@ Generates random messages in one chat between two users. Accepts positional argu
 | `--days <n>` | 5th | No | `7` | Spread messages across the last N days (`1`-`365`). |
 
 ```bash
-npm run db:message:generate -- 1 chatdesk.sage chatdesk.sage2 300 7
-npm run db:message:generate -- --chatId 1 --userA chatdesk.sage --userB chatdesk.sage2 --count 300 --days 7
+npm run db:message:generate -- 1 nextdesk.sage nextdesk.sage2 300 7
+npm run db:message:generate -- --chatId 1 --userA nextdesk.sage --userB nextdesk.sage2 --count 300 --days 7
 ```
 
 
@@ -535,8 +535,8 @@ npm run storage:migrate
 To run database and maintenance commands inside a Docker container:
 
 ```bash
-docker compose exec chatdesk npm --prefix /app/server run db:backup
-docker compose exec chatdesk npm --prefix /app/server run db:migrate
-docker compose exec chatdesk npm --prefix /app/server run db:inspect
-docker compose exec chatdesk npm --prefix /app/server run storage:migrate -- -y
+docker compose exec nextdesk npm --prefix /app/server run db:backup
+docker compose exec nextdesk npm --prefix /app/server run db:migrate
+docker compose exec nextdesk npm --prefix /app/server run db:inspect
+docker compose exec nextdesk npm --prefix /app/server run storage:migrate -- -y
 ```

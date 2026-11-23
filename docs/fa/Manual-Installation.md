@@ -45,8 +45,8 @@ volta install node@24.22.1 npm@11.6.4
 ## ۲. کلون‌کردن مخزن
 
 ```bash
-sudo mkdir -p /opt/chatdesk
-cd /opt/chatdesk
+sudo mkdir -p /opt/nextdesk
+cd /opt/nextdesk
 git clone https://github.com/MASolutionExpert/NEXTDESK.git .
 ```
 
@@ -64,17 +64,17 @@ nvm use
 ## ۳. نصب وابستگی‌ها
 
 ```bash
-cd /opt/chatdesk/server
+cd /opt/nextdesk/server
 npm install
 
-cd /opt/chatdesk/client
+cd /opt/nextdesk/client
 npm install
 npm run build
 ```
 
 ## ۴. ایجاد سرویس systemd
 
-فایل `/etc/systemd/system/chatdesk.service` را با محتوای زیر ایجاد کنید:
+فایل `/etc/systemd/system/nextdesk.service` را با محتوای زیر ایجاد کنید:
 
 ```ini
 [Unit]
@@ -83,8 +83,8 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/chatdesk/server
-ExecStart=/usr/bin/env node /opt/chatdesk/server/index.js
+WorkingDirectory=/opt/nextdesk/server
+ExecStart=/usr/bin/env node /opt/nextdesk/server/index.js
 Restart=on-failure
 RestartSec=5
 
@@ -121,39 +121,39 @@ ExecStart=/root/.volta/bin/node index.js
 1. این خطوط را به فایل سرویس systemd اضافه کنید:
 
 ```ini
-User=chatdesk
-Group=chatdesk
+User=nextdesk
+Group=nextdesk
 ```
 
 2. یک کاربر سیستمی اختصاصی ایجاد کنید:
 
 ```bash
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin chatdesk
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin nextdesk
 ```
 
 3. مالکیت پوشه پروژه را تغییر دهید:
 
 ```bash
-sudo chown -R chatdesk:chatdesk /opt/chatdesk
-git config --global --add safe.directory /opt/chatdesk
+sudo chown -R nextdesk:nextdesk /opt/nextdesk
+git config --global --add safe.directory /opt/nextdesk
 ```
 
 4. به کاربر سرویس اجازه دهید واحد خودش را کنترل کرده و لاگ‌های سیستم را بخواند (لازم است برای دکمه‌های راه‌اندازی مجدد/توقف سرویس و تب Logs در پنل ادمین):
 
 ```bash
-sudo tee /etc/sudoers.d/chatdesk > /dev/null <<'EOF'
+sudo tee /etc/sudoers.d/nextdesk > /dev/null <<'EOF'
 # NextDesk — allow the service user to control its own unit
 # and read privileged logs without a password.
-chatdesk ALL=(root) NOPASSWD: /usr/bin/systemctl restart chatdesk.service
-chatdesk ALL=(root) NOPASSWD: /usr/bin/systemctl stop chatdesk.service
-chatdesk ALL=(root) NOPASSWD: /usr/bin/journalctl -u chatdesk *
-chatdesk ALL=(root) NOPASSWD: /usr/bin/journalctl -u chatdesk-worker *
-chatdesk ALL=(root) NOPASSWD: /usr/bin/cat /var/log/nginx/error.log
-chatdesk ALL=(root) NOPASSWD: /usr/bin/cat /var/log/nginx/access.log
-chatdesk ALL=(root) NOPASSWD: /usr/bin/nginx -t
-chatdesk ALL=(root) NOPASSWD: /usr/bin/systemctl reload nginx
+nextdesk ALL=(root) NOPASSWD: /usr/bin/systemctl restart nextdesk.service
+nextdesk ALL=(root) NOPASSWD: /usr/bin/systemctl stop nextdesk.service
+nextdesk ALL=(root) NOPASSWD: /usr/bin/journalctl -u nextdesk *
+nextdesk ALL=(root) NOPASSWD: /usr/bin/journalctl -u nextdesk-worker *
+nextdesk ALL=(root) NOPASSWD: /usr/bin/cat /var/log/nginx/error.log
+nextdesk ALL=(root) NOPASSWD: /usr/bin/cat /var/log/nginx/access.log
+nextdesk ALL=(root) NOPASSWD: /usr/bin/nginx -t
+nextdesk ALL=(root) NOPASSWD: /usr/bin/systemctl reload nginx
 EOF
-sudo chmod 0440 /etc/sudoers.d/chatdesk
+sudo chmod 0440 /etc/sudoers.d/nextdesk
 ```
 
 بدون این مرحله، دکمه‌های **راه‌اندازی مجدد سرویس** و **توقف سرویس** در پنل ادمین با خطای دسترسی مواجه می‌شوند و لاگ‌های سیستم (journal سرویس، nginx) در تب Logs نمایش داده نمی‌شوند.
@@ -162,5 +162,5 @@ sudo chmod 0440 /etc/sudoers.d/chatdesk
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now chatdesk.service
+sudo systemctl enable --now nextdesk.service
 ```

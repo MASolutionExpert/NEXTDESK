@@ -132,7 +132,7 @@ lt-cred-mech
 
 # Realm & static credentials
 realm=your-domain.com
-user=chatdesk:YourSecurePassword123
+user=nextdesk:YourSecurePassword123
 
 # Public IP binding
 # If the server has a direct public IP:
@@ -173,7 +173,7 @@ Set the environment variables in your NextDesk `.env`:
 ```txt
 TURN_STUN_URL="stun:your-domain.com:3478"
 TURN_URL="turn:your-domain.com:3478"
-TURN_USERNAME="chatdesk"
+TURN_USERNAME="nextdesk"
 TURN_CREDENTIAL="YourSecurePassword123"
 ```
 

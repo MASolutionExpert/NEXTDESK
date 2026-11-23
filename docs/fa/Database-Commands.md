@@ -3,12 +3,12 @@
 NextDesk از هر دو موتور پایگاه داده SQLite (پیشفرض) و PostgreSQL پشتیبانی می کند و مجموعه ای از اسکریپته ای `npm` را برای مدیریت پایگاه داده، کاربران، چت ها، فایل ها و پشتیبان ها از خط فرمان ارائه می دهد. آنها را از پوشه `server/` اجرا کنید:
 
 ```bash
-cd /opt/chatdesk/server
+cd /opt/nextdesk/server
 ```
 
 :::tip
 
-همچنین می‌توانید هر دستور پایگاه داده را به‌صورت تعاملی از طریق [اسکریپت نصب](./Deployment-Script.md) (`chatdesk-deploy`) اجرا کنید.
+همچنین می‌توانید هر دستور پایگاه داده را به‌صورت تعاملی از طریق [اسکریپت نصب](./Deployment-Script.md) (`nextdesk-deploy`) اجرا کنید.
 
 :::
 
@@ -28,11 +28,11 @@ cd /opt/chatdesk/server
 
 دستورهای پشتیبانی شده پایگاه داده از یک اجراکننده پیش از Node استفاده میکنند و از حساب runtime ‏NextDesk پیروی میکنند:
 
-- **Docker:** دستور با UID/GID فعلی container اجرا میشود. Docker از `chatdesk.service` استفاده نمیکند.
-- **systemd:** دستور از `User=` و `Group=` مؤثر در `chatdesk.service`، از جمله overrideهای systemd، پیروی میکند. نبودن `Group=` به primary group کاربر service تبدیل میشود. وقتی root یک دستور را برای حساب service غیر root اجرا میکند، اجراکننده فقط پوشه `data/` همین installation را اصلاح کرده و سپس به همان حساب پیکربندی شده تغییر میکند.
+- **Docker:** دستور با UID/GID فعلی container اجرا میشود. Docker از `nextdesk.service` استفاده نمیکند.
+- **systemd:** دستور از `User=` و `Group=` مؤثر در `nextdesk.service`، از جمله overrideهای systemd، پیروی میکند. نبودن `Group=` به primary group کاربر service تبدیل میشود. وقتی root یک دستور را برای حساب service غیر root اجرا میکند، اجراکننده فقط پوشه `data/` همین installation را اصلاح کرده و سپس به همان حساب پیکربندی شده تغییر میکند.
 - **manual/no-systemd:** دستور از حساب فعلی فراخواننده استفاده میکند. هیچ حسابی ایجاد نمیکند و تلاشی برای اصلاح مالکیت ندارد.
 
-اگر `User=` وجود نداشته باشد یا `User=root` باشد، دستور systemd با root باقی میماند: نه `chown` اجرا میکند و نه کاربر را تغییر میدهد. با این حال، `Group=` صریح حفظ میشود؛ برای نمونه، `User=root` و `Group=appgroup` دستور را با `root:appgroup` اجرا میکند. برای امنیت، مسیر اصلاح root/non-root-systemd فقط پوشه `data/` همان نصب را که کنار اجراکننده است میپذیرد (در نصب استاندارد: `/opt/chatdesk/data`)؛ به جای تغییر بازگشتی مالکیت یک مسیر دلخواه، `DATA_DIR` بازنویسی شده را رد میکند.
+اگر `User=` وجود نداشته باشد یا `User=root` باشد، دستور systemd با root باقی میماند: نه `chown` اجرا میکند و نه کاربر را تغییر میدهد. با این حال، `Group=` صریح حفظ میشود؛ برای نمونه، `User=root` و `Group=appgroup` دستور را با `root:appgroup` اجرا میکند. برای امنیت، مسیر اصلاح root/non-root-systemd فقط پوشه `data/` همان نصب را که کنار اجراکننده است میپذیرد (در نصب استاندارد: `/opt/nextdesk/data`)؛ به جای تغییر بازگشتی مالکیت یک مسیر دلخواه، `DATA_DIR` بازنویسی شده را رد میکند.
 
 `DATA_DIR` شامل داده های SQLite مدیریت شده توسط برنامه، upload ها و backup ها است. داده های server ‏PostgreSQL به صورت خارجی توسط PostgreSQL مدیریت میشوند و در این پوشه قرار ندارند یا توسط آن تغییر نمیکنند.
 
@@ -79,8 +79,8 @@ cd /opt/chatdesk/server
 
 یک پشتیبان زمان‌دار و سازگار با موتور را در `data/backups/` ایجاد می‌کند:
 
-- **SQLite:** از `PostgreSQL database` در `chatdesk-backup-<timestamp>.db` کپی می‌گیرد.
-- **PostgreSQL:** با `pg_dump --format=custom` یک آرشیو `chatdesk-backup-<timestamp>.dump` ایجاد می‌کند.
+- **SQLite:** از `PostgreSQL database` در `nextdesk-backup-<timestamp>.db` کپی می‌گیرد.
+- **PostgreSQL:** با `pg_dump --format=custom` یک آرشیو `nextdesk-backup-<timestamp>.dump` ایجاد می‌کند.
 
 ```bash
 # SQLite یا PostgreSQL؛ پسوند از DB_CLIENT انتخاب می‌شود
@@ -105,8 +105,8 @@ npm run db:backup
 | `-y`، `--yes` | خیر | رد شدن از پرسش تأیید. |
 
 ```bash
-npm run db:restore -- -y --file /path/to/chatdesk-backup.db
-npm run db:restore -- -y --file /path/to/chatdesk-backup.dump
+npm run db:restore -- -y --file /path/to/nextdesk-backup.db
+npm run db:restore -- -y --file /path/to/nextdesk-backup.dump
 ```
 
 :::warning PostgreSQL باید آفلاین باشد
@@ -153,15 +153,15 @@ sudo apt-get install -y pgloader
 #### ۳. اجرای انتقال با pgloader
 
 ```bash
-pgloader ./data/PostgreSQL database postgresql://chatdesk:password@localhost:5432/chatdesk
+pgloader ./data/PostgreSQL database postgresql://nextdesk:password@localhost:5432/nextdesk
 ```
 
-یا با استفاده از یک فایل پیکربندی `chatdesk.load`:
+یا با استفاده از یک فایل پیکربندی `nextdesk.load`:
 
 ```lisp
 LOAD DATABASE
      FROM sqlite://./data/PostgreSQL database
-     INTO postgresql://chatdesk:password@localhost:5432/chatdesk
+     INTO postgresql://nextdesk:password@localhost:5432/nextdesk
 
  WITH include drop, create tables, create indexes, reset sequences
 
@@ -169,7 +169,7 @@ LOAD DATABASE
 ```
 
 ```bash
-pgloader chatdesk.load
+pgloader nextdesk.load
 ```
 
 ### `db:migrate`
@@ -253,10 +253,10 @@ npm run db:file:inspect
 | `--password <value>` | سوم | بله | رمز عبور حساب (هنگام ذخیره با bcrypt هش می‌شود). |
 
 ```bash
-npm run db:user:create -- --nickname "NextDesk Sage" --username chatdesk.sage --password "12345678"
+npm run db:user:create -- --nickname "NextDesk Sage" --username nextdesk.sage --password "12345678"
 
 # positional form:
-npm run db:user:create -- "NextDesk Sage" chatdesk.sage "12345678"
+npm run db:user:create -- "NextDesk Sage" nextdesk.sage "12345678"
 ```
 
 ### `db:user:generate`
@@ -289,8 +289,8 @@ npm run db:user:generate -- --count 50 --password "12345678" --nickname-prefix M
 | `--color <#hex>` | خیر | رنگ پروفایل، برای مثال `#10b981`. |
 
 ```bash
-npm run db:user:edit -- chatdesk.sage --nickname "NextDesk Sage" --color "#ff6b6b"
-npm run db:user:edit -- 1 --username chatdesk.admin --status invisible
+npm run db:user:edit -- nextdesk.sage --nickname "NextDesk Sage" --color "#ff6b6b"
+npm run db:user:edit -- 1 --username nextdesk.admin --status invisible
 ```
 
 ### `db:user:ban`
@@ -303,9 +303,9 @@ npm run db:user:edit -- 1 --username chatdesk.admin --status invisible
 | `-y`، `--yes` | خیر | رد شدن از پرسش تأیید. |
 
 ```bash
-npm run db:user:ban -- chatdesk.sage
+npm run db:user:ban -- nextdesk.sage
 # run again to unban:
-npm run db:user:ban -- chatdesk.sage
+npm run db:user:ban -- nextdesk.sage
 ```
 
 ### `db:user:verify`
@@ -317,9 +317,9 @@ npm run db:user:ban -- chatdesk.sage
 | `<user-id-or-username>` | بله | کاربری که باید تأیید یا لغو تأیید شود. |
 
 ```bash
-npm run db:user:verify -- chatdesk.sage
+npm run db:user:verify -- nextdesk.sage
 # اجرای دوباره برای لغو تأیید:
-npm run db:user:verify -- chatdesk.sage
+npm run db:user:verify -- nextdesk.sage
 ```
 
 ### `db:user:delete`
@@ -333,7 +333,7 @@ npm run db:user:verify -- chatdesk.sage
 | `-y`، `--yes` | خیر | رد شدن از پرسش تأیید. |
 
 ```bash
-npm run db:user:delete -- chatdesk.sage -y
+npm run db:user:delete -- nextdesk.sage -y
 npm run db:user:delete -- --all -y
 ```
 
@@ -357,9 +357,9 @@ npm run db:user:delete -- --all -y
 | `--stream-media` | خیر | دانلود رسانه منبع به آپلودهای NextDesk. |
 
 ```bash
-npm run db:chat:create -- --type group --name "Core Team" --owner chatdesk.sage --username core.team --visibility private --users chatdesk.sage2,chatdesk.sage3
+npm run db:chat:create -- --type group --name "Core Team" --owner nextdesk.sage --username core.team --visibility private --users nextdesk.sage2,nextdesk.sage3
 
-npm run db:chat:create -- --type channel --name "Announcements" --owner chatdesk.sage --username announcements
+npm run db:chat:create -- --type channel --name "Announcements" --owner nextdesk.sage --username announcements
 
 # Channel with a Remote Channel source:
 npm run db:chat:create -- --type channel --name "My Channel" --owner alice --username my_channel --remote-channel @telegram_source --sync-metadata --stream-media
@@ -377,7 +377,7 @@ npm run db:chat:create -- --type channel --name "My Channel" --owner alice --use
 | `--force` | خیر | افزودن مجدد کاربرانی که پیش‌تر از چت خارج شده‌اند. |
 
 ```bash
-npm run db:chat:add -- core.team chatdesk.sage2 chatdesk.sage3
+npm run db:chat:add -- core.team nextdesk.sage2 nextdesk.sage3
 npm run db:chat:add -- 1 --all
 npm run db:chat:add -- 1 --all --force
 ```
@@ -416,7 +416,7 @@ npm run db:chat:add -- 1 --all --force
 
 ```bash
 npm run db:chat:edit -- core.team --name "Core Team HQ" --visibility public --color "#14b8a6"
-npm run db:chat:edit -- 1 --owner chatdesk.sage2
+npm run db:chat:edit -- 1 --owner nextdesk.sage2
 
 # Remote Channel:
 npm run db:chat:edit -- my_channel --remote-channel @new_telegram_source
@@ -491,8 +491,8 @@ npm run db:file:delete -- --all -y
 | `--days <n>` | پنجم | خیر | `7` | پخش پیام‌ها در N روز گذشته (`1`-`365`). |
 
 ```bash
-npm run db:message:generate -- 1 chatdesk.sage chatdesk.sage2 300 7
-npm run db:message:generate -- --chatId 1 --userA chatdesk.sage --userB chatdesk.sage2 --count 300 --days 7
+npm run db:message:generate -- 1 nextdesk.sage nextdesk.sage2 300 7
+npm run db:message:generate -- --chatId 1 --userA nextdesk.sage --userB nextdesk.sage2 --count 300 --days 7
 ```
 
 
@@ -534,8 +534,8 @@ npm run storage:migrate
 هر اسکریپت npm را داخل کانتینر درحال اجرا با پیشوند `--prefix /app/server` اجرا کنید:
 
 ```bash
-docker compose exec chatdesk npm --prefix /app/server run db:backup
-docker compose exec chatdesk npm --prefix /app/server run db:migrate
-docker compose exec chatdesk npm --prefix /app/server run db:inspect
-docker compose exec chatdesk npm --prefix /app/server run storage:migrate -- -y
+docker compose exec nextdesk npm --prefix /app/server run db:backup
+docker compose exec nextdesk npm --prefix /app/server run db:migrate
+docker compose exec nextdesk npm --prefix /app/server run db:inspect
+docker compose exec nextdesk npm --prefix /app/server run storage:migrate -- -y
 ```

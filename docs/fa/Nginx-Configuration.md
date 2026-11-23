@@ -2,7 +2,7 @@
 
 NextDesk هم فرانت‌اند ساخته‌شده و هم API را از سرور Node ارائه می‌دهد، بنابراین Nginx تنها باید یک upstream را پراکسی کند: `http://127.0.0.1:SERVER_PORT`.
 
-فایل `/etc/nginx/sites-available/chatdesk` را ایجاد کنید:
+فایل `/etc/nginx/sites-available/nextdesk` را ایجاد کنید:
 
 :::info
 
@@ -114,7 +114,7 @@ server {
 سایت را فعال کنید:
 
 ```bash
-sudo ln -sf /etc/nginx/sites-available/chatdesk /etc/nginx/sites-enabled/chatdesk
+sudo ln -sf /etc/nginx/sites-available/nextdesk /etc/nginx/sites-enabled/nextdesk
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx

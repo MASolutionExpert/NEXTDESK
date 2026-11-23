@@ -4,7 +4,7 @@
 
 | روش نصب | مسیر به‌روزرسانی / دانگرید |
 |---|---|
-| اسکریپت نصب | `chatdesk-deploy` را اجرا کنید و **Update NextDesk** را انتخاب کنید (پشتیبان گیری از پایگاه داده، pull یا checkout در Git، بازسازی، مهاجرت ها و راه اندازی مجدد سرویس). |
+| اسکریپت نصب | `nextdesk-deploy` را اجرا کنید و **Update NextDesk** را انتخاب کنید (پشتیبان گیری از پایگاه داده، pull یا checkout در Git، بازسازی، مهاجرت ها و راه اندازی مجدد سرویس). |
 | Docker | دریافت یا checkout تگ یا کامیت مورد نظر در Git و اجرای `docker compose up -d --build`. |
 | دستی (systemd) | دریافت یا checkout تگ یا کامیت مورد نظر در Git، بازسازی کلاینت/سرور و راه اندازی مجدد سرویس. |
 
@@ -13,10 +13,10 @@
 همیشه پیش از به‌روزرسانی یا دانگرید از پایگاه داده خود پشتیبان بگیرید:
 
 ```bash
-cd /opt/chatdesk/server
+cd /opt/nextdesk/server
 npm run db:backup
 # Or use this for Docker:
-docker compose exec chatdesk npm --prefix /app/server run db:backup
+docker compose exec nextdesk npm --prefix /app/server run db:backup
 ```
 
 :::
@@ -27,14 +27,14 @@ docker compose exec chatdesk npm --prefix /app/server run db:backup
 
 :::
 
-## اسکریپت نصب (chatdesk-deploy)
+## اسکریپت نصب (nextdesk-deploy)
 
 اسکریپت تعاملی نصب، ساده ترین راه برای به‌روزرسانی یا دانگرید نمونه NextDesk شما است.
 
 ابزار را اجرا کنید:
 
 ```bash
-chatdesk-deploy
+nextdesk-deploy
 ```
 
 گزینه **2** (**Update NextDesk**) را انتخاب کنید.
@@ -63,7 +63,7 @@ Create a database backup before updating? [y/N]
 
 ۵. دسترسی های فایل ها و فایل های سرویس systemd را تنظیم میکند.
 
-۶. سرویس `chatdesk.service` (و `chatdesk-worker.service` در صورت وجود) را مجدداً راه اندازی کرده و Nginx را reload میکند.
+۶. سرویس `nextdesk.service` (و `nextdesk-worker.service` در صورت وجود) را مجدداً راه اندازی کرده و Nginx را reload میکند.
 
 ### ۳. دانگرید (حالت GitHub)
 
@@ -90,7 +90,7 @@ Do you want to downgrade? [y/N]
 
 هنگام انتخاب حالت **Offline** با استفاده از فایل فشرده zip محلی سورس کد:
 
-- **به‌روزرسانی**: اگر مقدار `VERSION` درون فایل فشرده جدیدتر از `/opt/chatdesk/VERSION` باشد، اسکریپت اقدام به به‌روزرسانی میکند.
+- **به‌روزرسانی**: اگر مقدار `VERSION` درون فایل فشرده جدیدتر از `/opt/nextdesk/VERSION` باشد، اسکریپت اقدام به به‌روزرسانی میکند.
 - **دانگرید**: اگر مقدار `VERSION` درون فایل فشرده قدیمی تر از نسخه نصب شده باشد، اسکریپت پیام زیر را نمایش میدهد:
 
   ```txt
@@ -101,9 +101,9 @@ Do you want to downgrade? [y/N]
 
 ### ۵. به‌روزرسانی منوی اسکریپت نصب
 
-برای به‌روزرسانی خودِ دستور سراسری `chatdesk-deploy`:
+برای به‌روزرسانی خودِ دستور سراسری `nextdesk-deploy`:
 
-۱. دستور `chatdesk-deploy` را اجرا کنید.
+۱. دستور `nextdesk-deploy` را اجرا کنید.
 
 ۲. گزینه **7** (**Update menu**) را انتخاب کنید.
 
@@ -114,7 +114,7 @@ Do you want to downgrade? [y/N]
 ### به‌روزرسانی به آخرین نسخه
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 git pull origin main
 docker compose -f docker-compose.yaml up -d --build
 sudo systemctl reload nginx
@@ -123,7 +123,7 @@ sudo systemctl reload nginx
 ### دانگرید به یک نسخه مشخص
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 git fetch --all --tags
 git checkout v0.11.4 # با تگ یا هش کامیت مورد نظر جایگزین کنید
 docker compose -f docker-compose.yaml up -d --build
@@ -135,7 +135,7 @@ sudo systemctl reload nginx
 ### به‌روزرسانی به آخرین نسخه
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 git pull origin main
 cd client
 npm install
@@ -143,14 +143,14 @@ npm run build
 cd ../server
 npm install
 npm run db:migrate
-sudo systemctl restart chatdesk
+sudo systemctl restart nextdesk
 sudo systemctl reload nginx
 ```
 
 ### دانگرید به یک نسخه مشخص
 
 ```bash
-cd /opt/chatdesk
+cd /opt/nextdesk
 git fetch --all --tags
 git checkout v0.11.4 # با تگ یا هش کامیت مورد نظر جایگزین کنید
 cd client
@@ -159,7 +159,7 @@ npm run build
 cd ../server
 npm install
 npm run db:migrate
-sudo systemctl restart chatdesk
+sudo systemctl restart nextdesk
 sudo systemctl reload nginx
 ```
 

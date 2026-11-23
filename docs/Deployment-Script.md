@@ -1,6 +1,6 @@
 # Deployment Script
 
-The deployment script (`chatdesk-deploy`) is the recommended way to install and manage NextDesk. It is an interactive, menu-driven tool that handles dependencies, builds, Nginx, SSL certificates, environment configuration, database management, and updates, so you do not have to run those steps by hand.
+The deployment script (`nextdesk-deploy`) is the recommended way to install and manage NextDesk. It is an interactive, menu-driven tool that handles dependencies, builds, Nginx, SSL certificates, environment configuration, database management, and updates, so you do not have to run those steps by hand.
 
 :::info
 
@@ -16,10 +16,10 @@ Run the one-liner on your server:
 curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/main/scripts/install.sh | bash
 ```
 
-This downloads the script, opens the menu, and installs a global `chatdesk-deploy` command. From then on, launch it anytime with:
+This downloads the script, opens the menu, and installs a global `nextdesk-deploy` command. From then on, launch it anytime with:
 
 ```bash
-chatdesk-deploy
+nextdesk-deploy
 ```
 
 ## Main menu
@@ -28,7 +28,7 @@ chatdesk-deploy
 |---|---|---|
 | 1 | 📥 Install NextDesk | Full guided install: dependencies, build, Nginx, SSL, and `.env`. |
 | 2 | 🔄 Update NextDesk | Update inside the current channel, or downgrade to a specific version, rebuild, and restart (optional pre-update backup). |
-| 3 | ♻️ Restart NextDesk | Restart the `chatdesk.service`. |
+| 3 | ♻️ Restart NextDesk | Restart the `nextdesk.service`. |
 | 4 | 🔀 Switch Test / Stable channel | Move the installation between the Test (dev) and Stable (main) channels through the full update pipeline. |
 | 5 | ⚙️ Edit Settings (.env) | Change ports, uploads, retention, sign-up, and other env values, then rebuild/apply. |
 | 6 | 🗃️ Manage Database | Open the database submenu (see below). |
@@ -50,7 +50,7 @@ builds:
 | **Test** (pre-release) | `dev` | `vX.Y.Z-dev.N` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/dev/scripts/install.sh \| REPO_BRANCH=dev bash` |
 
 - The installer remembers the channel it came from; **Update** always stays inside that channel, and the in-app update check follows the same rule.
-- The menu banner shows the installed version and channel; `chatdesk-deploy --status` prints the same information non-interactively.
+- The menu banner shows the installed version and channel; `nextdesk-deploy --status` prints the same information non-interactively.
 - **Switch Test / Stable channel** backs up, checks out the other branch, and runs the full pipeline (dependencies, migrations, client build, service restart, health check).
 - A dev build reaches the Stable channel only through the **"Promote dev to Stable"** GitHub Actions workflow, run manually with an approved dev tag — `main` is frozen otherwise.
 
@@ -146,10 +146,10 @@ See [Updating & Downgrading](./Updating.md) for full details and manual alternat
 
 ## Updating the deployment menu
 
-Choose **Update menu** (Option 7) to check for updates to the `chatdesk-deploy` script itself:
+Choose **Update menu** (Option 7) to check for updates to the `nextdesk-deploy` script itself:
 
 1. **Check for updates**: The script queries the official GitHub repository to check if a newer version of `scripts/install.sh` is available.
-2. **Automatic update**: If a newer version is found, it downloads and replaces the global `chatdesk-deploy` command (`/usr/local/bin/chatdesk-deploy`), updating it to the latest version.
+2. **Automatic update**: If a newer version is found, it downloads and replaces the global `nextdesk-deploy` command (`/usr/local/bin/nextdesk-deploy`), updating it to the latest version.
 3. **Reinstall prompt**: If the menu is already up to date, or if fetching from GitHub fails (such as in restricted network environments), it prompts:
    ```txt
    Do you want to reinstall the current menu again? [y/N]
@@ -192,8 +192,8 @@ The **View Logs** submenu surfaces the most useful logs without remembering path
 
 | Option | Source |
 |---|---|
-| Script logs | The installer's own log at `/opt/chatdesk/logs/install.log`. |
-| Service logs | `journalctl` output for `chatdesk.service`. |
+| Script logs | The installer's own log at `/opt/nextdesk/logs/install.log`. |
+| Service logs | `journalctl` output for `nextdesk.service`. |
 | Nginx access logs | Nginx access log. |
 | Nginx error logs | Nginx error log. |
 
