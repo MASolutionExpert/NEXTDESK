@@ -850,3 +850,37 @@ export const deleteCall = (payload) =>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+
+export const fetchChatFiles = ({
+  chatId,
+  username,
+  limit = 40,
+  offset = 0,
+}: any) => {
+  const params = new URLSearchParams({
+    username: String(username || ""),
+    limit: String(limit),
+    offset: String(offset),
+  });
+  return apiFetch(
+    `${API_BASE}/api/chats/${encodeURIComponent(String(chatId))}/files?${params.toString()}`,
+  );
+};
+
+export const searchChatMessages = ({
+  chatId,
+  username,
+  query,
+  limit = 30,
+  offset = 0,
+}: any) => {
+  const params = new URLSearchParams({
+    username: String(username || ""),
+    query: String(query || ""),
+    limit: String(limit),
+    offset: String(offset),
+  });
+  return apiFetch(
+    `${API_BASE}/api/chats/${encodeURIComponent(String(chatId))}/search?${params.toString()}`,
+  );
+};

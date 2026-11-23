@@ -751,3 +751,161 @@ export async function getTotalUnreadCount(userId: string): Promise<number> {
   );
   return Number(row?.total || 0);
 }
+
+export async function listChatFilesForUser(
+  chatId: string,
+  viewerUserId: string,
+  { limit = 40, offset = 0 }: any = {},
+) {
+  if (!chatId || !viewerUserId) return [];
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 40), 100);
+  const safeOffset = Math.max(0, Number(offset) || 0);
+  const rows = await pgGetAll(
+    `SELECT cmf.id, cmf.message_id, cmf.kind, cmf.original_name, cmf.stored_name,
+            cmf.mime_type, cmf.size_bytes, cmf.width_px, cmf.height_px,
+            cmf.duration_seconds, cmf.storage_driver, cmf.storage_key,
+            cmf.processing_status, cmf.thumb_storage_key, cmf.encryption_type,
+            cmf.created_at AS file_created_at,
+            cm.created_at AS message_created_at,
+            u.id AS sender_id, u.username AS sender_username,
+            u.nickname AS sender_nickname, u.avatar_url AS sender_avatar_url,
+            u.color AS sender_color, u.verified AS sender_verified, u.role AS sender_role
+     FROM chat_message_files cmf
+     JOIN chat_messages cm ON cm.id = cmf.message_id
+     JOIN users u ON u.id = cm.user_id
+     WHERE cm.chat_id = $1
+       AND cm.hidden_everyone_at IS NULL
+       AND cm.id NOT IN (
+         SELECT message_id FROM hidden_chat_messages WHERE user_id = $2
+       )
+     ORDER BY cm.created_at DESC, cm.id DESC, cmf.id DESC
+     LIMIT $3 OFFSET $4`,
+    [String(chatId), String(viewerUserId), safeLimit, safeOffset],
+  );
+  return rows || [];
+}
+
+export async function countChatFilesForUser(
+  chatId: string,
+  viewerUserId: string,
+): Promise<number> {
+  if (!chatId || !viewerUserId) return 0;
+  const row = await pgGetRow<{ count: number }>(
+    `SELECT COUNT(*) AS count
+     FROM chat_message_files cmf
+     JOIN chat_messages cm ON cm.id = cmf.message_id
+     WHERE cm.chat_id = $1
+       AND cm.hidden_everyone_at IS NULL
+       AND cm.id NOT IN (
+         SELECT message_id FROM hidden_chat_messages WHERE user_id = $2
+       )`,
+    [String(chatId), String(viewerUserId)],
+  );
+  return Number(row?.count || 0);
+}
+
+export async function searchChatMessagesForUser(
+  chatId: string,
+  viewerUserId: string,
+  query: string,
+  { limit = 30, offset = 0, maxScan = 50_000, chunkSize = 500 }: any = {},
+) {
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 30), 100);
+  const safeOffset = Math.max(0, Number(offset) || 0);
+  const safeMaxScan = Math.max(100, Number(maxScan) || 50_000);
+  const safeChunk = Math.min(Math.max(50, Number(chunkSize) || 500), 1000);
+  const needle = String(query || "").trim().toLowerCase();
+  if (!chatId || !viewerUserId || !needle) {
+    return { results: [], hasMore: false, scanned: 0 };
+  }
+
+  const targetCount = safeOffset + safeLimit + 1;
+  const matched: any[] = [];
+  let scanned = 0;
+  let dbOffset = 0;
+
+  while (scanned < safeMaxScan && matched.length < targetCount) {
+    const batchLimit = Math.min(safeChunk, safeMaxScan - scanned);
+    const rows = await pgGetAll(
+      `SELECT cm.id, cm.chat_id, cm.user_id, cm.body, cm.edited, cm.edited_body,
+              cm.created_at,
+              u.username, u.nickname, u.avatar_url, u.color, u.verified, u.role
+       FROM chat_messages cm
+       JOIN users u ON u.id = cm.user_id
+       WHERE cm.chat_id = $1
+         AND cm.hidden_everyone_at IS NULL
+         AND cm.body NOT LIKE '[[system:%]]'
+         AND cm.id NOT IN (
+           SELECT message_id FROM hidden_chat_messages WHERE user_id = $2
+         )
+       ORDER BY cm.created_at DESC, cm.id DESC
+       LIMIT $3 OFFSET $4`,
+      [String(chatId), String(viewerUserId), batchLimit, dbOffset],
+    );
+
+    if (!rows || rows.length === 0) break;
+    scanned += rows.length;
+    dbOffset += rows.length;
+
+    const msgIds = rows.map((r: any) => String(r.id));
+    const fileRows = msgIds.length
+      ? await pgGetAll(
+          `SELECT message_id, original_name, kind
+           FROM chat_message_files
+           WHERE message_id = ANY($1::text[])`,
+          [msgIds],
+        )
+      : [];
+    const filesByMsg = new Map<string, Array<{ name: string; kind: string }>>();
+    for (const f of fileRows || []) {
+      const mid = String(f.message_id);
+      if (!filesByMsg.has(mid)) filesByMsg.set(mid, []);
+      filesByMsg.get(mid)!.push({
+        name: String(f.original_name || ""),
+        kind: String(f.kind || "document"),
+      });
+    }
+
+    for (const rawRow of rows) {
+      const row = decryptMessageRow(rawRow);
+      const bodyStr = String(row.body || "");
+      const editedBodyStr = String(row.edited_body || "");
+      // Skip system messages even if stored encrypted
+      if (/^\[\[system:.*\]\]$/s.test(bodyStr.trim())) continue;
+
+      const displayBody = (Number(row.edited || 0) && editedBodyStr) ? editedBodyStr : bodyStr;
+      const bodyHit =
+        bodyStr.toLowerCase().includes(needle) ||
+        editedBodyStr.toLowerCase().includes(needle);
+      const msgFiles = filesByMsg.get(String(row.id)) || [];
+      const matchedFiles = msgFiles
+        .filter((f) => f.name.toLowerCase().includes(needle))
+        .map((f) => f.name);
+
+      if (bodyHit || matchedFiles.length > 0) {
+        matched.push({
+          id: row.id,
+          chatId: row.chat_id,
+          userId: row.user_id,
+          username: row.username,
+          nickname: row.nickname || row.username,
+          avatarUrl: row.avatar_url || null,
+          color: row.color || "#10b981",
+          verified: Boolean(row.verified),
+          role: row.role || "user",
+          body: displayBody,
+          edited: Boolean(Number(row.edited || 0)),
+          matchedFiles,
+          createdAt: row.created_at,
+        });
+        if (matched.length >= targetCount) break;
+      }
+    }
+
+    if (rows.length < batchLimit) break;
+  }
+
+  const hasMore = matched.length > safeOffset + safeLimit;
+  const results = matched.slice(safeOffset, safeOffset + safeLimit);
+  return { results, hasMore, scanned };
+}

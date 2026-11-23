@@ -42,6 +42,9 @@ function registerChatRoutes(app, deps) {
     listChatMembersForChats,
     listChatsForUser,
     listMessageFilesByMessageIds,
+    listChatFilesForUser = null,
+    countChatFilesForUser = null,
+    searchChatMessagesForUser = null,
     listUsers,
     removeAvatarByUrl,
     removePendingPresignedUploads,
@@ -1799,6 +1802,171 @@ function registerChatRoutes(app, deps) {
       alreadyMember,
     });
   });
+
+
+  // ─── Per-thread Files Gallery (members-only) ─────────────────────────────
+  app.get(
+    "/api/chats/:chatId/files",
+    validateUuidParams("chatId"),
+    async (req, res) => {
+      const session: any = await requireSession(req, res);
+      if (!session) return;
+
+      const chatId = req.params.chatId;
+      const username: any = req.query.username?.toString();
+      if (!username) {
+        return res.status(400).json({ error: "Username is required." });
+      }
+      if (!requireSessionUsernameMatch(res, session, username)) return;
+
+      const user: any = await resolveMaybePromise(
+        findUserByUsername(String(username).toLowerCase()),
+      );
+      if (!user) {
+        return res.status(404).json({ error: "User not found." });
+      }
+
+      const member = await resolveMaybePromise(isMember(chatId, user.id));
+      if (!member) {
+        return res.status(403).json({ error: "Not a member of this chat." });
+      }
+
+      const limit = Math.min(Math.max(1, Number(req.query.limit) || 40), 100);
+      const offset = Math.max(0, Number(req.query.offset) || 0);
+
+      const rawRows: any =
+        typeof listChatFilesForUser === "function"
+          ? await resolveMaybePromise(
+              listChatFilesForUser(chatId, user.id, { limit, offset }),
+            )
+          : [];
+      const total: number =
+        typeof countChatFilesForUser === "function"
+          ? Number(
+              await resolveMaybePromise(countChatFilesForUser(chatId, user.id)),
+            ) || 0
+          : Array.isArray(rawRows)
+            ? rawRows.length
+            : 0;
+
+      const files: any[] = [];
+      for (const file of rawRows || []) {
+        let fileUrl = `/api/uploads/messages/${file.stored_name}`;
+        const driver = file.storage_driver;
+        const storageKey = file.storage_key;
+        const thumbKey = file.thumb_storage_key || file.thumbStorageKey;
+        const thumbUrl = await resolveThumbUrl({
+          storageProvider: deps.storageProvider,
+          file,
+          thumbKey,
+          fileId: file.id,
+        });
+        if (
+          (driver === "remote" || driver === "s3") &&
+          deps.storageProvider &&
+          typeof deps.storageProvider.getDownloadUrl === "function" &&
+          storageKey
+        ) {
+          try {
+            fileUrl = await deps.storageProvider.getDownloadUrl(storageKey);
+          } catch {}
+        }
+
+        files.push({
+          id: file.id,
+          messageId: file.message_id,
+          kind: file.kind,
+          name: file.original_name,
+          mimeType: file.mime_type,
+          sizeBytes: Number(file.size_bytes || 0),
+          width: Number.isFinite(Number(file.width_px)) ? Number(file.width_px) : null,
+          height: Number.isFinite(Number(file.height_px)) ? Number(file.height_px) : null,
+          durationSeconds: Number.isFinite(Number(file.duration_seconds))
+            ? Number(file.duration_seconds)
+            : null,
+          processing:
+            typeof isVideoFileProcessing === "function"
+              ? isVideoFileProcessing(file)
+              : String(file.processing_status || "").toLowerCase() === "processing",
+          url: fileUrl,
+          thumbUrl: thumbUrl || null,
+          createdAt: file.message_created_at || file.file_created_at,
+          sender: {
+            id: file.sender_id,
+            username: file.sender_username,
+            nickname: file.sender_nickname || file.sender_username,
+            avatarUrl: ensureAvatarExists(file.sender_id, file.sender_avatar_url),
+            color: file.sender_color || "#10b981",
+            verified: Boolean(file.sender_verified),
+            role: file.sender_role || "user",
+          },
+        });
+      }
+
+      return res.json({
+        files,
+        total,
+        limit,
+        offset,
+        hasMore: offset + files.length < total,
+      });
+    },
+  );
+
+  // ─── Per-thread Full-History Search (members-only) ───────────────────────
+  app.get(
+    "/api/chats/:chatId/search",
+    validateUuidParams("chatId"),
+    async (req, res) => {
+      const session: any = await requireSession(req, res);
+      if (!session) return;
+
+      const chatId = req.params.chatId;
+      const username: any = req.query.username?.toString();
+      const query: any = req.query.query?.toString() || "";
+      if (!username) {
+        return res.status(400).json({ error: "Username is required." });
+      }
+      if (!query.trim()) {
+        return res.status(400).json({ error: "Search query is required." });
+      }
+      if (!requireSessionUsernameMatch(res, session, username)) return;
+
+      const user: any = await resolveMaybePromise(
+        findUserByUsername(String(username).toLowerCase()),
+      );
+      if (!user) {
+        return res.status(404).json({ error: "User not found." });
+      }
+
+      const member = await resolveMaybePromise(isMember(chatId, user.id));
+      if (!member) {
+        return res.status(403).json({ error: "Not a member of this chat." });
+      }
+
+      const limit = Math.min(Math.max(1, Number(req.query.limit) || 30), 100);
+      const offset = Math.max(0, Number(req.query.offset) || 0);
+
+      const searchResult: any =
+        typeof searchChatMessagesForUser === "function"
+          ? await resolveMaybePromise(
+              searchChatMessagesForUser(chatId, user.id, query, { limit, offset }),
+            )
+          : { results: [], hasMore: false };
+
+      const results = (searchResult?.results || []).map((item: any) => ({
+        ...item,
+        avatarUrl: ensureAvatarExists(item.userId, item.avatarUrl),
+      }));
+
+      return res.json({
+        results,
+        limit,
+        offset,
+        hasMore: Boolean(searchResult?.hasMore),
+      });
+    },
+  );
 
   app.get("/api/users", async (req, res) => {
     const session: any = await requireSession(req, res);
