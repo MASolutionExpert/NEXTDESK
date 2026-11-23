@@ -2,6 +2,10 @@
 
 All notable changes to **NextDesk** are documented in this file.
 
+## 2.0.0-dev.2026112105
+
+- **Async Admin Helper Fix**: marked `resolveUserId` as `async` and awaited its calls in `src/server/api/admin.ts` for PostgreSQL query compatibility under Node 24 native TypeScript execution.
+
 ## 2.0.0-dev.2026112104
 
 - **Final PostgreSQL + Prisma 7 Server Verification Fixes**: restored `createUser(username, passwordHash, nickname?, ...)` signature order in `src/server/db/usersRepo.ts`, removed duplicate `adminTransaction` import in `src/server/index.ts`, fixed template literal quoting on two `INSERT INTO users` statements, and aligned normalized timestamp format in `test/server/db/prisma.test.ts`.

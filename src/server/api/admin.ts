@@ -1302,7 +1302,7 @@ function registerAdminRoutes(app, deps) {
           return res.status(404).json({ error: "Chat not found." });
         }
 
-        const resolveUserId = (raw) => {
+        const resolveUserId = async (raw) => {
           const str = String(raw || "").trim();
           if (!str) return null;
           // Try by ID directly (UUID string)
@@ -1315,8 +1315,8 @@ function registerAdminRoutes(app, deps) {
           return row?.id || null;
         };
 
-        const userAId = resolveUserId(userA);
-        const userBId = resolveUserId(userB);
+        const userAId = await resolveUserId(userA);
+        const userBId = await resolveUserId(userB);
         if (!userAId || !userBId) {
           return res.status(404).json({ error: "One or both users not found." });
         }

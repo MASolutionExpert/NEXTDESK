@@ -416,7 +416,7 @@ function registerAdminPanelRoutes(app, deps) {
     res.json(stats);
   });
 
-  app.get("/api/admin/system", (req, res) => {
+  app.get("/api/admin/system", async (req, res) => {
     if (!requireAdmin(req, res)) return;
     const mem: any = process.memoryUsage();
     const totalMem: any  = os.totalmem();
