@@ -42,7 +42,7 @@ export const decryptFileToTempPath = (filePath, originalName = "") => {
     decipher.final(),
   ]);
 
-  const tempDir = path.join(os.tmpdir(), "chatdesk-secure");
+  const tempDir = path.join(os.tmpdir(), "nextdesk-secure");
   fs.mkdirSync(tempDir, { recursive: true });
   const ext = path.extname(String(originalName || filePath)).toLowerCase();
   const tempPath = path.join(

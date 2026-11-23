@@ -21,9 +21,9 @@ describe("useChatEvents — custom realtime event dispatch and dev proxy", () =>
     expect(typeof nextConfig.headers).toBe("function");
   });
 
-  test("dispatches chatdesk:realtime-event on window when a valid WebSocket event is received", () => {
+  test("dispatches nextdesk:realtime-event on window when a valid WebSocket event is received", () => {
     const listener = vi.fn();
-    window.addEventListener("chatdesk:realtime-event", listener);
+    window.addEventListener("nextdesk:realtime-event", listener);
 
     const payload = {
       type: "presence_update",
@@ -31,12 +31,12 @@ describe("useChatEvents — custom realtime event dispatch and dev proxy", () =>
       status: "online",
     };
     window.dispatchEvent(
-      new CustomEvent("chatdesk:realtime-event", { detail: payload }),
+      new CustomEvent("nextdesk:realtime-event", { detail: payload }),
     );
 
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener.mock.calls[0][0].detail).toEqual(payload);
 
-    window.removeEventListener("chatdesk:realtime-event", listener);
+    window.removeEventListener("nextdesk:realtime-event", listener);
   });
 });

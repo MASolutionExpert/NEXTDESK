@@ -26,7 +26,7 @@ describe("WebSocket Gateway", () => {
     gateway.broadcastAll({ type: "test" });
 
     expect(publishSpy).toHaveBeenCalledWith(
-      "chatdesk:events",
+      "nextdesk:events",
       expect.stringContaining('"broadcast":true'),
     );
 

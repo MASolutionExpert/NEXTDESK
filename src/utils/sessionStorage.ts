@@ -1,6 +1,6 @@
 import { normalizeUuid } from "./uuidUtils.ts";
 
-export const SESSION_USER_KEY = "chatdesk-session-user";
+export const SESSION_USER_KEY = "nextdesk-session-user";
 
 function getStorage() {
   if (typeof localStorage !== "undefined") return localStorage;

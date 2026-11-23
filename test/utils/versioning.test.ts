@@ -138,7 +138,7 @@ describe("fetchLatestGitHubTag release channels", () => {
     mockTagsResponse(MIXED_TAGS);
     const latest = await fetchLatestGitHubTag({
       owner: "MASolutionExpert",
-      repo: "chatdesk",
+      repo: "nextdesk",
       channel: "stable",
     });
     expect(latest.rawTag).toBe("v1.0.0");
@@ -148,7 +148,7 @@ describe("fetchLatestGitHubTag release channels", () => {
     mockTagsResponse(MIXED_TAGS);
     const latest = await fetchLatestGitHubTag({
       owner: "MASolutionExpert",
-      repo: "chatdesk",
+      repo: "nextdesk",
       channel: "dev",
     });
     expect(latest.rawTag).toBe("v1.1.0-dev.7");
@@ -158,7 +158,7 @@ describe("fetchLatestGitHubTag release channels", () => {
     mockTagsResponse(MIXED_TAGS);
     const latest = await fetchLatestGitHubTag({
       owner: "MASolutionExpert",
-      repo: "chatdesk",
+      repo: "nextdesk",
     });
     expect(latest.rawTag).toBe("v1.0.0");
   });

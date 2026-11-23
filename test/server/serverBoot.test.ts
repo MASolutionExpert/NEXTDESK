@@ -11,7 +11,7 @@ const serverDir = path.join(projectRootDir, "src/server");
 const BOOT_TIMEOUT_MS = 20_000;
 
 function bootServer(timeoutMs = BOOT_TIMEOUT_MS) {
-  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "chatdesk-boot-"));
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "nextdesk-boot-"));
 
   const child = spawn(process.execPath, ["index.ts"], {
     cwd: serverDir,
@@ -57,7 +57,7 @@ describe("Server boot", () => {
         result.ok,
         `server exited early (code=${result.code}, signal=${result.signal}) stderr:\n${result.stderr}`,
       ).toBe(true);
-      expect(result.stdout).toMatch(/(NextDesk|ChatDesk).*server running/i);
+      expect(result.stdout).toMatch(/NextDesk.*server running/i);
       expect(result.stderr).not.toMatch(/ReferenceError/);
     } finally {
       fs.rmSync(result.dataDir, { recursive: true, force: true });

@@ -95,7 +95,7 @@ function registerAdminRoutes(app, deps) {
     // (see lib/adminApiToken.js), so this should always be set. Still guard
     // against a missing value rather than silently skipping the check.
     const expectedToken = String(process.env.ADMIN_API_TOKEN || "");
-    const provided = String(req.headers["x-chatdesk-admin-token"] || "");
+    const provided = String(req.headers["x-nextdesk-admin-token"] || "");
     const expectedBuf = Buffer.from(expectedToken);
     const providedBuf = Buffer.from(provided);
     const tokenMatches =
@@ -1458,7 +1458,7 @@ function registerAdminRoutes(app, deps) {
         if (!chatId) {
           const row = await adminGetRow(
             `SELECT id FROM chats WHERE name = ? ORDER BY id ASC LIMIT 1`,
-            ["ChatDesk Demo"],
+            ["NextDesk Demo"],
           );
           chatId = row?.id || null;
         }
@@ -1468,11 +1468,11 @@ function registerAdminRoutes(app, deps) {
           await adminRun(
             `INSERT INTO chats (id, name, type, created_at)
              VALUES (?, ?, ?, to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))`,
-            [newChatId, "ChatDesk Demo", "group"],
+            [newChatId, "NextDesk Demo", "group"],
           );
 
           chatId = await adminGetRow("SELECT id FROM chats WHERE name = ?", [
-              "ChatDesk Demo",
+              "NextDesk Demo",
             ])?.id || null;
         }
 

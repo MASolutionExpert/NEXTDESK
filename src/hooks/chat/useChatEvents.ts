@@ -228,7 +228,7 @@ export function useChatEvents({
           return;
         }
         if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("chatdesk:realtime-event", { detail: payload }));
+          window.dispatchEvent(new CustomEvent("nextdesk:realtime-event", { detail: payload }));
         }
         if (payload.type === "session_revoked") {
           onSessionRevokedRef.current?.(payload);

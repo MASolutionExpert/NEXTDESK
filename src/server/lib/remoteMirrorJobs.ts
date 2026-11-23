@@ -16,7 +16,7 @@ import path from "node:path";
  */
 
 const DEFAULT_TTL_MS = 30 * 60 * 1000;
-const TEMP_PREFIX = "chatdesk-mirror-";
+const TEMP_PREFIX = "nextdesk-mirror-";
 
 function randomHex(bytes = 16) {
   return crypto.randomBytes(bytes).toString("hex");

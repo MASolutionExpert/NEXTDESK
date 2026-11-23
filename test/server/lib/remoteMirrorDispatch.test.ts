@@ -44,7 +44,7 @@ describe("dispatchMirrorJob", () => {
     expect(body.callbackUrl).toContain(
       "/api/remote-channel/webhook/mirror-done",
     );
-    expect(opts.headers["x-chatdesk-webhook-secret"]).toBe("shh");
+    expect(opts.headers["x-nextdesk-webhook-secret"]).toBe("shh");
     registry.sweep();
   });
 

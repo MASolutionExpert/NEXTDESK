@@ -9,7 +9,7 @@ const uploadsDir = path.join(dataDir, "uploads", "messages");
 
 async function main() {
   const args = getCliArgs();
-  const hasForceFlag = hasForceYes(args) || process.env.CHATDESK_FORCE_DELETE === "1";
+  const hasForceFlag = hasForceYes(args) || process.env.NEXTDESK_FORCE_DELETE === "1";
   const confirmed = await confirmAction({
     prompt: "This will permanently delete the PostgreSQL database and uploaded message files. Continue?",
     force: hasForceFlag,

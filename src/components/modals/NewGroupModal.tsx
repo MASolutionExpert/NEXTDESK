@@ -18,7 +18,7 @@ import {
   UserPlus,
   Users,
 } from "../../icons/lucide.ts";
-import { ChatDeskIcon, TelegramIcon } from "../../icons/BrandIcons.tsx";
+import { NextDeskIcon, TelegramIcon } from "../../icons/BrandIcons.tsx";
 import { copyTextToClipboard } from "../../utils/clipboard.ts";
 import { getAvatarStyle } from "../../utils/avatarColor.ts";
 import { hasPersian } from "../../utils/fontUtils.ts";
@@ -178,7 +178,7 @@ export default function NewGroupModal({
     fileUploadEnabled &&
     Boolean(groupForm.remoteChannelStreamMedia);
   const remoteProviderLabel =
-    groupForm.remoteChannelProvider === "chatdesk" ? "ChatDesk" : "Telegram";
+    groupForm.remoteChannelProvider === "nextdesk" ? "NextDesk" : "Telegram";
   const entityName =
     entityLabel?.toLowerCase() === "channel"
       ? t("modals.names.channel")
@@ -186,7 +186,7 @@ export default function NewGroupModal({
         ? t("modals.names.group")
         : entityLabel;
   const remoteSourcePlaceholder =
-    groupForm.remoteChannelProvider === "chatdesk"
+    groupForm.remoteChannelProvider === "nextdesk"
       ? "https://example.com/invite/channelname"
       : t("modals.newGroup.telegramSourcePlaceholder");
   const privacyOptionClass = (locked = false) =>
@@ -555,8 +555,8 @@ export default function NewGroupModal({
                         aria-haspopup="listbox"
                       >
                         <span className="flex items-center gap-2">
-                          {groupForm.remoteChannelProvider === "chatdesk"
-                            ? <ChatDeskIcon size={16} />
+                          {groupForm.remoteChannelProvider === "nextdesk"
+                            ? <NextDeskIcon size={16} />
                             : <TelegramIcon size={16} className="shrink-0" />}
                           {remoteProviderLabel}
                         </span>
@@ -610,17 +610,17 @@ export default function NewGroupModal({
                               setRemoteSourceMenuOpen(false);
                               setGroupForm((prev) => ({
                                 ...prev,
-                                remoteChannelProvider: "chatdesk",
+                                remoteChannelProvider: "nextdesk",
                                 remoteChannelSource: "",
                               }));
                             }}
                             className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
                           >
                             <span className="flex items-center gap-2">
-                              <ChatDeskIcon size={16} />
-                              ChatDesk
+                              <NextDeskIcon size={16} />
+                              NextDesk
                             </span>
-                            {groupForm.remoteChannelProvider === "chatdesk" ? (
+                            {groupForm.remoteChannelProvider === "nextdesk" ? (
                               <span className="h-2 w-2 rounded-full bg-emerald-500" />
                             ) : null}
                           </button>

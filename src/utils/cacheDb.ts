@@ -1,4 +1,4 @@
-const DB_NAME = "chatdesk-cache";
+const DB_NAME = "nextdesk-cache";
 const DB_VERSION = 2;
 
 const STORES = {

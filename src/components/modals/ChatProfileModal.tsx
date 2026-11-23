@@ -19,7 +19,7 @@ import {
   Volume2,
   VolumeX,
 } from "../../icons/lucide.ts";
-import { ChatDeskIcon, TelegramIcon } from "../../icons/BrandIcons.tsx";
+import { NextDeskIcon, TelegramIcon } from "../../icons/BrandIcons.tsx";
 import { copyTextToClipboard } from "../../utils/clipboard.ts";
 import { getAvatarInitials } from "../../utils/avatarInitials.ts";
 import { hasPersian } from "../../utils/fontUtils.ts";
@@ -144,11 +144,11 @@ export default function ChatProfileModal({
       if (String(payload?.chatId || "") !== String(chat.id || "")) return;
       fetchRemoteStatus();
     };
-    window.addEventListener("chatdesk:realtime-event", handleRealtimeEvent);
+    window.addEventListener("nextdesk:realtime-event", handleRealtimeEvent);
 
     return () => {
       clearInterval(intervalId);
-      window.removeEventListener("chatdesk:realtime-event", handleRealtimeEvent);
+      window.removeEventListener("nextdesk:realtime-event", handleRealtimeEvent);
     };
   }, [open, chat?.id, chat?.type, currentUser?.username, remoteChannelAvailable, onRemoteChannelStatusChange]);
 
@@ -666,8 +666,8 @@ export default function ChatProfileModal({
                     <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                       {remoteChannelStatus.source.provider === "telegram" ? (
                         <TelegramIcon size={18} className="shrink-0" />
-                      ) : remoteChannelStatus.source.provider === "chatdesk" ? (
-                        <ChatDeskIcon size={18} />
+                      ) : remoteChannelStatus.source.provider === "nextdesk" ? (
+                        <NextDeskIcon size={18} />
                       ) : (
                         <span>{remoteChannelStatus.source.provider}:</span>
                       )}

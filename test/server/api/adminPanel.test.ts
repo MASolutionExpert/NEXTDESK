@@ -129,7 +129,7 @@ describe("PostgreSQL maintenance actions", () => {
   });
 
   test("uses native PostgreSQL maintenance dependencies for backup, vacuum, and reset", async () => {
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "chatdesk-admin-panel-"));
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "nextdesk-admin-panel-"));
     temporaryPaths.push(directory);
     const backup = vi.fn(async (target) => fs.writeFileSync(target, "archive"));
     const vacuum = vi.fn(async () => {});
@@ -197,7 +197,7 @@ describe("PostgreSQL maintenance actions", () => {
     const restoreRes = await request(app)
       .post("/api/admin/maintenance/restore")
       .set("Cookie", "sid=admin-session")
-      .attach("database", Buffer.from("archive"), "chatdesk.dump");
+      .attach("database", Buffer.from("archive"), "nextdesk.dump");
     expect(restoreRes.status).toBe(409);
     expect(restore).not.toHaveBeenCalled();
 

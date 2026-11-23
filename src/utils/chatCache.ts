@@ -9,14 +9,14 @@ import {
 } from "./cacheDb.ts";
 
 export const CHAT_CACHE_VERSION = 4;
-export const CHAT_LIST_CACHE_KEY = "chatdesk-chat-list-cache";
-export const CHAT_MESSAGES_CACHE_KEY = "chatdesk-chat-messages-cache";
-export const CHAT_MESSAGES_INDEX_KEY = "chatdesk-chat-messages-index";
+export const CHAT_LIST_CACHE_KEY = "nextdesk-chat-list-cache";
+export const CHAT_MESSAGES_CACHE_KEY = "nextdesk-chat-messages-cache";
+export const CHAT_MESSAGES_INDEX_KEY = "nextdesk-chat-messages-index";
 export const CHAT_MESSAGES_INDEX_LIMIT = 25;
 export const MEDIA_THUMB_CACHE_KEY = "chat-media-thumbs-v2";
 export const MEDIA_POSTER_CACHE_KEY = "chat-video-posters-v3";
 export const VOICE_WAVEFORM_CACHE_KEY = "voice-waveform-cache-v1";
-export const CHANNEL_SEEN_CACHE_KEY = "chatdesk-channel-seen";
+export const CHANNEL_SEEN_CACHE_KEY = "nextdesk-channel-seen";
 // Reflects live changes to messageFetchLimit made via the admin panel.
 export const getMessageCacheMax = () =>
   Math.max(50, Math.min(200, CHAT_PAGE_CONFIG.messageFetchLimit));
@@ -49,7 +49,7 @@ export const canUseLocalStorage = () => {
   if (typeof window === "undefined") return false;
   if (localStorageAvailable !== undefined) return localStorageAvailable;
   try {
-    const testKey = "__chatdesk_ls_test__";
+    const testKey = "__nextdesk_ls_test__";
     window.localStorage.setItem(testKey, "1");
     window.localStorage.removeItem(testKey);
     localStorageAvailable = true;

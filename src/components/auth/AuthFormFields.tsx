@@ -45,7 +45,7 @@ export default function AuthFormFields({
               name="nickname"
               type="text"
               required
-              placeholder="ChatDesk Sage"
+              placeholder="NextDesk Sage"
               maxLength={NICKNAME_MAX}
               onInput={(event) => {
                 const value = String(event.currentTarget.value || "");
@@ -84,7 +84,7 @@ export default function AuthFormFields({
             pattern={USERNAME_INPUT_PATTERN}
             title={t("modals.auth.usernameHint")}
             autoCapitalize="none"
-            placeholder="chatdesk.sage"
+            placeholder="nextdesk.sage"
             maxLength={USERNAME_MAX}
             onInput={(event) => {
               const value = String(event.currentTarget.value || "");

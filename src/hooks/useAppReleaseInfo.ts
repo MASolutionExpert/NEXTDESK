@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchAppInfo } from "../api/appMetaApi.ts";
 
-const WHATS_NEW_DISMISSED_VERSION_KEY = "chatdesk-whats-new-dismissed-version";
+const WHATS_NEW_DISMISSED_VERSION_KEY = "nextdesk-whats-new-dismissed-version";
 
 async function parseJsonResponse(response, fallbackMessage) {
   let payload: any = null;

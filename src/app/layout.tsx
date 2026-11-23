@@ -29,7 +29,7 @@ export const viewport: Viewport = {
 
 const themePreloadScript = `(function () {
   try {
-    var stored = localStorage.getItem("chatdesk-theme");
+    var stored = localStorage.getItem("nextdesk-theme");
     var isDark = stored === "dark";
     if (isDark) {
       var root = document.documentElement;

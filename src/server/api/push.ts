@@ -83,7 +83,7 @@ function registerPushRoutes(app, deps) {
     }
     try {
       await sendPushNotificationToUsers([user.id], {
-        title: "ChatDesk",
+        title: "NextDesk",
         body: "Test notification",
         data: { url: "/" },
       });

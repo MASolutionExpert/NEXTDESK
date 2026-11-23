@@ -145,8 +145,8 @@ export const chat = {
       groupTitle: "{name} ({sender})",
     },
     documentTitle: {
-      unreadOne: "ChatDesk | {count} new message",
-      unreadOther: "ChatDesk | {count} new messages",
+      unreadOne: "NextDesk | {count} new message",
+      unreadOther: "NextDesk | {count} new messages",
     },
     groupModal: {
       editChannel: "Edit channel",
@@ -367,8 +367,8 @@ export const chat = {
       groupTitle: "{name} ({sender})",
     },
     documentTitle: {
-      unreadOne: "ChatDesk | {count} پیام جدید",
-      unreadOther: "ChatDesk | {count} پیام جدید",
+      unreadOne: "NextDesk | {count} پیام جدید",
+      unreadOther: "NextDesk | {count} پیام جدید",
     },
     groupModal: {
       editChannel: "ویرایش کانال",

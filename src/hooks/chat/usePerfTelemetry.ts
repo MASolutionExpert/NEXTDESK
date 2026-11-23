@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { APP_CONFIG } from "../../settings/appConfig.ts";
 
-const PERF_TELEMETRY_KEY = "chatdesk-perf-telemetry-v1";
+const PERF_TELEMETRY_KEY = "nextdesk-perf-telemetry-v1";
 const PERF_MAX_ENTRIES = 120;
 
 const readTelemetry = () => {

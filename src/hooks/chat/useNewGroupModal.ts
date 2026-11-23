@@ -21,7 +21,7 @@ export function useNewGroupModal({
     visibility: "public",
     allowMemberInvites: true,
     remoteChannelEnabled: false,
-    remoteChannelProvider: "chatdesk",
+    remoteChannelProvider: "nextdesk",
     remoteChannelSource: "",
     remoteChannelSyncMetadata: false,
     remoteChannelStreamMedia: false,

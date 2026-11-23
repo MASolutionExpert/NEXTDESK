@@ -9,9 +9,9 @@ const config = {
   postgres: {
     host: "db.example.test",
     port: 5433,
-    user: "chatdesk",
+    user: "nextdesk",
     password: "super-secret",
-    database: "chatdesk_prod",
+    database: "nextdesk_prod",
     url: null,
     ssl: true,
   },
@@ -27,8 +27,8 @@ describe("postgresMaintenance", () => {
       },
     });
 
-    await maintenance.backup("/tmp/chatdesk.dump");
-    await maintenance.restore("/tmp/chatdesk.dump");
+    await maintenance.backup("/tmp/nextdesk.dump");
+    await maintenance.restore("/tmp/nextdesk.dump");
     await maintenance.vacuum();
     await maintenance.dropDatabase();
     await maintenance.createDatabase();
@@ -42,17 +42,17 @@ describe("postgresMaintenance", () => {
       "createdb",
     ]);
     expect(calls[0].args).toContain("--format=custom");
-    expect(calls[0].args).toContain("--file=/tmp/chatdesk.dump");
+    expect(calls[0].args).toContain("--file=/tmp/nextdesk.dump");
     expect(calls[2].args).toContain("--single-transaction");
     expect(calls[4].args).toContain("--force");
-    expect(calls[5].args).toContain("--owner=chatdesk");
+    expect(calls[5].args).toContain("--owner=nextdesk");
     expect(JSON.stringify(calls.map((call) => call.args))).not.toContain(
       "super-secret",
     );
     expect(calls[0].options.env).toMatchObject({
       PGHOST: "db.example.test",
       PGPORT: "5433",
-      PGUSER: "chatdesk",
+      PGUSER: "nextdesk",
       PGPASSWORD: "super-secret",
       PGSSLMODE: "require",
     });
@@ -82,10 +82,10 @@ describe("postgresMaintenance", () => {
       config,
       execute: async () => {},
     });
-    await expect(maintenance.backup("/tmp/chatdesk.db")).rejects.toThrow(
+    await expect(maintenance.backup("/tmp/nextdesk.db")).rejects.toThrow(
       ".dump",
     );
-    await expect(maintenance.restore("/tmp/chatdesk.db")).rejects.toThrow(
+    await expect(maintenance.restore("/tmp/nextdesk.db")).rejects.toThrow(
       ".dump",
     );
   });
@@ -104,11 +104,11 @@ describe("postgresMaintenance", () => {
       },
     });
 
-    await maintenance.verifyArchive("/tmp/chatdesk.dump");
+    await maintenance.verifyArchive("/tmp/nextdesk.dump");
 
     const listCall = calls.find((call) => call.args.includes("--list"));
-    expect(listCall.args).toContain("/tmp/chatdesk.dump");
-    expect(listCall.args).not.toContain("--file=/tmp/chatdesk.dump");
+    expect(listCall.args).toContain("/tmp/nextdesk.dump");
+    expect(listCall.args).not.toContain("--file=/tmp/nextdesk.dump");
   });
 
   test("rejects unsafe system databases and redacts native tool failures", async () => {

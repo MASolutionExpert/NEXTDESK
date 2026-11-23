@@ -24,7 +24,7 @@ function makeManager({ emitChatEvent, claimImpl }: any) {
     updateRemoteChannelSourceError: async () => {},
     getRemoteChannelSourceById: async () => ({
       id: 5,
-      provider: "chatdesk",
+      provider: "nextdesk",
       enabled: 1,
       source_version: 1,
       chat_id: "c1",
@@ -49,12 +49,12 @@ function makeManager({ emitChatEvent, claimImpl }: any) {
 
 const sleep = (ms) => new Promise<any>((resolve) => setTimeout(resolve, ms));
 
-const chatdeskItem = {
+const nextdeskItem = {
   id: 1,
   source_id: 5,
   source_version: 1,
   chat_id: "c1",
-  provider: "chatdesk",
+  provider: "nextdesk",
   telegram_message_id: 11,
   payload_json: JSON.stringify({ message: { id: 11, body: "hello" } }),
 };
@@ -67,7 +67,7 @@ describe("queue change events", () => {
       emitChatEvent,
       claimImpl: async () => {
         calls += 1;
-        return calls === 1 ? chatdeskItem : null;
+        return calls === 1 ? nextdeskItem : null;
       },
     });
     manager.start();

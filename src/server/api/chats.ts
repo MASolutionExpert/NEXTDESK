@@ -2,7 +2,7 @@ import path from "node:path";
 import { createInviteToken } from "../lib/inviteTokens.ts";
 import { createMembershipService } from "../lib/services/membershipService.ts";
 import { createDeletionService } from "../lib/services/deletionService.ts";
-import { normalizeChatDeskSource, normalizeTelegramSource, resolveChatDeskSource } from "../lib/remoteChannels.ts";
+import { normalizeNextDeskSource, normalizeTelegramSource, resolveNextDeskSource } from "../lib/remoteChannels.ts";
 import { resolveThumbUrl } from "../lib/thumbUrl.ts";
 import { validateUuidParams, validateUuidBody } from "../lib/uuidMiddleware.ts";
 
@@ -200,7 +200,7 @@ function registerChatRoutes(app, deps) {
     }
 
     const provider: any = String(remoteChannel.provider || "telegram").toLowerCase();
-    if (provider !== "telegram" && provider !== "chatdesk") {
+    if (provider !== "telegram" && provider !== "nextdesk") {
       return {
         shouldSave: true,
         error: "Remote Channel source is invalid.",
@@ -242,14 +242,14 @@ function registerChatRoutes(app, deps) {
         };
       }
     } else {
-      // provider === "chatdesk"
+      // provider === "nextdesk"
       if (enabled) {
-        normalized = normalizeChatDeskSource(rawSource);
+        normalized = normalizeNextDeskSource(rawSource);
         if (!normalized.ok) {
           return { shouldSave: true, error: normalized.error, status: 400 };
         }
         // Resolve the actual channel username from the target server.
-        const resolved: any = await resolveChatDeskSource(
+        const resolved: any = await resolveNextDeskSource(
           normalized.sourceUrl,
           normalized.inviteTarget,
         );
@@ -258,13 +258,13 @@ function registerChatRoutes(app, deps) {
         }
         normalized = { ...normalized, sourceUsername: resolved.sourceUsername };
       } else if (rawSource) {
-        const optionalNormalized: any = normalizeChatDeskSource(rawSource);
+        const optionalNormalized: any = normalizeNextDeskSource(rawSource);
         if (optionalNormalized.ok) normalized = optionalNormalized;
       }
       if (enabled && !normalized.sourceUrl) {
         return {
           shouldSave: true,
-          error: "ChatDesk source URL is required.",
+          error: "NextDesk source URL is required.",
           status: 400,
         };
       }
@@ -855,7 +855,7 @@ function registerChatRoutes(app, deps) {
     });
   });
 
-  // Public unauthenticated metadata endpoint used by remote ChatDesk servers
+  // Public unauthenticated metadata endpoint used by remote NextDesk servers
   // to sync channel name and avatar when "Sync Channel Metadata" is enabled.
   // Only works for public channels on servers with SIGN_UP enabled.
   app.get("/api/channels/:username/meta", async (req, res) => {
@@ -889,7 +889,7 @@ function registerChatRoutes(app, deps) {
     });
   });
 
-  // Public unauthenticated messages endpoint used by remote ChatDesk servers
+  // Public unauthenticated messages endpoint used by remote NextDesk servers
   app.get("/api/channels/:username/messages", async (req, res) => {
     if (!getSetting("SIGN_UP")) {
       return res.status(403).json({ error: "This server is private." });

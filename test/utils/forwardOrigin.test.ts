@@ -11,16 +11,16 @@ describe("resolveForwardedTarget", () => {
     const target = resolveForwardedTarget({
       forwardedFromChatId: null,
       forwardedFromUserId: null,
-      forwardedFromLabel: "chatdesktest",
+      forwardedFromLabel: "nextdesktest",
       remoteForwardedChatId: UUID,
-      storedForwardedLabel: "chatdesktest",
+      storedForwardedLabel: "nextdesktest",
       chatName: "Mirror",
       chatColor: "#10b981",
     });
     expect(target).toMatchObject({ kind: "chat", chatId: UUID });
   });
 
-  test("remote chatdesk message with a UUID channel id opens the channel", () => {
+  test("remote nextdesk message with a UUID channel id opens the channel", () => {
     const target = resolveForwardedTarget({
       forwardedFromChatId: null,
       forwardedFromUserId: null,

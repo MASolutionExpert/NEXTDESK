@@ -78,7 +78,7 @@ export function resolveDatabaseUrl(): string {
     process.env.POSTGRES_PASSWORD ?? "postgres",
   );
   const database = encodeURIComponent(
-    (process.env.POSTGRES_DB || "chatdesk").trim(),
+    (process.env.POSTGRES_DB || "nextdesk").trim(),
   );
   const sslQuery = process.env.POSTGRES_SSL === "true" ? "?sslmode=require" : "";
 
@@ -117,7 +117,7 @@ export function describePgTarget(): PgTargetDescription {
     mode: "parts",
     host: process.env.POSTGRES_HOST || "127.0.0.1",
     port: String(process.env.POSTGRES_PORT || 5432),
-    database: process.env.POSTGRES_DB || "chatdesk",
+    database: process.env.POSTGRES_DB || "nextdesk",
     user: process.env.POSTGRES_USER || "postgres",
     ssl: process.env.POSTGRES_SSL === "true",
   };
@@ -162,7 +162,7 @@ export function buildPgPoolConfig(): PoolConfig {
     port: Number(process.env.POSTGRES_PORT || 5432),
     user: process.env.POSTGRES_USER || "postgres",
     password: process.env.POSTGRES_PASSWORD ?? "postgres",
-    database: process.env.POSTGRES_DB || "chatdesk",
+    database: process.env.POSTGRES_DB || "nextdesk",
     ssl:
       process.env.POSTGRES_SSL === "true"
         ? { rejectUnauthorized: false }

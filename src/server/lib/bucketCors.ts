@@ -1,5 +1,5 @@
 const REQUIRED_METHODS = ["GET", "PUT", "HEAD", "POST"];
-// Coverage only demands the methods ChatDesk actually uses (presigned PUT
+// Coverage only demands the methods NextDesk actually uses (presigned PUT
 // uploads, GET/HEAD downloads). POST is still written for completeness.
 const COVERAGE_METHODS = ["GET", "PUT", "HEAD"];
 

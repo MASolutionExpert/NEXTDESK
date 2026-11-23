@@ -9,7 +9,7 @@ export const auth = {
   en: {
     app: {
       loading: "Loading{dots}",
-      logoAlt: "ChatDesk logo",
+      logoAlt: "NextDesk logo",
     },
     errors: {
       unableToSignIn: "Unable to sign in.",
@@ -20,7 +20,7 @@ export const auth = {
   fa: {
     app: {
       loading: "در حال بارگذاری{dots}",
-      logoAlt: "لوگوی ChatDesk",
+      logoAlt: "لوگوی NextDesk",
     },
     errors: {
       unableToSignIn: "ورود انجام نشد.",

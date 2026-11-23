@@ -166,7 +166,7 @@ export async function runAdminActionViaServer(action: string, payload: Record<st
   if (!running) return null;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (process.env.ADMIN_API_TOKEN) {
-    headers["x-chatdesk-admin-token"] = process.env.ADMIN_API_TOKEN;
+    headers["x-nextdesk-admin-token"] = process.env.ADMIN_API_TOKEN;
   }
   const res = await fetch(`http://127.0.0.1:${port}/api/admin/db-tools`, {
     method: "POST",

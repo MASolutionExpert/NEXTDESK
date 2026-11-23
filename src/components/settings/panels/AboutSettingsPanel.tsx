@@ -4,7 +4,7 @@ import {
   DockerIcon,
   GithubIcon,
   RailwayIcon,
-  ChatDeskIcon,
+  NextDeskIcon,
 } from "../../../icons/BrandIcons.tsx";
 import { ABOUT_CONTENT } from "../../../settings/aboutContent.ts";
 import Tooltip from "../../common/Tooltip.tsx";
@@ -14,7 +14,7 @@ const SOCIAL_ICONS = {
   docker: DockerIcon,
   railway: RailwayIcon,
   github: GithubIcon,
-  chatdesk: ChatDeskIcon,
+  nextdesk: NextDeskIcon,
 };
 
 export function AboutSettingsPanel({

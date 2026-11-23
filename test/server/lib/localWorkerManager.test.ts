@@ -18,7 +18,7 @@ describe("localWorkerManager", () => {
       const mockFetch: any = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => ({ status: "ok", service: "chatdesk-media-worker" }),
+        json: async () => ({ status: "ok", service: "nextdesk-media-worker" }),
       });
 
       const healthy: any = await isLocalWorkerHealthy(8080, mockFetch, 100);
@@ -86,7 +86,7 @@ describe("localWorkerManager", () => {
       const mockFetch: any = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => ({ status: "ok", service: "chatdesk-media-worker" }),
+        json: async () => ({ status: "ok", service: "nextdesk-media-worker" }),
       });
       const mockSpawn: any = vi.fn();
 

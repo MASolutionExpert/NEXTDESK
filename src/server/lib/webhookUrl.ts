@@ -33,8 +33,8 @@ export function resolveWebhookCallbackUrl(env: Record<string, string | undefined
   const explicit = [
     source.WEBHOOK_URL,
     source.WEBHOOK_CALLBACK_URL,
-    source.CHATDESK_WEBHOOK_URL,
-    source.CHATDESK_WEBHOOK_CALLBACK_URL,
+    source.NEXTDESK_WEBHOOK_URL,
+    source.NEXTDESK_WEBHOOK_CALLBACK_URL,
   ]
     .map(clean)
     .find(Boolean);

@@ -1,4 +1,4 @@
-import { normalizeChatDeskSource, normalizeTelegramSource, resolveChatDeskSource } from "../lib/remoteChannels.ts";
+import { normalizeNextDeskSource, normalizeTelegramSource, resolveNextDeskSource } from "../lib/remoteChannels.ts";
 import { validateUuidParams } from "../lib/uuidMiddleware.ts";
 
 function registerRemoteChannelRoutes(app, deps) {
@@ -51,13 +51,13 @@ function registerRemoteChannelRoutes(app, deps) {
     }
   };
 
-  // Telegram requires API credentials; ChatDesk just needs the feature enabled.
+  // Telegram requires API credentials; NextDesk just needs the feature enabled.
   const isTelegramAvailable = () =>
     Boolean(REMOTE_CHANNELS?.enabled && REMOTE_CHANNELS?.telegramConfigured);
-  const isChatDeskAvailable = () =>
+  const isNextDeskAvailable = () =>
     Boolean(REMOTE_CHANNELS?.enabled);
   const isRemoteChannelAvailable = () =>
-    isTelegramAvailable() || isChatDeskAvailable();
+    isTelegramAvailable() || isNextDeskAvailable();
   // REMOTE_CHANNEL_UI=false hides the user-facing UI; only server admins
   // (admin panel routes) may configure mirroring then.
   const isUiEnabled = () => Boolean(getSetting("REMOTE_CHANNEL_UI"));
@@ -213,7 +213,7 @@ function registerRemoteChannelRoutes(app, deps) {
     return res.json({
       available: isRemoteChannelAvailable(),
       telegramConfigured: Boolean(REMOTE_CHANNELS?.telegramConfigured),
-      chatdeskConfigured: isChatDeskAvailable(),
+      nextdeskConfigured: isNextDeskAvailable(),
       proxyConfigured: Boolean(REMOTE_CHANNELS?.proxyConfigured),
       source: serialized,
     });
@@ -261,7 +261,7 @@ function registerRemoteChannelRoutes(app, deps) {
     const streamMedia: any = Boolean(getSetting("FILE_UPLOAD") && req.body?.streamMedia);
     const provider: any = String(req.body?.provider || "telegram").toLowerCase();
 
-    if (provider !== "telegram" && provider !== "chatdesk") {
+    if (provider !== "telegram" && provider !== "nextdesk") {
       return res.status(400).json({ error: "Remote Channel provider is invalid." });
     }
 
@@ -297,15 +297,15 @@ function registerRemoteChannelRoutes(app, deps) {
         return res.status(400).json({ error: "Telegram source is required." });
       }
     } else {
-      // provider === "chatdesk"
+      // provider === "nextdesk"
       if (enabled) {
-        normalized = normalizeChatDeskSource(rawSource);
+        normalized = normalizeNextDeskSource(rawSource);
         if (!normalized.ok) {
           return res.status(400).json({ error: normalized.error });
         }
         // Resolve the actual channel username from the target server.
         // This also validates the server is public and the channel exists.
-        const resolved: any = await resolveChatDeskSource(
+        const resolved: any = await resolveNextDeskSource(
           normalized.sourceUrl,
           normalized.inviteTarget,
         );
@@ -314,11 +314,11 @@ function registerRemoteChannelRoutes(app, deps) {
         }
         normalized = { ...normalized, sourceUsername: resolved.sourceUsername };
       } else if (rawSource) {
-        const optionalNormalized: any = normalizeChatDeskSource(rawSource);
+        const optionalNormalized: any = normalizeNextDeskSource(rawSource);
         if (optionalNormalized.ok) normalized = optionalNormalized;
       }
       if (enabled && !normalized.sourceUrl) {
-        return res.status(400).json({ error: "ChatDesk source URL is required." });
+        return res.status(400).json({ error: "NextDesk source URL is required." });
       }
     }
 
@@ -345,7 +345,7 @@ function registerRemoteChannelRoutes(app, deps) {
       syncMetadata &&
       typeof remoteChannelManager?.syncSourceMetadata === "function"
     ) {
-      // Run metadata sync in the background — works for both Telegram and ChatDesk.
+      // Run metadata sync in the background — works for both Telegram and NextDesk.
       const sourceId = source?.id;
       remoteChannelManager.syncSourceMetadata(sourceId).catch(() => {
         // Errors are recorded on the source record by syncSourceMetadata itself.

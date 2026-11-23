@@ -28,7 +28,7 @@ export function resolveDataDir(customDataDir?: any) {
   const cleaned = cleanString(customDataDir || process.env.DATA_DIR);
   if (cleaned) return path.resolve(cleaned);
   if (fs.existsSync("/opt/nextdesk/data")) return "/opt/nextdesk/data";
-  if (fs.existsSync("/opt/chatdesk/data")) return "/opt/chatdesk/data";
+  if (fs.existsSync("/opt/nextdesk/data")) return "/opt/nextdesk/data";
   if (fs.existsSync("/app/data")) return "/app/data";
   if (fs.existsSync(path.join(projectRootDir, "data"))) {
     return path.join(projectRootDir, "data");

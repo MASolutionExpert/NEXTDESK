@@ -613,16 +613,16 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
   useEffect(() => {
     if (!isMobileViewport) return;
     if (activeChatId) {
-      window.dispatchEvent(new Event("chatdesk-hide-install-bar"));
+      window.dispatchEvent(new Event("nextdesk-hide-install-bar"));
     } else {
-      window.dispatchEvent(new Event("chatdesk-show-install-bar"));
+      window.dispatchEvent(new Event("nextdesk-show-install-bar"));
     }
   }, [activeChatId, isMobileViewport]);
   const [microphonePermission, setMicrophonePermission] = useState("unknown");
   const [microphonePermissionSupported, setMicrophonePermissionSupported] =
     useState(false);
   const [permissionPromptDelayUntil, setPermissionPromptDelayUntil] = useState(0);
-  const PERMISSION_DISMISS_PREFIX = "chatdesk-permission-dismiss-";
+  const PERMISSION_DISMISS_PREFIX = "nextdesk-permission-dismiss-";
   const PERMISSION_DISMISS_MS = 3 * 24 * 60 * 60 * 1000;
   const PERMISSION_PROMPT_DELAY_MS = 1000;
   const readPermissionDismissed = (kind) => {
@@ -1710,7 +1710,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
               : "chat.documentTitle.unreadOther",
             { count: totalUnread },
           )
-        : "ChatDesk";
+        : "NextDesk";
     if (navigator?.setAppBadge) {
       if (totalUnreadCount > 0) {
         navigator.setAppBadge(totalUnreadCount).catch(() => null);
@@ -5980,7 +5980,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
       visibility: "public",
       allowMemberInvites: true,
       remoteChannelEnabled: false,
-      remoteChannelProvider: appInfo?.remoteChannels?.telegramConfigured ? "telegram" : "chatdesk",
+      remoteChannelProvider: appInfo?.remoteChannels?.telegramConfigured ? "telegram" : "nextdesk",
       remoteChannelSource: "",
       remoteChannelSyncMetadata: false,
       remoteChannelStreamMedia: false,
@@ -6196,7 +6196,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
       visibility: activeChat.group_visibility || "public",
       allowMemberInvites: Boolean(Number(activeChat.allow_member_invites || 0)),
       remoteChannelEnabled: false,
-      remoteChannelProvider: appInfo?.remoteChannels?.telegramConfigured ? "telegram" : "chatdesk",
+      remoteChannelProvider: appInfo?.remoteChannels?.telegramConfigured ? "telegram" : "nextdesk",
       remoteChannelSource: "",
       remoteChannelSyncMetadata: false,
       remoteChannelStreamMedia: false,
@@ -6236,7 +6236,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
           setNewGroupForm((prev) => ({
             ...prev,
             remoteChannelEnabled: Boolean(source?.enabled),
-            remoteChannelProvider: source?.provider || "chatdesk",
+            remoteChannelProvider: source?.provider || "nextdesk",
             remoteChannelSource:
               source?.sourceRaw ||
               (source?.sourceUsername ? `@${source.sourceUsername}` : "") ||
@@ -6380,7 +6380,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
       newGroupForm.visibility !== "private" &&
       Boolean(newGroupForm.remoteChannelEnabled);
     const remoteChannelProvider: any = String(
-      newGroupForm.remoteChannelProvider || "chatdesk",
+      newGroupForm.remoteChannelProvider || "nextdesk",
     ).toLowerCase();
     const remoteChannelSyncMetadata =
       remoteChannelEnabled && Boolean(newGroupForm.remoteChannelSyncMetadata);
@@ -7479,8 +7479,8 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
             remoteChannelTelegramAvailable={Boolean(
               appInfo?.remoteChannels?.telegramConfigured
             )}
-            remoteChannelChatDeskAvailable={Boolean(
-              appInfo?.remoteChannels?.chatdeskConfigured
+            remoteChannelNextDeskAvailable={Boolean(
+              appInfo?.remoteChannels?.nextdeskConfigured
             )}
             remoteChannelMediaStreamAllowed={Boolean(
               appInfo?.remoteChannels?.mediaStreamEnabled

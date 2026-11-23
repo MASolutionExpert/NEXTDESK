@@ -38,18 +38,18 @@ describe("remote channel tick mode", () => {
     manager.stop();
   });
 
-  test("tickOnce polls chatdesk sources, drains queue, and disconnects", async () => {
-    const pollChatDesk = vi.fn(async () => []);
+  test("tickOnce polls nextdesk sources, drains queue, and disconnects", async () => {
+    const pollNextDesk = vi.fn(async () => []);
     const manager = makeManager(
       { tickMode: true },
       {
-        listEnabledRemoteChannelSources: pollChatDesk,
+        listEnabledRemoteChannelSources: pollNextDesk,
       },
     );
     manager.start();
     const summary = await manager.tickOnce({ drainBatches: 1 });
-    expect(pollChatDesk).toHaveBeenCalled();
-    expect(summary.chatdesk).toBe("polled");
+    expect(pollNextDesk).toHaveBeenCalled();
+    expect(summary.nextdesk).toBe("polled");
     expect(summary.telegram).toBe("not-configured");
     expect(summary.queueBatches).toBe(1);
     manager.stop();

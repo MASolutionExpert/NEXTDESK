@@ -43,7 +43,7 @@ const TABS = [
 // Auto-exit the panel after this much inactivity (no mouse/keyboard/touch).
 const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 
-const ADMIN_SIDEBAR_OPEN_STORAGE_KEY = "chatdesk.admin.sidebar-open";
+const ADMIN_SIDEBAR_OPEN_STORAGE_KEY = "nextdesk.admin.sidebar-open";
 
 function getInitialSidebarOpen() {
   if (typeof window === "undefined") return true;
@@ -185,9 +185,9 @@ export default function AdminPanel({ user, onBack }: any) {
       }, 300);
     };
 
-    window.addEventListener("chatdesk:realtime-event", handleRealtimeEvent);
+    window.addEventListener("nextdesk:realtime-event", handleRealtimeEvent);
     return () => {
-      window.removeEventListener("chatdesk:realtime-event", handleRealtimeEvent);
+      window.removeEventListener("nextdesk:realtime-event", handleRealtimeEvent);
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
   }, [tab, refreshKey]);

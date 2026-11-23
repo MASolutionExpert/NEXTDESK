@@ -8,7 +8,7 @@ describe("resolveWebhookCallbackUrl", () => {
     expect(
       resolveWebhookCallbackUrl({
         WEBHOOK_URL: "https://hooks.example.com/done",
-        RAILWAY_PRIVATE_DOMAIN: "chatdesk.railway.internal",
+        RAILWAY_PRIVATE_DOMAIN: "nextdesk.railway.internal",
         PORT: "8080",
       }),
     ).toBe("https://hooks.example.com/done");
@@ -17,28 +17,28 @@ describe("resolveWebhookCallbackUrl", () => {
   test("ignores an explicit URL with an uninterpolated empty port", () => {
     expect(
       resolveWebhookCallbackUrl({
-        WEBHOOK_URL: `http://chatdesk.railway.internal:/${PATH.slice(1)}`,
-        RAILWAY_PRIVATE_DOMAIN: "chatdesk.railway.internal",
+        WEBHOOK_URL: `http://nextdesk.railway.internal:/${PATH.slice(1)}`,
+        RAILWAY_PRIVATE_DOMAIN: "nextdesk.railway.internal",
         PORT: "1234",
       }),
-    ).toBe(`http://chatdesk.railway.internal:1234${PATH}`);
+    ).toBe(`http://nextdesk.railway.internal:1234${PATH}`);
   });
 
   test("builds a private-network URL from Railway runtime vars", () => {
     expect(
       resolveWebhookCallbackUrl({
-        RAILWAY_PRIVATE_DOMAIN: "chatdesk.railway.internal",
+        RAILWAY_PRIVATE_DOMAIN: "nextdesk.railway.internal",
         PORT: "8080",
       }),
-    ).toBe(`http://chatdesk.railway.internal:8080${PATH}`);
+    ).toBe(`http://nextdesk.railway.internal:8080${PATH}`);
   });
 
   test("falls back to the public domain when no port is known", () => {
     expect(
       resolveWebhookCallbackUrl({
-        RAILWAY_PUBLIC_DOMAIN: "chatdesk.up.railway.app",
+        RAILWAY_PUBLIC_DOMAIN: "nextdesk.up.railway.app",
       }),
-    ).toBe(`https://chatdesk.up.railway.app${PATH}`);
+    ).toBe(`https://nextdesk.up.railway.app${PATH}`);
   });
 
   test("falls back to loopback with SERVER_PORT", () => {

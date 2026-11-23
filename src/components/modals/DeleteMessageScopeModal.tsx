@@ -8,7 +8,7 @@ import { useFocusTrap } from "../../hooks/useFocusTrap.ts";
 import { useI18n } from "../../i18n/index.ts";
 
 const DELETE_FOR_EVERYONE_PREFERENCE_KEY =
-  "chatdesk-delete-message-for-everyone";
+  "nextdesk-delete-message-for-everyone";
 
 const readDeleteForEveryonePreference = () => {
   if (typeof window === "undefined") return false;

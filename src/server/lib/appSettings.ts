@@ -323,13 +323,13 @@ export const SETTING_DEFS = [
     nullable: true,
   },
   {
-    key: "REMOTE_CHANNEL_CHATDESK_PROXY_URL",
+    key: "REMOTE_CHANNEL_NEXTDESK_PROXY_URL",
     type: TYPE_STRING,
-    label: "ChatDesk proxy",
+    label: "NextDesk proxy",
     description:
-      "Proxy URL for outbound server-to-server requests to remote ChatDesk instances.",
+      "Proxy URL for outbound server-to-server requests to remote NextDesk instances.",
     group: "proxy",
-    envKey: "REMOTE_CHANNEL_CHATDESK_PROXY_URL",
+    envKey: "REMOTE_CHANNEL_NEXTDESK_PROXY_URL",
     defaultVal: "",
     nullable: true, // applied per-request; no restart needed
   },

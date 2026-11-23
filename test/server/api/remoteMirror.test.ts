@@ -49,7 +49,7 @@ describe("remote mirror blob + webhook", () => {
     const { app } = setupMirrorApp();
     const res: any = await request(app)
       .get(`/api/remote-channel/blob/${entry.jobId}`)
-      .set("x-chatdesk-mirror-secret", entry.secret);
+      .set("x-nextdesk-mirror-secret", entry.secret);
     expect(res.status).toBe(200);
     expect(Buffer.from(res.body).toString()).toBe("mirror-bytes");
   });
@@ -61,11 +61,11 @@ describe("remote mirror blob + webhook", () => {
     const { app } = setupMirrorApp();
     const bad: any = await request(app)
       .get(`/api/remote-channel/blob/${entry.jobId}`)
-      .set("x-chatdesk-mirror-secret", "wrong");
+      .set("x-nextdesk-mirror-secret", "wrong");
     expect(bad.status).toBe(401);
     const missing: any = await request(app)
       .get("/api/remote-channel/blob/does-not-exist")
-      .set("x-chatdesk-mirror-secret", "x");
+      .set("x-nextdesk-mirror-secret", "x");
     expect(missing.status).toBe(404);
   });
 
@@ -182,7 +182,7 @@ describe("remote mirror blob + webhook", () => {
     const { app } = setupMirrorApp({ webhookSecret: "shh" });
     const res: any = await request(app)
       .post("/api/remote-channel/webhook/mirror-done")
-      .set("x-chatdesk-webhook-secret", "wrong")
+      .set("x-nextdesk-webhook-secret", "wrong")
       .send({ jobId: "x", status: "ready" });
     expect(res.status).toBe(401);
   });

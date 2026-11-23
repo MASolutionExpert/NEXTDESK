@@ -6,13 +6,13 @@ import { fileURLToPath } from "node:url";
 const serverDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRootDir = path.resolve(serverDir, "..", "..", "..");
 
-const SERVICE_NAME = process.env.CHATDESK_SERVICE_NAME || "chatdesk.service";
-const WORKER_SERVICE_NAME = process.env.CHATDESK_WORKER_SERVICE_NAME || "chatdesk-worker.service";
+const SERVICE_NAME = process.env.NEXTDESK_SERVICE_NAME || "nextdesk.service";
+const WORKER_SERVICE_NAME = process.env.NEXTDESK_WORKER_SERVICE_NAME || "nextdesk-worker.service";
 
 // Candidate paths for each log source. The first readable one wins.
 const INSTALLER_LOG_CANDIDATES = [
   path.join(projectRootDir, "logs", "install.log"),
-  "/opt/chatdesk/logs/install.log",
+  "/opt/nextdesk/logs/install.log",
 ];
 
 const NGINX_LOG_CANDIDATES = [
@@ -22,7 +22,7 @@ const NGINX_LOG_CANDIDATES = [
 
 // Hint shown when a log is unavailable due to OS-level permission restrictions.
 const PERMISSION_HINT =
-  "To fix: add the chatdesk user to the adm and systemd-journal groups, " +
+  "To fix: add the nextdesk user to the adm and systemd-journal groups, " +
   "and add a sudoers drop-in for service control. " +
   "Re-run the installer or see the README for manual steps.";
 

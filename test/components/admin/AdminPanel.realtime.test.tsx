@@ -3,7 +3,7 @@ import { render } from "vitest-browser-react";
 import AdminPanel from "../../../src/components/admin/AdminPanel.tsx";
 
 describe("AdminPanel — Real-time Updates", () => {
-  test("subscribes to chatdesk:realtime-event and triggers debounced refresh without background polling", async () => {
+  test("subscribes to nextdesk:realtime-event and triggers debounced refresh without background polling", async () => {
     const fetchSpy = vi.fn().mockImplementation((url) => {
       if (url.includes("/api/admin/stats")) {
         return Promise.resolve({
@@ -40,7 +40,7 @@ describe("AdminPanel — Real-time Updates", () => {
 
     // Dispatch realtime event
     window.dispatchEvent(
-      new CustomEvent("chatdesk:realtime-event", {
+      new CustomEvent("nextdesk:realtime-event", {
         detail: { type: "presence_update", username: "bob", status: "online" },
       }),
     );

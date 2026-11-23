@@ -1,4 +1,4 @@
-export const CLIPBOARD_COPY_EVENT = "chatdesk:clipboard-copy";
+export const CLIPBOARD_COPY_EVENT = "nextdesk:clipboard-copy";
 
 const dispatchCopyEvent = (text) => {
   if (typeof window === "undefined") return;

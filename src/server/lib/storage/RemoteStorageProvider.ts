@@ -287,7 +287,7 @@ export class RemoteStorageProvider extends StorageProvider {
    * @returns {Promise<boolean>}
    */
   async checkHealth() {
-    await this.exists("chatdesk-storage-health-probe");
+    await this.exists("nextdesk-storage-health-probe");
     return true;
   }
 

@@ -15,7 +15,7 @@ if (typeof window === "undefined") {
 
 describe("useChatEvents — message update event handling for chat list cards", () => {
   test("schedules chat reload and updates chat list state when chat_message_updated is received for any chat", () => {
-    // We simulate receiving a chatdesk:realtime-event by invoking the handler setup logic
+    // We simulate receiving a nextdesk:realtime-event by invoking the handler setup logic
     const payload = {
       type: "chat_message_updated",
       chatId: "other-chat-456",
@@ -27,7 +27,7 @@ describe("useChatEvents — message update event handling for chat list cards", 
 
     // Dispatch custom event to window
     window.dispatchEvent(
-      new CustomEvent("chatdesk:realtime-event", { detail: payload }),
+      new CustomEvent("nextdesk:realtime-event", { detail: payload }),
     );
 
     // Verify event structure supported

@@ -41,7 +41,7 @@ import {
   Video,
 } from "../../icons/lucide.ts";
 import { copyTextToClipboard } from "../../utils/clipboard.ts";
-import { TelegramIcon, ChatDeskIcon } from "../../icons/BrandIcons.tsx";
+import { TelegramIcon, NextDeskIcon } from "../../icons/BrandIcons.tsx";
 import { api, cardCls, btnPrimary, btnSecondary } from "./adminShared.ts";
 import { SectionHeading } from "./AdminCommon.tsx";
 import ConfirmModal from "../modals/ConfirmModal.tsx";
@@ -102,7 +102,7 @@ const SETTING_ICONS = {
   REMOTE_CHANNEL_QUEUE_CONCURRENCY: SquareStack,
   REMOTE_CHANNEL_QUEUE_STALE_LOCK_MS: Lock,
   REMOTE_CHANNEL_TELEGRAM_PROXY_URL: TelegramIcon,
-  REMOTE_CHANNEL_CHATDESK_PROXY_URL: ChatDeskIcon,
+  REMOTE_CHANNEL_NEXTDESK_PROXY_URL: NextDeskIcon,
   PUSH_PROXY_URL: Bell,
   STORAGE_EXPIRES_IN: Clock12,
   STORAGE_PROXY_URL: PackageOpen,
@@ -153,7 +153,7 @@ const SETTING_ICON_ANIM = {
   REMOTE_CHANNEL_QUEUE_CONCURRENCY: "icon-anim-lift",
   REMOTE_CHANNEL_QUEUE_STALE_LOCK_MS: "icon-anim-bob",
   REMOTE_CHANNEL_TELEGRAM_PROXY_URL: "icon-anim-swing",
-  REMOTE_CHANNEL_CHATDESK_PROXY_URL: "icon-anim-swing",
+  REMOTE_CHANNEL_NEXTDESK_PROXY_URL: "icon-anim-swing",
   PUSH_PROXY_URL: "icon-anim-swing",
   STORAGE_EXPIRES_IN: "icon-anim-swing",
   STORAGE_PROXY_URL: "icon-anim-swing",

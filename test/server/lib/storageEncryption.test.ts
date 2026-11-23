@@ -71,12 +71,12 @@ describe("storage text encryption", () => {
 
   test("decrypts file byte ranges correctly for media streaming", () => {
     const encryption: any = createEncryption();
-    const fullContent: any = Buffer.from("Hello ChatDesk encrypted media streaming world!");
+    const fullContent: any = Buffer.from("Hello NextDesk encrypted media streaming world!");
     const encryptedBuffer: any = encryption.encryptBuffer(fullContent);
 
     // Mock filesystem methods to test in-memory
     const decryptedRange: any = encryption.decryptBuffer(encryptedBuffer).subarray(6, 14);
-    expect(decryptedRange.toString()).toBe("ChatDesk");
+    expect(decryptedRange.toString()).toBe("NextDesk");
   });
 
   test("ensureStorageEncryptionKey returns existing env key or generates a new one", () => {

@@ -198,7 +198,7 @@ import {
   SETTING_DEFS,
 } from "./lib/appSettings.ts";
 
-process.title = "chatdesk-server";
+process.title = "nextdesk-server";
 
 const app: any = express();
 const serverDir: any = path.dirname(fileURLToPath(import.meta.url));
@@ -397,8 +397,8 @@ const REMOTE_CHANNEL_TELEGRAM_SESSION_STRING = REMOTE_CHANNEL_SECRETS.sessionStr
 const REMOTE_CHANNEL_PROXY_URL: any = String(
   getSetting("REMOTE_CHANNEL_TELEGRAM_PROXY_URL") || "",
 ).trim();
-const REMOTE_CHANNEL_CHATDESK_PROXY_URL: any = String(
-  getSetting("REMOTE_CHANNEL_CHATDESK_PROXY_URL") || "",
+const REMOTE_CHANNEL_NEXTDESK_PROXY_URL: any = String(
+  getSetting("REMOTE_CHANNEL_NEXTDESK_PROXY_URL") || "",
 ).trim();
 const REMOTE_CHANNEL_TELEGRAM_CONFIGURED: any = Boolean(
   REMOTE_CHANNEL_TELEGRAM_API_ID &&
@@ -411,7 +411,7 @@ const REMOTE_CHANNEL_CONFIG: any = {
   mediaStreamEnabled: REMOTE_CHANNEL_MEDIA_STREAM,
   telegramConfigured: REMOTE_CHANNEL_TELEGRAM_CONFIGURED,
   proxyConfigured: Boolean(REMOTE_CHANNEL_PROXY_URL),
-  chatdeskProxyUrl: REMOTE_CHANNEL_CHATDESK_PROXY_URL,
+  nextdeskProxyUrl: REMOTE_CHANNEL_NEXTDESK_PROXY_URL,
   telegramApiId: REMOTE_CHANNEL_TELEGRAM_API_ID,
   telegramApiHash: REMOTE_CHANNEL_TELEGRAM_API_HASH,
   telegramSessionString: REMOTE_CHANNEL_TELEGRAM_SESSION_STRING,
@@ -855,7 +855,7 @@ const apiDeps: any = {
     uiEnabled: REMOTE_CHANNEL_CONFIG.uiEnabled,
     mediaStreamEnabled: REMOTE_CHANNEL_CONFIG.mediaStreamEnabled,
     telegramConfigured: REMOTE_CHANNEL_CONFIG.telegramConfigured,
-    chatdeskConfigured: REMOTE_CHANNEL_CONFIG.enabled,
+    nextdeskConfigured: REMOTE_CHANNEL_CONFIG.enabled,
     proxyConfigured: REMOTE_CHANNEL_CONFIG.proxyConfigured,
   },
   USERNAME_REGEX,

@@ -250,7 +250,7 @@ export default function WhatsNewModal({
               {t("modals.whatsNew.title")}
             </p>
             <h3 id="whats-new-modal-title" className="mt-2 text-2xl font-bold text-emerald-700 dark:text-emerald-200">
-              ChatDesk {activeSection?.heading || version || ""}
+              NextDesk {activeSection?.heading || version || ""}
             </h3>
           </div>
           <button

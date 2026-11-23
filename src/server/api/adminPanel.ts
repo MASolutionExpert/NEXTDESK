@@ -2,7 +2,7 @@ import { normalizeHexColor, normalizeGroupUsername, normalizeVisibility, normali
 import { createInviteToken } from "../lib/inviteTokens.ts";
 import { validateUuidParams } from "../lib/uuidMiddleware.ts";
 import { isValidUuid, generateUuid } from "../lib/uuidUtils.ts";
-import { normalizeChatDeskSource, normalizeTelegramSource, resolveChatDeskSource } from "../lib/remoteChannels.ts";
+import { normalizeNextDeskSource, normalizeTelegramSource, resolveNextDeskSource } from "../lib/remoteChannels.ts";
 import { readInstallerLog, readNginxLog, readServiceLog, readWorkerLog, probeLogSources } from "../lib/systemLogs.ts";
 import { userEvents } from "../lib/workers/autoAddWorker.ts";
 import os from "node:os";
@@ -176,7 +176,7 @@ function registerAdminPanelRoutes(app, deps) {
       return { shouldSave: true, error: "Remote Channel can only be enabled for public channels.", status: 400 };
     }
     const provider: any = String(remoteChannel.provider || "telegram").toLowerCase();
-    if (provider !== "telegram" && provider !== "chatdesk") {
+    if (provider !== "telegram" && provider !== "nextdesk") {
       return { shouldSave: true, error: "Remote Channel source is invalid.", status: 400 };
     }
     if (provider === "telegram" && !isTelegramAvailable()) {
@@ -196,17 +196,17 @@ function registerAdminPanelRoutes(app, deps) {
       }
     } else {
       if (enabled) {
-        normalized = normalizeChatDeskSource(rawSource);
+        normalized = normalizeNextDeskSource(rawSource);
         if (!normalized.ok) return { shouldSave: true, error: normalized.error, status: 400 };
-        const resolved: any = await resolveChatDeskSource(normalized.sourceUrl, normalized.inviteTarget);
+        const resolved: any = await resolveNextDeskSource(normalized.sourceUrl, normalized.inviteTarget);
         if (!resolved.ok) return { shouldSave: true, error: resolved.error, status: 400 };
         normalized = { ...normalized, sourceUsername: resolved.sourceUsername };
       } else if (rawSource) {
-        const opt: any = normalizeChatDeskSource(rawSource);
+        const opt: any = normalizeNextDeskSource(rawSource);
         if (opt.ok) normalized = opt;
       }
       if (enabled && !normalized.sourceUrl) {
-        return { shouldSave: true, error: "ChatDesk source URL is required.", status: 400 };
+        return { shouldSave: true, error: "NextDesk source URL is required.", status: 400 };
       }
     }
     return {
@@ -1332,7 +1332,7 @@ function registerAdminPanelRoutes(app, deps) {
       uiEnabled: Boolean(getSetting("REMOTE_CHANNEL_UI")),
       mediaStreamEnabled: Boolean(getSetting("REMOTE_CHANNEL_MEDIA_STREAM")),
       telegramConfigured: Boolean(deps.REMOTE_CHANNELS?.telegramConfigured),
-      chatdeskConfigured: isRemoteChannelAvailable(),
+      nextdeskConfigured: isRemoteChannelAvailable(),
       proxyConfigured: Boolean(deps.REMOTE_CHANNELS?.proxyConfigured),
       source: await serializeAdminRemoteSource(source),
     });
@@ -1796,20 +1796,20 @@ function registerAdminPanelRoutes(app, deps) {
     // dropdb --force terminates this server's own pool. Run it only after the
     // process has stopped, using the CLI command that enforces that condition.
     return res.status(409).json({
-      error: "Stop ChatDesk, then run npm run db:delete -- -y to delete a PostgreSQL database.",
+      error: "Stop NextDesk, then run npm run db:delete -- -y to delete a PostgreSQL database.",
     });
   });
 
   // ─── Service control ─────────────────────────────────────────────────────────
 
-  const SERVICE_NAME = process.env.CHATDESK_SERVICE_NAME || "chatdesk";
+  const SERVICE_NAME = process.env.NEXTDESK_SERVICE_NAME || "nextdesk";
 
   // Sends a POST request to the Docker Engine API via the Unix socket to
   // restart or stop this container. The container name / ID is read from the
   // HOSTNAME env var, which Docker sets to the container ID by default, and
-  // can be overridden with CHATDESK_CONTAINER_NAME for named containers.
+  // can be overridden with NEXTDESK_CONTAINER_NAME for named containers.
   const runDockerAction = (action) => new Promise<any>((resolve) => {
-    const container = process.env.CHATDESK_CONTAINER_NAME || process.env.HOSTNAME || "chatdesk";
+    const container = process.env.NEXTDESK_CONTAINER_NAME || process.env.HOSTNAME || "nextdesk";
     const socketPath = "/var/run/docker.sock";
     // action is "restart" or "stop" — both are POST endpoints in the Docker API.
     const path = `/containers/${container}/${action}`;
@@ -1913,9 +1913,9 @@ function registerAdminPanelRoutes(app, deps) {
   // Docker deployments must update nginx/nginx.conf and restart nginx manually.
 
   const NGINX_CONFIG_CANDIDATES = [
-    "/etc/nginx/sites-available/chatdesk",
-    "/etc/nginx/sites-enabled/chatdesk",
-    "/etc/nginx/conf.d/chatdesk.conf",
+    "/etc/nginx/sites-available/nextdesk",
+    "/etc/nginx/sites-enabled/nextdesk",
+    "/etc/nginx/conf.d/nextdesk.conf",
     "/etc/nginx/conf.d/default.conf",
   ];
 

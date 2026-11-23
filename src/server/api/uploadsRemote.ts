@@ -580,7 +580,7 @@ export function registerRemoteUploadRoutes(app, deps) {
     const expectedSecret =
       deps.webhookSecret !== undefined ? deps.webhookSecret : webhookSecret;
     if (expectedSecret) {
-      const headerSecret = req.headers["x-chatdesk-webhook-secret"];
+      const headerSecret = req.headers["x-nextdesk-webhook-secret"];
       if (headerSecret !== expectedSecret) {
         console.warn(
           `[uploads] Rejected webhook for file ${req.body?.fileId ?? "unknown"}: invalid webhook secret.`,

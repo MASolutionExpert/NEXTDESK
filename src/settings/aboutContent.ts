@@ -6,11 +6,11 @@ export const ABOUT_CONTENT = {
   socials: [
     {
       icon: "docker",
-      href: "https://hub.docker.com/r/MASolutionExpert/chatdesk",
+      href: "https://hub.docker.com/r/MASolutionExpert/NEXTDESK",
     },
     {
       icon: "github",
-      href: "https://github.com/MASolutionExpert/chatdesk",
+      href: "https://github.com/MASolutionExpert/NEXTDESK",
     },
   ],
   supportIntro: "",

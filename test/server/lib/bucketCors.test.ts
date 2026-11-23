@@ -37,7 +37,7 @@ describe("resolveAppOrigins", () => {
     expect(
       resolveAppOrigins({
         APP_PUBLIC_URL: "https://app.example.com, https://admin.example.com/",
-        RAILWAY_PUBLIC_DOMAIN: "chatdesk.up.railway.app",
+        RAILWAY_PUBLIC_DOMAIN: "nextdesk.up.railway.app",
       }),
     ).toEqual(["https://app.example.com", "https://admin.example.com"]);
   });
@@ -51,17 +51,17 @@ describe("resolveAppOrigins", () => {
   test("falls back to RAILWAY_PUBLIC_DOMAIN", () => {
     expect(
       resolveAppOrigins({
-        RAILWAY_PUBLIC_DOMAIN: "chatdesk.up.railway.app",
+        RAILWAY_PUBLIC_DOMAIN: "nextdesk.up.railway.app",
       }),
-    ).toEqual(["https://chatdesk.up.railway.app"]);
+    ).toEqual(["https://nextdesk.up.railway.app"]);
   });
 
   test("falls back to RENDER_EXTERNAL_URL", () => {
     expect(
       resolveAppOrigins({
-        RENDER_EXTERNAL_URL: "https://chatdesk.onrender.com",
+        RENDER_EXTERNAL_URL: "https://nextdesk.onrender.com",
       }),
-    ).toEqual(["https://chatdesk.onrender.com"]);
+    ).toEqual(["https://nextdesk.onrender.com"]);
   });
 
   test("returns empty array when nothing is known", () => {

@@ -220,7 +220,7 @@ describe("webhook thumbUrl wiring", () => {
 
     const res = await request(customApp.app)
       .post("/api/uploads/webhook/processed")
-      .set("x-chatdesk-webhook-secret", "secret-key-123")
+      .set("x-nextdesk-webhook-secret", "secret-key-123")
       .send({
         fileId: fileUuid,
         status: "ready",

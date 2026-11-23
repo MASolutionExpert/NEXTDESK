@@ -107,7 +107,7 @@ describe("isCallSupported", () => {
   it("returns true on HTTPS with mediaDevices", () => {
     vi.stubGlobal("window", {
       isSecureContext: true,
-      location: { protocol: "https:", hostname: "chatdesk.example.com" },
+      location: { protocol: "https:", hostname: "nextdesk.example.com" },
     });
     vi.stubGlobal("navigator", {
       mediaDevices: { getUserMedia: () => Promise.resolve() },

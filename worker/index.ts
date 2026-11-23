@@ -18,7 +18,7 @@ import {
 const workerDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRootDir = path.resolve(workerDir, "..");
 
-process.title = "chatdesk-worker";
+process.title = "nextdesk-worker";
 
 if (typeof process.loadEnvFile === "function") {
   try { process.loadEnvFile(path.join(projectRootDir, ".env")); } catch {}
@@ -85,7 +85,7 @@ class AsyncQueue {
 
 const jobQueue = new AsyncQueue(WORKER_CONCURRENCY);
 
-const tmpDir = path.join(os.tmpdir(), "chatdesk-media-worker");
+const tmpDir = path.join(os.tmpdir(), "nextdesk-media-worker");
 fs.mkdirSync(tmpDir, { recursive: true });
 
 const tempPath = (suffix = "") =>
@@ -218,7 +218,7 @@ async function notifyCallback(url, payload, secret, maxRetries = 5) {
         headers: {
           "Content-Type": "application/json",
           ...(effectiveSecret
-            ? { "x-chatdesk-webhook-secret": effectiveSecret }
+            ? { "x-nextdesk-webhook-secret": effectiveSecret }
             : {}),
         },
         body: JSON.stringify(payload),
@@ -503,7 +503,7 @@ export async function processMirrorJob({
   try {
     await downloadWithRetry(async () => {
       const headers = downloadSecret
-        ? { "x-chatdesk-mirror-secret": downloadSecret }
+        ? { "x-nextdesk-mirror-secret": downloadSecret }
         : {};
       const res = await fetch(downloadUrl, { headers });
       if (!res.ok) {
@@ -614,7 +614,7 @@ export function createWorkerServer(options: any = {}) {
   const processMirrorFn = options.processMirrorJob || processMirrorJob;
 
   const checkSecret = (req, res) => {
-    const incomingSecret = req.headers["x-chatdesk-webhook-secret"];
+    const incomingSecret = req.headers["x-nextdesk-webhook-secret"];
     if (effectiveWebhookSecret && incomingSecret !== effectiveWebhookSecret) {
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Unauthorized" }));
@@ -635,7 +635,7 @@ export function createWorkerServer(options: any = {}) {
       return res.end(
         JSON.stringify({
           status: "ok",
-          service: "chatdesk-media-worker",
+          service: "nextdesk-media-worker",
           queue: {
             pending: effectiveQueue.pending,
             queued: effectiveQueue.size,
@@ -648,7 +648,7 @@ export function createWorkerServer(options: any = {}) {
     // Transcode dispatch endpoint
     if (req.method === "POST" && url.pathname === "/transcode") {
       if (!checkSecret(req, res)) return;
-      const incomingSecret = req.headers["x-chatdesk-webhook-secret"];
+      const incomingSecret = req.headers["x-nextdesk-webhook-secret"];
 
       let payload;
       try {
@@ -714,7 +714,7 @@ export function createWorkerServer(options: any = {}) {
     // Mirror dispatch endpoint (Remote Channel media handoff)
     if (req.method === "POST" && url.pathname === "/mirror-media") {
       if (!checkSecret(req, res)) return;
-      const incomingSecret = req.headers["x-chatdesk-webhook-secret"];
+      const incomingSecret = req.headers["x-nextdesk-webhook-secret"];
 
       let payload;
       try {
@@ -801,7 +801,7 @@ if (
 ) {
   server.listen(PORT, () => {
     console.log(
-      `[chatdesk-worker] listening on port ${PORT} (storage: ${storage.type})`,
+      `[nextdesk-worker] listening on port ${PORT} (storage: ${storage.type})`,
     );
   });
 

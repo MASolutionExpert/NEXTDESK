@@ -17,7 +17,7 @@ import {
   Reply,
   Video,
 } from "../../../icons/lucide.ts";
-import { ChatDeskIcon, TelegramIcon } from "../../../icons/BrandIcons.tsx";
+import { NextDeskIcon, TelegramIcon } from "../../../icons/BrandIcons.tsx";
 import { hasPersian } from "../../../utils/fontUtils.ts";
 import { getAvatarInitials } from "../../../utils/avatarInitials.ts";
 import { formatCompactCount, formatDayLabel } from "../../../utils/chatFormat.ts";
@@ -208,7 +208,7 @@ export const MessageItem: any = memo(function MessageItem({
     ? /^remote:tg:/i.test(clientRequestId)
       ? "telegram"
       : /^remote:sb:/i.test(clientRequestId)
-        ? "chatdesk"
+        ? "nextdesk"
         : "unknown"
     : null;
   const forwardedFromUsername: any = String(msg?.forwarded_from_username || "").trim();
@@ -770,8 +770,8 @@ export const MessageItem: any = memo(function MessageItem({
           />
           {remoteForwardedProvider === "telegram" ? (
             <TelegramIcon size={13} className="shrink-0" />
-          ) : remoteForwardedProvider === "chatdesk" ? (
-            <ChatDeskIcon size={13} />
+          ) : remoteForwardedProvider === "nextdesk" ? (
+            <NextDeskIcon size={13} />
           ) : null}
           <span className="inline-flex min-w-0 items-center gap-0.5">
             <Tooltip label={forwardedFromLabel} asChild>
@@ -784,8 +784,8 @@ export const MessageItem: any = memo(function MessageItem({
               >
                 {remoteForwardedProvider === "telegram"
                   ? forwardedFromLabel.replace(/^telegram:\s*/i, "")
-                  : remoteForwardedProvider === "chatdesk"
-                    ? forwardedFromLabel.replace(/^chatdesk:\s*/i, "")
+                  : remoteForwardedProvider === "nextdesk"
+                    ? forwardedFromLabel.replace(/^nextdesk:\s*/i, "")
                     : forwardedFromLabel}
               </span>
             </Tooltip>

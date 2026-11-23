@@ -122,8 +122,8 @@ function registerAdminRemoteChannelRoutes(app, deps) {
       requestRetries: 1,
       autoReconnect: false,
       ...connectionOptions,
-      deviceModel: "ChatDesk",
-      systemVersion: "ChatDesk Server",
+      deviceModel: "NextDesk",
+      systemVersion: "NextDesk Server",
       appVersion: "1.0",
     } as any);
   };
@@ -362,7 +362,7 @@ function registerAdminRemoteChannelRoutes(app, deps) {
           baseLogger: new Logger("none" as any),
           connectionRetries: 1,
           autoReconnect: false,
-          deviceModel: "ChatDesk",
+          deviceModel: "NextDesk",
         },
       );
       try {

@@ -21,12 +21,12 @@ import {
 } from '../utils/sessionStorage.ts'
 
 const API_BASE = ''
-const AUTH_REDIRECT_KEY = 'chatdesk-auth-redirect'
-const OPEN_CHAT_ID_KEY = 'chatdesk-open-chat-id'
-const PWA_INSTALL_DISMISS_KEY = 'chatdesk-pwa-install-dismissed'
-const PWA_PERMISSIONS_PROMPT_KEY = 'chatdesk-pwa-permissions-prompt'
-const ROUTE_CHUNK_TELEMETRY_KEY = 'chatdesk-route-chunk-telemetry-v1'
-const CHUNK_RECOVERY_ATTEMPT_KEY = 'chatdesk-chunk-recovery-attempted'
+const AUTH_REDIRECT_KEY = 'nextdesk-auth-redirect'
+const OPEN_CHAT_ID_KEY = 'nextdesk-open-chat-id'
+const PWA_INSTALL_DISMISS_KEY = 'nextdesk-pwa-install-dismissed'
+const PWA_PERMISSIONS_PROMPT_KEY = 'nextdesk-pwa-permissions-prompt'
+const ROUTE_CHUNK_TELEMETRY_KEY = 'nextdesk-route-chunk-telemetry-v1'
+const CHUNK_RECOVERY_ATTEMPT_KEY = 'nextdesk-chunk-recovery-attempted'
 const loadAuthPage = () => import('../views/AuthPage.tsx')
 const loadChatPage = () => import('../views/ChatPage.tsx')
 const loadInvitePage = () => import('../views/InvitePage.tsx')
@@ -136,7 +136,7 @@ export default function NextDeskApp() {
         const keys = await window.caches.keys()
         await Promise.all(
           keys
-            .filter((key) => key.startsWith('chatdesk-'))
+            .filter((key) => key.startsWith('nextdesk-'))
             .map((key) => window.caches.delete(key)),
         )
       }
@@ -159,7 +159,7 @@ export default function NextDeskApp() {
   }
 
   const [isDark, setIsDark] = useState(() => {
-    const stored = localStorage.getItem('chatdesk-theme')
+    const stored = localStorage.getItem('nextdesk-theme')
     if (stored === 'light') return false
     if (stored === 'dark') return true
     return resolveAutoThemeIsDark()
@@ -311,10 +311,10 @@ export default function NextDeskApp() {
     root.classList.add('theme-switching')
     if (nextIsDark) {
       root.classList.add('dark')
-      localStorage.setItem('chatdesk-theme', 'dark')
+      localStorage.setItem('nextdesk-theme', 'dark')
     } else {
       root.classList.remove('dark')
-      localStorage.setItem('chatdesk-theme', 'light')
+      localStorage.setItem('nextdesk-theme', 'light')
     }
     root.style.colorScheme = nextIsDark ? 'dark' : 'light'
 
@@ -436,13 +436,13 @@ export default function NextDeskApp() {
     const handleShowInstall = () => setInstallForceHidden(false)
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
     window.addEventListener('appinstalled', handleInstalled)
-    window.addEventListener('chatdesk-hide-install-bar', handleHideInstall)
-    window.addEventListener('chatdesk-show-install-bar', handleShowInstall)
+    window.addEventListener('nextdesk-hide-install-bar', handleHideInstall)
+    window.addEventListener('nextdesk-show-install-bar', handleShowInstall)
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
       window.removeEventListener('appinstalled', handleInstalled)
-      window.removeEventListener('chatdesk-hide-install-bar', handleHideInstall)
-      window.removeEventListener('chatdesk-show-install-bar', handleShowInstall)
+      window.removeEventListener('nextdesk-hide-install-bar', handleHideInstall)
+      window.removeEventListener('nextdesk-show-install-bar', handleShowInstall)
     }
   }, [isStandaloneDisplay])
 
@@ -858,8 +858,8 @@ export default function NextDeskApp() {
       const redirectPath = window.sessionStorage.getItem(AUTH_REDIRECT_KEY)
       let supportIntro = false
       try {
-        supportIntro = window.localStorage.getItem('chatdesk-support-intro') === '1'
-        if (supportIntro) window.localStorage.removeItem('chatdesk-support-intro')
+        supportIntro = window.localStorage.getItem('nextdesk-support-intro') === '1'
+        if (supportIntro) window.localStorage.removeItem('nextdesk-support-intro')
       } catch {}
       if (redirectPath && redirectPath.startsWith('/invite/')) {
         window.sessionStorage.removeItem(AUTH_REDIRECT_KEY)
@@ -919,7 +919,7 @@ export default function NextDeskApp() {
       // Signup creates the account only; user must explicitly sign in next.
       // After the first sign-in we guide new customers to pick a department.
       try {
-        window.localStorage.setItem('chatdesk-support-intro', '1')
+        window.localStorage.setItem('nextdesk-support-intro', '1')
       } catch {}
       setUser(null)
       setAuthStatus('')
@@ -1033,7 +1033,7 @@ export default function NextDeskApp() {
                   <img src={logo} alt={translateKey('auth.app.logoAlt')} className="h-8 w-8" />
                 </div>
                 <div>
-                  <p className="text-xl font-bold tracking-tight sm:text-2xl">ChatDesk</p>
+                  <p className="text-xl font-bold tracking-tight sm:text-2xl">NextDesk</p>
                 </div>
               </div>
             </header>

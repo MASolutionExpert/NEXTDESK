@@ -317,7 +317,7 @@ describe("E2E S3 & Local Upload Lifecycle", () => {
       // 3. Webhook callback from media worker
       const webhookRes = await request(appObj.app)
         .post("/api/uploads/webhook/processed")
-        .set("x-chatdesk-webhook-secret", "super-secret-webhook-key")
+        .set("x-nextdesk-webhook-secret", "super-secret-webhook-key")
         .send({
           fileId,
           status: "ready",

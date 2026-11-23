@@ -42,17 +42,17 @@ describe("POST /api/internal/remote-channel/tick", () => {
     const { app } = makeTickApp();
     const res = await request(app)
       .post("/api/internal/remote-channel/tick")
-      .set("x-chatdesk-cron-secret", "wrong");
+      .set("x-nextdesk-cron-secret", "wrong");
     expect(res.status).toBe(401);
   });
 
   test("runs a tick with the correct secret", async () => {
     const { app } = makeTickApp({
-      tickOnce: async () => ({ telegram: "polled", chatdesk: "polled" }),
+      tickOnce: async () => ({ telegram: "polled", nextdesk: "polled" }),
     });
     const res = await request(app)
       .post("/api/internal/remote-channel/tick")
-      .set("x-chatdesk-cron-secret", SECRET);
+      .set("x-nextdesk-cron-secret", SECRET);
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
     expect(res.body.telegram).toBe("polled");
@@ -68,7 +68,7 @@ describe("POST /api/internal/remote-channel/tick", () => {
     });
     const res = await request(app)
       .post("/api/internal/remote-channel/tick")
-      .set("x-chatdesk-cron-secret", SECRET);
+      .set("x-nextdesk-cron-secret", SECRET);
     expect(res.status).toBe(409);
   });
 
@@ -85,7 +85,7 @@ describe("POST /api/internal/remote-channel/tick", () => {
     });
     const res = await request(app)
       .post("/api/internal/remote-channel/tick")
-      .set("x-chatdesk-cron-secret", "boot-generated-secret");
+      .set("x-nextdesk-cron-secret", "boot-generated-secret");
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
   });
@@ -99,7 +99,7 @@ describe("POST /api/internal/remote-channel/tick", () => {
     });
     const res = await request(app)
       .post("/api/internal/remote-channel/tick")
-      .set("x-chatdesk-cron-secret", "anything");
+      .set("x-nextdesk-cron-secret", "anything");
     expect(res.status).toBe(403);
   });
 });

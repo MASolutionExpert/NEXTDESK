@@ -58,7 +58,7 @@ export function useMobileCacheOptimization() {
   useEffect(() => {
     if (isCacheDisabledForDevice()) {
       console.warn(
-        "[ChatDesk Cache] Cache disabled: device memory resource constraint or repeated errors",
+        "[NextDesk Cache] Cache disabled: device memory resource constraint or repeated errors",
       );
     }
   }, []);

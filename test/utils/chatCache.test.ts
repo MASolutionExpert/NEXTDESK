@@ -84,35 +84,35 @@ describe("normalizeMessageBody", () => {
 describe("buildChatListCacheKey", () => {
   test("lowercases the username", () => {
     expect(buildChatListCacheKey("Alice")).toBe(
-      "chatdesk-chat-list-cache:alice",
+      "nextdesk-chat-list-cache:alice",
     );
   });
 
   test("handles empty username", () => {
-    expect(buildChatListCacheKey("")).toBe("chatdesk-chat-list-cache:");
+    expect(buildChatListCacheKey("")).toBe("nextdesk-chat-list-cache:");
   });
 
   test("handles null username", () => {
-    expect(buildChatListCacheKey(null)).toBe("chatdesk-chat-list-cache:");
+    expect(buildChatListCacheKey(null)).toBe("nextdesk-chat-list-cache:");
   });
 });
 
 describe("buildMessagesCacheKey", () => {
   test("includes both username and chatId", () => {
     expect(buildMessagesCacheKey("Alice", "550e8400-e29b-41d4-a716-446655440000")).toBe(
-      "chatdesk-chat-messages-cache:alice:550e8400-e29b-41d4-a716-446655440000",
+      "nextdesk-chat-messages-cache:alice:550e8400-e29b-41d4-a716-446655440000",
     );
   });
 
   test("uses chatId as-is (string UUID)", () => {
     expect(buildMessagesCacheKey("alice", "10")).toBe(
-      "chatdesk-chat-messages-cache:alice:10",
+      "nextdesk-chat-messages-cache:alice:10",
     );
   });
 
   test("defaults chatId to empty string for falsy values", () => {
     expect(buildMessagesCacheKey("alice", null)).toBe(
-      "chatdesk-chat-messages-cache:alice:",
+      "nextdesk-chat-messages-cache:alice:",
     );
   });
 });
@@ -120,7 +120,7 @@ describe("buildMessagesCacheKey", () => {
 describe("buildMessagesIndexKey", () => {
   test("lowercases the username", () => {
     expect(buildMessagesIndexKey("Bob")).toBe(
-      "chatdesk-chat-messages-index:bob",
+      "nextdesk-chat-messages-index:bob",
     );
   });
 });
@@ -128,7 +128,7 @@ describe("buildMessagesIndexKey", () => {
 describe("buildChannelSeenCacheKey", () => {
   test("includes both username and chatId", () => {
     expect(buildChannelSeenCacheKey("alice", 3)).toBe(
-      "chatdesk-channel-seen:alice:3",
+      "nextdesk-channel-seen:alice:3",
     );
   });
 });

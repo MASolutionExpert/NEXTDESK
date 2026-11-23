@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ChatDesk i18n core.
+ * NextDesk i18n core.
  *
  * Tiny, dependency-free localization for the client. Two supported UI
  * languages: Persian ('fa', the system default) and English ('en').
@@ -26,7 +26,7 @@ import {
 import { fa, en } from "./locales.ts";
 
 const DICTS = { fa, en };
-const STORAGE_KEY = "chatdesk.uiLanguage";
+const STORAGE_KEY = "nextdesk.uiLanguage";
 
 export const LANGUAGES = [
   { code: "fa", label: "فارسی" },

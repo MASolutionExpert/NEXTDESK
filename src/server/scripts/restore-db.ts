@@ -14,7 +14,7 @@ dotenv.config({ path: path.join(projectRootDir, ".env"), quiet: true });
 dotenv.config({ path: path.join(serverDir, ".env"), override: true, quiet: true });
 
 const backupDir = path.join(dataDir, "backups");
-const serviceName = process.env.CHATDESK_SERVICE_NAME || process.env.NEXTDESK_SERVICE_NAME || "nextdesk";
+const serviceName = process.env.NEXTDESK_SERVICE_NAME || process.env.NEXTDESK_SERVICE_NAME || "nextdesk";
 
 function listDbBackups(extension: string): string[] {
   const dirs = [backupDir];
@@ -32,7 +32,7 @@ function listDbBackups(extension: string): string[] {
           (entry) =>
             dir !== "/root" ||
             entry.name.startsWith("nextdesk-backup-") ||
-            entry.name.startsWith("chatdesk-backup-"),
+            entry.name.startsWith("nextdesk-backup-"),
         )
         .map((entry) => path.join(dir, entry.name));
       files.push(...entries);

@@ -75,7 +75,7 @@ export function createMediaQueueManager({
 
         // Broadcast SSE notification
         if (typeof emitChatEvent === "function") {
-          emitChatEvent("chatdesk:realtime-event", {
+          emitChatEvent("nextdesk:realtime-event", {
             type: "video:ready",
             fileId,
             storageKey: row.storage_key || storageKey,

@@ -24,7 +24,7 @@ export async function isLocalWorkerHealthy(
     if (!res || !res.ok) return false;
     const body = await res.json().catch(() => ({}));
     return (
-      body && (body.status === "ok" || body.service === "chatdesk-media-worker")
+      body && (body.status === "ok" || body.service === "nextdesk-media-worker")
     );
   } catch {
     clearTimeout(timeoutId);
