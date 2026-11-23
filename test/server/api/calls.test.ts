@@ -177,11 +177,15 @@ describe("/api/calls endpoints", () => {
       );
     });
 
-    it("returns 409 when call already active", async () => {
+    it("returns 409 when call already active (connected)", async () => {
       await request(app)
         .post("/api/calls/start")
         .set("Cookie", "sid=alice-token")
         .send({ chatId: CHAT_ID, type: "voice" });
+      await request(app)
+        .post("/api/calls/accept")
+        .set("Cookie", "sid=bob-token")
+        .send({ chatId: CHAT_ID });
 
       const res = await request(app)
         .post("/api/calls/start")

@@ -882,3 +882,143 @@ export async function getSupportOverview() {
     chats: decryptedChats,
   };
 }
+
+const CALL_LOG_BODY_RE = /^\[\[call:(voice|video):(outgoing|connected|cancelled|declined|missed|failed)(?::(\d+))?\]\]$/;
+
+export async function adminListCalls({
+  limit = 50,
+  offset = 0,
+  search = "",
+  typeFilter = null,
+  outcomeFilter = null,
+  sortBy = "created_at",
+  sortDir = "DESC",
+}: any = {}) {
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 50), 200);
+  const safeOffset = Math.max(0, Number(offset) || 0);
+  const safeSortDir = String(sortDir || "").toUpperCase() === "ASC" ? "ASC" : "DESC";
+  const safeType = ["voice", "video"].includes(String(typeFilter || "").toLowerCase())
+    ? String(typeFilter).toLowerCase()
+    : null;
+  const safeOutcome = [
+    "outgoing",
+    "connected",
+    "cancelled",
+    "declined",
+    "missed",
+    "failed",
+  ].includes(String(outcomeFilter || "").toLowerCase())
+    ? String(outcomeFilter).toLowerCase()
+    : null;
+  const needle = String(search || "").trim().toLowerCase();
+
+  // Only plaintext system call-log entries start with "[[call:"; user-typed
+  // look-alikes are stored encrypted ("sb-enc-v1:...") so they never match.
+  const whereClauses: string[] = ["cm.body LIKE '[[call:%]]'"];
+  const params: any[] = [];
+
+  if (safeType) {
+    whereClauses.push(`cm.body LIKE ?`);
+    params.push(`[[call:${safeType}:%]]`);
+  }
+  if (safeOutcome) {
+    whereClauses.push(`(cm.body LIKE ? OR cm.body LIKE ?)`);
+    params.push(`[[call:%:${safeOutcome}]]`, `[[call:%:${safeOutcome}:%]]`);
+  }
+  if (needle) {
+    const escaped = `%${needle.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_")}%`;
+    whereClauses.push(
+      `(LOWER(COALESCE(caller.username, '')) LIKE ? ESCAPE '\\'
+        OR LOWER(COALESCE(caller.nickname, '')) LIKE ? ESCAPE '\\'
+        OR LOWER(COALESCE(c.name, '')) LIKE ? ESCAPE '\\'
+        OR EXISTS (
+          SELECT 1 FROM chat_members pcm
+          JOIN users pu ON pu.id = pcm.user_id
+          WHERE pcm.chat_id = c.id
+            AND (LOWER(COALESCE(pu.username, '')) LIKE ? ESCAPE '\\'
+              OR LOWER(COALESCE(pu.nickname, '')) LIKE ? ESCAPE '\\')
+        ))`,
+    );
+    params.push(escaped, escaped, escaped, escaped, escaped);
+  }
+
+  const whereSql = `WHERE ${whereClauses.join(" AND ")}`;
+
+  const rows = await pgGetAll(
+    `SELECT cm.id, cm.chat_id, cm.body, cm.created_at,
+            caller.id AS caller_id,
+            caller.username AS caller_username,
+            caller.nickname AS caller_nickname,
+            caller.avatar_url AS caller_avatar_url,
+            caller.color AS caller_color,
+            caller.verified AS caller_verified,
+            caller.role AS caller_role,
+            c.name AS chat_name,
+            c.type AS chat_type,
+            COALESCE(c.channel, 'direct') AS chat_channel,
+            (SELECT string_agg(pu.username, ', ' ORDER BY pu.username)
+             FROM chat_members pcm
+             JOIN users pu ON pu.id = pcm.user_id
+             WHERE pcm.chat_id = c.id) AS participants
+     FROM chat_messages cm
+     JOIN users caller ON caller.id = cm.user_id
+     JOIN chats c ON c.id = cm.chat_id
+     ${whereSql}
+     ORDER BY cm.created_at DESC, cm.id DESC`,
+    params,
+  );
+
+  const parsed: any[] = [];
+  for (const row of rows || []) {
+    const match = CALL_LOG_BODY_RE.exec(String(row.body || "").trim());
+    if (!match) continue;
+    const callType = match[1];
+    const outcome = match[2];
+    const durationSeconds = match[3] !== undefined ? Number(match[3]) : null;
+    if (safeType && callType !== safeType) continue;
+    if (safeOutcome && outcome !== safeOutcome) continue;
+
+    parsed.push({
+      id: row.id,
+      chatId: row.chat_id,
+      chatName: row.chat_name || row.participants || row.chat_id,
+      chatType: row.chat_type || "dm",
+      chatChannel: row.chat_channel || "direct",
+      participants: row.participants || "",
+      callType,
+      outcome,
+      durationSeconds,
+      createdAt: row.created_at,
+      caller: {
+        id: row.caller_id,
+        username: row.caller_username,
+        nickname: row.caller_nickname || row.caller_username,
+        avatarUrl: row.caller_avatar_url || null,
+        color: row.caller_color || "#10b981",
+        verified: Boolean(row.caller_verified),
+        role: row.caller_role || "user",
+      },
+    });
+  }
+
+  const dirMul = safeSortDir === "ASC" ? 1 : -1;
+  parsed.sort((a, b) => {
+    if (sortBy === "duration") {
+      return ((a.durationSeconds ?? -1) - (b.durationSeconds ?? -1)) * dirMul;
+    }
+    if (sortBy === "type") {
+      return a.callType.localeCompare(b.callType) * dirMul;
+    }
+    if (sortBy === "outcome") {
+      return a.outcome.localeCompare(b.outcome) * dirMul;
+    }
+    if (sortBy === "caller") {
+      return String(a.caller.username || "").localeCompare(String(b.caller.username || "")) * dirMul;
+    }
+    return String(a.createdAt || "").localeCompare(String(b.createdAt || "")) * dirMul;
+  });
+
+  const total = parsed.length;
+  const calls = parsed.slice(safeOffset, safeOffset + safeLimit);
+  return { calls, total };
+}

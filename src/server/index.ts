@@ -172,6 +172,7 @@ import {
   getAdminStats,
   adminListUsers,
   adminListChats,
+  adminListCalls,
   adminCountUsers,
   adminCountChats,
   adminBanUser,
@@ -603,6 +604,7 @@ const callManager = createCallManager({
   updateCallMessageBody,
   sendPushNotificationToUsers: (...args) =>
     pushService.sendPushNotificationToUsers(...args),
+  isUserConnected: (username: string) => presenceTracker.isConnected(username),
   maxCallDurationMs: (getSetting("CALL_MAX_DURATION") || 0) * 60000,
 });
 
@@ -1053,6 +1055,7 @@ const apiDeps: any = {
   getAdminStats,
   adminListUsers,
   adminListChats,
+  adminListCalls,
   adminCountUsers,
   adminCountChats,
   adminBanUser,
@@ -1502,6 +1505,7 @@ const wsGateway: any = createWebSocketGateway({
   getSessionFromToken: getSessionCombined,
   onUserConnected: (username, ws) => presenceTracker.markConnected(username, ws),
   onUserDisconnected: (username, ws) => presenceTracker.markDisconnected(username, ws),
+  isUserConnected: (username) => presenceTracker.isConnected(username),
   heartbeatIntervalMs: wsHeartbeatIntervalMs,
   heartbeatTimeoutMs: wsHeartbeatTimeoutMs,
 });

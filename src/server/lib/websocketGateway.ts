@@ -8,6 +8,7 @@ export function createWebSocketGateway({
   getSessionFromToken,
   onUserConnected,
   onUserDisconnected,
+  isUserConnected = null,
   heartbeatIntervalMs = 30000,
   heartbeatTimeoutMs = 10000,
 }: any) {
@@ -197,11 +198,18 @@ export function createWebSocketGateway({
               clients.delete(ws);
               if (!clients.size) clientsByUsername.delete(username);
             }
-            if (callManager && typeof callManager.cleanupUserCalls === "function") {
+          }
+          if (onUserDisconnected) onUserDisconnected(username, ws);
+          // Only tear down calls when the user's LAST realtime session (WS or SSE) is gone.
+          if (username && callManager && typeof callManager.cleanupUserCalls === "function") {
+            const stillConnected =
+              typeof isUserConnected === "function"
+                ? Boolean(isUserConnected(username))
+                : Boolean(clientsByUsername.get(username)?.size);
+            if (!stillConnected) {
               callManager.cleanupUserCalls(username);
             }
           }
-          if (onUserDisconnected) onUserDisconnected(username, ws);
         });
       }
     };
@@ -238,7 +246,13 @@ export function createWebSocketGateway({
                       type: data?.type,
                     });
                     if (res?.error && typeof ws.send === "function") {
-                      ws.send(JSON.stringify({ type: "call:error", chatId, error: res.error }));
+                      ws.send(JSON.stringify({
+                        type: "call:error",
+                        chatId,
+                        signalType,
+                        error: res.error,
+                        ...(res.code ? { code: res.code } : {}),
+                      }));
                     }
                   } else if (signalType === "accept") {
                     const res = await callManager.acceptCall({
@@ -246,7 +260,13 @@ export function createWebSocketGateway({
                       chatId,
                     });
                     if (res?.error && typeof ws.send === "function") {
-                      ws.send(JSON.stringify({ type: "call:error", chatId, error: res.error }));
+                      ws.send(JSON.stringify({
+                        type: "call:error",
+                        chatId,
+                        signalType,
+                        error: res.error,
+                        ...(res.code ? { code: res.code } : {}),
+                      }));
                     }
                   } else if (signalType === "reject") {
                     await callManager.rejectCall({
@@ -258,14 +278,24 @@ export function createWebSocketGateway({
                     await callManager.endCall({
                       user: currentSession,
                       chatId,
+                      reason: data?.reason,
                     });
                   } else if (["offer", "answer", "ice-candidate", "camera-state", "screen-share-state"].includes(signalType)) {
-                    await callManager.relaySignal({
+                    const res = await callManager.relaySignal({
                       user: currentSession,
                       chatId,
                       signalType,
                       payload: data || {},
                     });
+                    if (res?.error && typeof ws.send === "function") {
+                      ws.send(JSON.stringify({
+                        type: "call:error",
+                        chatId,
+                        signalType,
+                        error: res.error,
+                        ...(res.code ? { code: res.code } : {}),
+                      }));
+                    }
                   }
                 } catch (_) {}
               },

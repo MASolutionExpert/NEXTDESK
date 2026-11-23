@@ -84,6 +84,7 @@ function registerAdminPanelRoutes(app, deps) {
     getOnlineCount,
     adminListUsers,
     adminListChats,
+    adminListCalls = null,
     adminCountUsers,
     adminCountChats,
     adminBanUser,
@@ -1119,6 +1120,52 @@ function registerAdminPanelRoutes(app, deps) {
       ? await rawResult
       : rawResult) || { chats: [], total: 0 };
     res.json({ chats, total, limit, offset });
+  });
+
+  app.get("/api/admin/calls", async (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    if (typeof adminListCalls !== "function") {
+      return res.json({ calls: [], total: 0, limit: 50, offset: 0 });
+    }
+    const limit = Number(req.query.limit || 50);
+    const offset = Number(req.query.offset || 0);
+    const search = String(req.query.search || "").trim();
+    const sortBy = ["created_at", "duration", "type", "outcome", "caller"].includes(
+      String(req.query.sortBy || ""),
+    )
+      ? String(req.query.sortBy)
+      : "created_at";
+    const sortDir =
+      String(req.query.sortDir || "").toLowerCase() === "asc" ? "ASC" : "DESC";
+    const typeFilter = ["voice", "video"].includes(
+      String(req.query.type || "").toLowerCase(),
+    )
+      ? String(req.query.type).toLowerCase()
+      : null;
+    const outcomeFilter = [
+      "outgoing",
+      "connected",
+      "cancelled",
+      "declined",
+      "missed",
+      "failed",
+    ].includes(String(req.query.outcome || "").toLowerCase())
+      ? String(req.query.outcome).toLowerCase()
+      : null;
+    const rawResult: any = adminListCalls({
+      limit,
+      offset,
+      search,
+      sortBy,
+      sortDir,
+      typeFilter,
+      outcomeFilter,
+    });
+    const { calls, total } =
+      (rawResult && typeof rawResult.then === "function"
+        ? await rawResult
+        : rawResult) || { calls: [], total: 0 };
+    res.json({ calls, total, limit, offset });
   });
 
   // ─── Chats — create ──────────────────────────────────────────────────────────

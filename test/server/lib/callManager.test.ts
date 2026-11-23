@@ -180,19 +180,29 @@ describe("callManager", () => {
       });
     });
 
-    it("rejects starting a call if one is already active in the chat", async () => {
-      await callManager.startCall({
+    it("resumes ringing call when same caller redials and returns 409 once connected", async () => {
+      const first = await callManager.startCall({
         user: callerUser,
         chatId: dummyChatId,
         type: "voice",
       });
-      const res = await callManager.startCall({
+      expect(first.status).toBe(200);
+      const redial = await callManager.startCall({
         user: callerUser,
         chatId: dummyChatId,
         type: "voice",
       });
-      expect(res.status).toBe(409);
-      expect(res.error).toBe("Call already in progress in this chat");
+      expect(redial.status).toBe(200);
+      expect(redial.resumed).toBe(true);
+
+      await callManager.acceptCall({ user: calleeUser, chatId: dummyChatId });
+      const whileConnected = await callManager.startCall({
+        user: callerUser,
+        chatId: dummyChatId,
+        type: "voice",
+      });
+      expect(whileConnected.status).toBe(409);
+      expect(whileConnected.error).toBe("Call already in progress in this chat");
     });
 
     it("rejects starting a call if other participant is deleted", async () => {
@@ -619,7 +629,7 @@ describe("callManager", () => {
       );
     });
 
-    it("marks the log failed when the callee rejects while ringing", async () => {
+    it("marks the log declined when the callee rejects while ringing", async () => {
       await callManager.startCall({
         user: callerUser,
         chatId: dummyChatId,
@@ -629,7 +639,7 @@ describe("callManager", () => {
       expect(res.status).toBe(200);
       expect(updateCallMessageBody).toHaveBeenCalledWith(
         expect.any(String),
-        "[[call:video:failed]]",
+        "[[call:video:declined]]",
       );
     });
 
