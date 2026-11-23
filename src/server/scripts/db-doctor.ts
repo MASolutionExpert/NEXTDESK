@@ -44,13 +44,11 @@ const CRITICAL_TABLES = [
 
 const LEFTOVER_REBUILD_RE = /(_old|_new|_tmp|_backup|_rebuild)$/i;
 
-const line = (msg = "") => process.stdout.write(`${msg}
-`);
+const line = (msg = "") => process.stdout.write(`${msg}\n`);
 const ok = (msg: string) => line(`  [OK]   ${msg}`);
 const warn = (msg: string) => line(`  [WARN] ${msg}`);
 const fail = (msg: string) => line(`  [FAIL] ${msg}`);
-const section = (title: string) => line(`
-=== ${title} ===`);
+const section = (title: string) => line(`\n=== ${title} ===`);
 
 export async function collectDiagnostics() {
   const report: any = {

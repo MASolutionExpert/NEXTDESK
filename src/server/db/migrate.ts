@@ -242,10 +242,8 @@ export async function runPostgresPreflight(
   const targetSummary = `${target.user}@${target.host}:${target.port}/${target.database} (ssl=${target.ssl ? "on" : "off"})`;
   throw new Error(
     `PostgreSQL preflight failed after ${attempts} probe(s) (${elapsedMs}ms) for ${targetSummary}` +
-      `${code ? ` [${code}]` : ""} (${classified.category}): ${detail}
-` +
-      `  Cause: ${classified.hint}
-` +
+      `${code ? ` [${code}]` : ""} (${classified.category}): ${detail}\n` +
+      `  Cause: ${classified.hint}\n` +
       `  Configured timeouts: connect=${timeouts.connectionTimeoutMs}ms, statement=${timeouts.statementTimeoutMs}ms.`,
   );
 }
@@ -450,8 +448,7 @@ async function runPrismaCli(
     });
 
     child.on("error", (err: Error) => {
-      stderr += (stderr ? "
-" : "") + (err?.message || String(err));
+      stderr += (stderr ? "\n" : "") + (err?.message || String(err));
       finish(1);
     });
 
@@ -505,11 +502,9 @@ export async function alignLegacyLiveDatabaseNonDestructively(): Promise<void> {
       .split(";")
       .map((s) =>
         s
-          .split("
-")
+          .split("\n")
           .filter((line) => !line.trim().startsWith("--"))
-          .join("
-")
+          .join("\n")
           .trim(),
       )
       .filter((s) => s.length > 0);
@@ -621,8 +616,7 @@ export async function runDatabaseMigrations(
     }
     if (!resolveRes.ok) {
       throw new Error(
-        `Failed to baseline existing live database (${BASELINE_MIGRATION_NAME}):
-${resolveRes.stderr || resolveRes.stdout}`,
+        `Failed to baseline existing live database (${BASELINE_MIGRATION_NAME}):\n${resolveRes.stderr || resolveRes.stdout}`,
       );
     }
     baselinedLegacyDb = true;
@@ -652,8 +646,7 @@ ${resolveRes.stderr || resolveRes.stdout}`,
     }
     if (!deployRes.ok) {
       throw new Error(
-        `Prisma migrate deploy failed (exit ${deployRes.status}):
-${deployRes.stderr || deployRes.stdout}`,
+        `Prisma migrate deploy failed (exit ${deployRes.status}):\n${deployRes.stderr || deployRes.stdout}`,
       );
     }
     if (!quiet) {
