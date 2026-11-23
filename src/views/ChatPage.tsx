@@ -6974,10 +6974,41 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
     },
     "sbGroupInviteModal",
   );
+  const [chatFilesModalOpen, setChatFilesModalOpen] = useState(false);
+  const [chatSearchModalOpen, setChatSearchModalOpen] = useState(false);
+
+  const handleJumpToMessageInActiveChat = useCallback((messageId: any) => {
+    if (!messageId) return;
+    window.setTimeout(() => {
+      const target: any = document.getElementById(`message-${messageId}`);
+      if (target && typeof target.scrollIntoView === "function") {
+        target.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+      const bubble: any = target?.querySelector?.("[data-message-bubble]");
+      if (!bubble) return;
+      bubble.classList.remove("reply-flash");
+      void bubble.offsetWidth;
+      bubble.classList.add("reply-flash");
+      window.setTimeout(() => {
+        bubble.classList.remove("reply-flash");
+      }, 700);
+    }, 60);
+  }, []);
+
   useOverlayBack(
     Boolean(profileModalOpen),
     closeProfileModal,
     "sbChatProfileModal",
+  );
+  useOverlayBack(
+    Boolean(chatFilesModalOpen),
+    () => setChatFilesModalOpen(false),
+    "sbChatFilesModal",
+  );
+  useOverlayBack(
+    Boolean(chatSearchModalOpen),
+    () => setChatSearchModalOpen(false),
+    "sbChatSearchModal",
   );
   useOverlayBack(
     Boolean(notificationsModalOpen),
@@ -7576,6 +7607,40 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
             onOpenUserContextMenu={openContextMenu}
             onEditGroup={mentionProfileChat && String(mentionProfileChat.id || "") !== String(activeChat?.id || "") ? undefined : openEditGroupFromProfile}
             onEditSelfProfile={openSelfProfileEditor}
+            onOpenFiles={
+              !mentionProfileChat && !mentionProfileUser && !profileModalMember && activeChat?.id
+                ? () => setChatFilesModalOpen(true)
+                : null
+            }
+            onOpenSearch={
+              !mentionProfileChat && !mentionProfileUser && !profileModalMember && activeChat?.id
+                ? () => setChatSearchModalOpen(true)
+                : null
+            }
+          />
+        </Suspense>
+      ) : null}
+
+      {chatFilesModalOpen && activeChat?.id ? (
+        <Suspense fallback={null}>
+          <ChatFilesModal
+            open={chatFilesModalOpen}
+            chatId={activeChat.id}
+            username={user?.username}
+            onClose={() => setChatFilesModalOpen(false)}
+            onJumpToMessage={handleJumpToMessageInActiveChat}
+          />
+        </Suspense>
+      ) : null}
+
+      {chatSearchModalOpen && activeChat?.id ? (
+        <Suspense fallback={null}>
+          <ChatSearchModal
+            open={chatSearchModalOpen}
+            chatId={activeChat.id}
+            username={user?.username}
+            onClose={() => setChatSearchModalOpen(false)}
+            onJumpToMessage={handleJumpToMessageInActiveChat}
           />
         </Suspense>
       ) : null}
