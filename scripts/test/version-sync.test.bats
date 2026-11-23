@@ -18,8 +18,8 @@ setup() {
   cp -r "$ROOT_DIR/scripts" "$temp_dir/scripts"
   cp "$ROOT_DIR/VERSION" "$temp_dir/VERSION"
   cp "$ROOT_DIR/CHANGELOG.md" "$temp_dir/CHANGELOG.md"
-  # Simulate a stale header (the bug that froze chatdesk-deploy at dev.2)
-  sed -i 's|^# chatdesk-deploy-version:.*|# chatdesk-deploy-version: 0.0.1|' \
+  # Simulate a stale header (the bug that froze nextdesk-deploy at dev.2)
+  sed -i 's|^# nextdesk-deploy-version:.*|# nextdesk-deploy-version: 0.0.1|' \
     "$temp_dir/scripts/install.sh"
   run bash "$temp_dir/scripts/verify-release-sync.sh"
   [ "$status" -ne 0 ]

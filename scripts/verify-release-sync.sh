@@ -42,10 +42,10 @@ fi
 
 header_version=""
 if [[ -f "$ROOT_DIR/scripts/install.sh" ]]; then
-  header_version="$(grep -E '^# chatdesk-deploy-version:' "$ROOT_DIR/scripts/install.sh" | head -n 1 | cut -d ':' -f 2- | xargs)"
+  header_version="$(grep -E '^# nextdesk-deploy-version:' "$ROOT_DIR/scripts/install.sh" | head -n 1 | cut -d ':' -f 2- | xargs)"
 fi
 if [[ -z "$header_version" ]]; then
-  fail_reason "scripts/install.sh has no '# chatdesk-deploy-version:' header."
+  fail_reason "scripts/install.sh has no '# nextdesk-deploy-version:' header."
 elif [[ -n "$version" && "$header_version" != "$version" ]]; then
   fail_reason "Installer header version ($header_version) does not match VERSION ($version). The CLI would never self-update."
 fi
@@ -61,7 +61,7 @@ if [[ -n "$version" && -f "$ROOT_DIR/CHANGELOG.md" ]]; then
 fi
 
 if [[ -f "$ROOT_DIR/scripts/install.sh" ]]; then
-  for fn in semver_compare_versions channel_label_for_branch detect_install_branch finalize_chatdesk_source_change run_updated_finalize_pipeline switch_release_channel update_chatdesk; do
+  for fn in semver_compare_versions channel_label_for_branch detect_install_branch finalize_nextdesk_source_change run_updated_finalize_pipeline switch_release_channel update_nextdesk; do
     if ! grep -Eq "^${fn}\(\) \{" "$ROOT_DIR/scripts/install.sh"; then
       fail_reason "scripts/install.sh is missing required function: ${fn}()"
     fi

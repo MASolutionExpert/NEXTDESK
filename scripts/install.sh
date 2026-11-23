@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# chatdesk-deploy-version: 2.0.0-dev.2026112107
+# nextdesk-deploy-version: 2.0.0-dev.2026112107
 
 set -uo pipefail
 
@@ -26,19 +26,19 @@ handle_exit() {
     return 0
   fi
 
-  printf "\n%b[CHATDESK] Script exited with code %s.%b\n" "$COLOR_ERROR" "$exit_code" "$COLOR_RESET" >&2
+  printf "\n%b[NEXTDESK] Script exited with code %s.%b\n" "$COLOR_ERROR" "$exit_code" "$COLOR_RESET" >&2
   if [[ -f "$LOG_FILE" ]]; then
-    printf "%b[CHATDESK] Review the log at %s for the last recorded step.%b\n" "$COLOR_ERROR" "$LOG_FILE" "$COLOR_RESET" >&2
+    printf "%b[NEXTDESK] Review the log at %s for the last recorded step.%b\n" "$COLOR_ERROR" "$LOG_FILE" "$COLOR_RESET" >&2
   fi
 }
 
 handle_interrupt() {
-  # If an update stopped the ChatDesk service and the operator pressed Ctrl+C
+  # If an update stopped the NextDesk service and the operator pressed Ctrl+C
   # before the restart step, restore the service immediately so the site does
   # not sit behind nginx with HTTP 502. Guarded with declare -F because traps
   # can fire before this function's dependencies are defined.
-  if declare -F restore_chatdesk_service_after_update >/dev/null 2>&1; then
-    restore_chatdesk_service_after_update || true
+  if declare -F restore_nextdesk_service_after_update >/dev/null 2>&1; then
+    restore_nextdesk_service_after_update || true
   fi
   handle_exit
   exit 130
@@ -47,9 +47,9 @@ handle_interrupt() {
 trap 'handle_interrupt' INT TERM
 trap 'handle_exit' EXIT
 
-APP_NAME="chatdesk"
-INSTALL_DIR="/opt/chatdesk"
-LOG_FILE="/opt/chatdesk/logs/install.log"
+APP_NAME="nextdesk"
+INSTALL_DIR="/opt/nextdesk"
+LOG_FILE="/opt/nextdesk/logs/install.log"
 DATA_COMMAND_LAUNCHER="${DATA_COMMAND_LAUNCHER:-${INSTALL_DIR}/scripts/run-data-command.sh}"
 # Repository source. Point REPO_URL / REPO_BRANCH at any fork to install it.
 # Example: REPO_URL=https://github.com/<you>/<repo>.git REPO_BRANCH=dev bash scripts/install.sh
@@ -57,17 +57,17 @@ REPO_URL="${REPO_URL:-https://github.com/MASolutionExpert/NEXTDESK.git}"
 REPO_BRANCH="${REPO_BRANCH:-main}"
 # Install metadata: remembers which repo/branch the server was installed from
 # so later updates keep tracking that branch (dev installs keep updating from dev).
-INSTALL_CONFIG_FILE="${INSTALL_DIR}/.chatdesk-install.conf"
-SERVICE_USER="chatdesk"
-SERVICE_GROUP="chatdesk"
-SERVICE_NAME="chatdesk"
-SERVICE_FILE="/etc/systemd/system/chatdesk.service"
-WORKER_SERVICE_NAME="chatdesk-worker"
-WORKER_SERVICE_FILE="/etc/systemd/system/chatdesk-worker.service"
-LEGO_RENEW_SERVICE_FILE="/etc/systemd/system/chatdesk-lego-renew.service"
-LEGO_RENEW_TIMER_FILE="/etc/systemd/system/chatdesk-lego-renew.timer"
-NGINX_SITE_FILE="/etc/nginx/sites-available/chatdesk"
-NGINX_ENABLED_FILE="/etc/nginx/sites-enabled/chatdesk"
+INSTALL_CONFIG_FILE="${INSTALL_DIR}/.nextdesk-install.conf"
+SERVICE_USER="nextdesk"
+SERVICE_GROUP="nextdesk"
+SERVICE_NAME="nextdesk"
+SERVICE_FILE="/etc/systemd/system/nextdesk.service"
+WORKER_SERVICE_NAME="nextdesk-worker"
+WORKER_SERVICE_FILE="/etc/systemd/system/nextdesk-worker.service"
+LEGO_RENEW_SERVICE_FILE="/etc/systemd/system/nextdesk-lego-renew.service"
+LEGO_RENEW_TIMER_FILE="/etc/systemd/system/nextdesk-lego-renew.timer"
+NGINX_SITE_FILE="/etc/nginx/sites-available/nextdesk"
+NGINX_ENABLED_FILE="/etc/nginx/sites-enabled/nextdesk"
 DEFAULT_SERVER_PORT="5174"
 DEFAULT_CLIENT_PORT="80"
 DEFAULT_WORKER_PORT="8080"
@@ -84,13 +84,13 @@ _repo_url_path="${REPO_URL#*github.com/}"
 _repo_url_path="${_repo_url_path%.git}"
 SCRIPT_REMOTE_URL="${SCRIPT_REMOTE_URL:-https://raw.githubusercontent.com/${_repo_url_path}/${REPO_BRANCH}/scripts/install.sh}"
 LOG_LINES="${LOG_LINES:-100}"
-CERT_INSTALL_DIR="/etc/ssl/chatdesk"
-ACME_WEBROOT="/var/lib/chatdesk/certbot"
-LEGO_STATE_DIR="/var/lib/chatdesk/lego"
+CERT_INSTALL_DIR="/etc/ssl/nextdesk"
+ACME_WEBROOT="/var/lib/nextdesk/certbot"
+LEGO_STATE_DIR="/var/lib/nextdesk/lego"
 LEGO_BIN="/usr/local/bin/lego"
-GLOBAL_COMMAND_PATH="/usr/local/bin/chatdesk-deploy"
-CHATDESK_SOCIAL_GITHUB="https://github.com/MASolutionExpert/NEXTDESK"
-CHATDESK_SOCIAL_DOCS="https://github.com/MASolutionExpert/NEXTDESK/tree/main/docs"
+GLOBAL_COMMAND_PATH="/usr/local/bin/nextdesk-deploy"
+NEXTDESK_SOCIAL_GITHUB="https://github.com/MASolutionExpert/NEXTDESK"
+NEXTDESK_SOCIAL_DOCS="https://github.com/MASolutionExpert/NEXTDESK/tree/main/docs"
 
 # Mirror URLs
 MIRROR_NODESOURCE="${MIRROR_NODESOURCE:-}"
@@ -109,7 +109,7 @@ CERTBOT_EMAIL=""
 DEFAULT_DB_CLIENT="postgres"
 DEFAULT_POSTGRES_HOST="127.0.0.1"
 DEFAULT_POSTGRES_PORT="5432"
-DEFAULT_POSTGRES_DB="chatdesk"
+DEFAULT_POSTGRES_DB="nextdesk"
 DEFAULT_POSTGRES_USER="postgres"
 DEFAULT_POSTGRES_PASSWORD="postgres"
 DEFAULT_POSTGRES_URL=""
@@ -148,7 +148,7 @@ COTURN_MIN_PORT="${COTURN_MIN_PORT:-49152}"
 COTURN_MAX_PORT="${COTURN_MAX_PORT:-65535}"
 COTURN_EXTERNAL_IP="${COTURN_EXTERNAL_IP:-}"
 COTURN_REALM="${COTURN_REALM:-}"
-COTURN_USER="${COTURN_USER:-chatdesk}"
+COTURN_USER="${COTURN_USER:-nextdesk}"
 COTURN_PASSWORD="${COTURN_PASSWORD:-}"
 COTURN_CONF_FILE="${COTURN_CONF_FILE:-/etc/turnserver.conf}"
 COTURN_DEFAULT_FILE="${COTURN_DEFAULT_FILE:-/etc/default/coturn}"
@@ -193,7 +193,7 @@ read_script_version_header() {
     return 1
   fi
   local header=""
-  header="$(grep -E '^# chatdesk-deploy-version:' "$file_path" | head -n 1 | cut -d ':' -f 2- | xargs || true)"
+  header="$(grep -E '^# nextdesk-deploy-version:' "$file_path" | head -n 1 | cut -d ':' -f 2- | xargs || true)"
   if [[ -z "$header" || "$header" == "auto" ]]; then
     return 1
   fi
@@ -236,10 +236,10 @@ log() {
   local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
   local log_dir="$(dirname "$LOG_FILE")"
 
-  printf "%b[CHATDESK] %s%b\n" "$COLOR_LOG" "$1" "$COLOR_RESET"
+  printf "%b[NEXTDESK] %s%b\n" "$COLOR_LOG" "$1" "$COLOR_RESET"
 
   if [[ -d "$log_dir" ]]; then
-    printf "[%s] [CHATDESK] %s\n" "$timestamp" "$1" >> "$LOG_FILE" 2>/dev/null || true
+    printf "[%s] [NEXTDESK] %s\n" "$timestamp" "$1" >> "$LOG_FILE" 2>/dev/null || true
   fi
 }
 
@@ -254,17 +254,17 @@ ensure_log_dir() {
 
 warn() {
   local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-  printf "%b[%s] WARNING: %s%b\n" "$COLOR_WARN" "CHATDESK" "$*" "$COLOR_RESET" >&2
+  printf "%b[%s] WARNING: %s%b\n" "$COLOR_WARN" "NEXTDESK" "$*" "$COLOR_RESET" >&2
   if [[ -f "$LOG_FILE" ]]; then
-    printf "[%s] [CHATDESK] WARNING: %s\n" "$timestamp" "$*" >> "$LOG_FILE" 2>/dev/null || true
+    printf "[%s] [NEXTDESK] WARNING: %s\n" "$timestamp" "$*" >> "$LOG_FILE" 2>/dev/null || true
   fi
 }
 
 fail() {
   local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-  printf "%b[%s] ERROR: %s%b\n" "$COLOR_ERROR" "CHATDESK" "$*" "$COLOR_RESET" >&2
+  printf "%b[%s] ERROR: %s%b\n" "$COLOR_ERROR" "NEXTDESK" "$*" "$COLOR_RESET" >&2
   if [[ -f "$LOG_FILE" ]]; then
-    printf "[%s] [CHATDESK] ERROR: %s\n" "$timestamp" "$*" >> "$LOG_FILE" 2>/dev/null || true
+    printf "[%s] [NEXTDESK] ERROR: %s\n" "$timestamp" "$*" >> "$LOG_FILE" 2>/dev/null || true
   fi
   exit 1
 }
@@ -327,7 +327,7 @@ print_plain_success_block() {
   local lines=("$@")
   local line=""
 
-  printf "\n%b[CHATDESK] %s%b\n" "$COLOR_SUCCESS" "$title" "$COLOR_RESET"
+  printf "\n%b[NEXTDESK] %s%b\n" "$COLOR_SUCCESS" "$title" "$COLOR_RESET"
   for line in "${lines[@]}"; do
     if [[ -z "$line" ]]; then
       printf "\n"
@@ -351,10 +351,10 @@ print_success_frame() {
     print_plain_success_block "$title" "${lines[@]}"
     if [[ -f "$LOG_FILE" ]]; then
       local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-      printf "[%s] [CHATDESK] %s\n" "$timestamp" "$title" >> "$LOG_FILE" 2>/dev/null || true
+      printf "[%s] [NEXTDESK] %s\n" "$timestamp" "$title" >> "$LOG_FILE" 2>/dev/null || true
       local line=""
       for line in "${lines[@]}"; do
-        printf "[%s] [CHATDESK] %s\n" "$timestamp" "$line" >> "$LOG_FILE" 2>/dev/null || true
+        printf "[%s] [NEXTDESK] %s\n" "$timestamp" "$line" >> "$LOG_FILE" 2>/dev/null || true
       done
     fi
     return 0
@@ -389,9 +389,9 @@ print_success_frame() {
 
   if [[ -f "$LOG_FILE" ]]; then
     local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-    printf "[%s] [CHATDESK] %s\n" "$timestamp" "$title" >> "$LOG_FILE" 2>/dev/null || true
+    printf "[%s] [NEXTDESK] %s\n" "$timestamp" "$title" >> "$LOG_FILE" 2>/dev/null || true
     for line in "${lines[@]}"; do
-      printf "[%s] [CHATDESK] %s\n" "$timestamp" "$line" >> "$LOG_FILE" 2>/dev/null || true
+      printf "[%s] [NEXTDESK] %s\n" "$timestamp" "$line" >> "$LOG_FILE" 2>/dev/null || true
     done
   fi
 }
@@ -403,8 +403,8 @@ show_deployment_success_frame() {
 
   case "$action" in
     install)
-      title="ChatDesk Installation Complete"
-      lines+=("ChatDesk has been installed successfully.")
+      title="NextDesk Installation Complete"
+      lines+=("NextDesk has been installed successfully.")
       lines+=("")
       lines+=("App:")
       if [[ "$CERT_MODE" == "http" ]]; then
@@ -454,20 +454,20 @@ show_deployment_success_frame() {
       fi
       ;;
     update)
-      title="ChatDesk Update Complete"
-      lines+=("ChatDesk has been updated successfully.")
+      title="NextDesk Update Complete"
+      lines+=("NextDesk has been updated successfully.")
       lines+=("Service restarted and nginx reloaded.")
       ;;
     *)
-      title="ChatDesk Success"
+      title="NextDesk Success"
       lines+=("Operation completed successfully.")
       ;;
   esac
 
   lines+=("")
   lines+=("Links:")
-  lines+=("GitHub: ${CHATDESK_SOCIAL_GITHUB}")
-  lines+=("Docs: ${CHATDESK_SOCIAL_DOCS}")
+  lines+=("GitHub: ${NEXTDESK_SOCIAL_GITHUB}")
+  lines+=("Docs: ${NEXTDESK_SOCIAL_DOCS}")
 
   print_success_frame "$title" "${lines[@]}"
 }
@@ -1601,8 +1601,8 @@ ensure_service_user_exists() {
 
   # Install a passwordless sudoers drop-in so the service process can
   # control its own systemd unit and read nginx/service logs via sudo -n.
-  local sudoers_drop_in="/etc/sudoers.d/chatdesk"
-  local sudoers_content="# ChatDesk — allow the service user to control its own unit
+  local sudoers_drop_in="/etc/sudoers.d/nextdesk"
+  local sudoers_content="# NextDesk — allow the service user to control its own unit
 # and read privileged logs without a password.
 ${SERVICE_USER} ALL=(root) NOPASSWD: /usr/bin/systemctl restart ${SERVICE_NAME}
 ${SERVICE_USER} ALL=(root) NOPASSWD: /usr/bin/systemctl stop ${SERVICE_NAME}
@@ -1840,14 +1840,14 @@ run_updated_finalize_pipeline() {
     REPO_URL="$REPO_URL" REPO_BRANCH="$REPO_BRANCH" bash "$updated_script" --finalize-update
     return $?
   fi
-  finalize_chatdesk_source_change
+  finalize_nextdesk_source_change
 }
 
 clean_tracked_lockfiles_for_pull() {
   run_in_install_dir "git checkout -- package-lock.json client/package-lock.json server/package-lock.json worker/package-lock.json 2>/dev/null || true"
 }
 
-# Release channels. ChatDesk ships two completely separate channels so a
+# Release channels. NextDesk ships two completely separate channels so a
 # test install never receives production releases and a production install
 # never receives test builds:
 #   dev branch  -> Test channel    (prereleases vX.Y.Z-dev.N)
@@ -1884,9 +1884,9 @@ detect_install_branch() {
 # it is added here once, so an install made through any path always applies
 # the complete change set (dependencies, migrations, client build, CLI sync,
 # systemd units, service restart and health verification).
-finalize_chatdesk_source_change() {
+finalize_nextdesk_source_change() {
   log "Installing dependencies..."
-  install_chatdesk_dependencies || return 1
+  install_nextdesk_dependencies || return 1
   ensure_vapid_keys || return 1
 
   log "Synchronizing database schema with latest version..."
@@ -1906,13 +1906,13 @@ finalize_chatdesk_source_change() {
     configure_systemd_service || true
   fi
 
-  log "Restarting ChatDesk service..."
-  run_as_root systemctl restart chatdesk.service || return 1
-  if have_cmd systemctl && systemctl list-unit-files | grep -q "^chatdesk-worker.service"; then
-    run_as_root systemctl restart chatdesk-worker.service || true
+  log "Restarting NextDesk service..."
+  run_as_root systemctl restart nextdesk.service || return 1
+  if have_cmd systemctl && systemctl list-unit-files | grep -q "^nextdesk-worker.service"; then
+    run_as_root systemctl restart nextdesk-worker.service || true
   fi
   run_as_root systemctl reload nginx || return 1
-  verify_chatdesk_service_health || true
+  verify_nextdesk_service_health || true
 
   write_install_config || true
   return 0
@@ -1939,7 +1939,7 @@ clone_repo() {
     run_silent run_as_root mkdir -p "$INSTALL_DIR" || return 1
   fi
 
-  log "Cloning ChatDesk repository..."
+  log "Cloning NextDesk repository..."
   run_silent run_as_root git clone --branch "$REPO_BRANCH" "$REPO_URL" "$INSTALL_DIR" || return 1
   write_install_config || true
 }
@@ -1955,7 +1955,7 @@ prepare_install_dir_for_offline() {
 }
 
 find_offline_source_zip() {
-  local zip_name="chatdesk.zip"
+  local zip_name="nextdesk.zip"
   local candidates=(
     "$(pwd)/${zip_name}"
     "$HOME/${zip_name}"
@@ -1976,13 +1976,13 @@ find_restore_backup_path() {
   local extension=""
   extension="$(database_backup_extension)"
   local candidates=(
-    "/opt/chatdesk/data/backups"
+    "/opt/nextdesk/data/backups"
     "/root"
   )
   local dir=""
   for dir in "${candidates[@]}"; do
     local found=""
-    found="$(run_as_root_output bash -lc "find '$dir' -maxdepth 1 -type f -name 'chatdesk-backup-*${extension}' -printf '%T@\t%p\n' 2>/dev/null | sort -nr | head -1 | cut -f2-" | tr -d '\r\n')" || found=""
+    found="$(run_as_root_output bash -lc "find '$dir' -maxdepth 1 -type f -name 'nextdesk-backup-*${extension}' -printf '%T@\t%p\n' 2>/dev/null | sort -nr | head -1 | cut -f2-" | tr -d '\r\n')" || found=""
     if [[ -n "$found" && -f "$found" ]]; then
       printf "%s" "$found"
       return 0
@@ -2022,7 +2022,7 @@ ensure_offline_source_ready() {
   local zip_path=""
   zip_path="$(find_offline_source_zip)" || zip_path=""
   if [[ -z "$zip_path" ]]; then
-    warn "Offline ${mode_label} requires chatdesk.zip to be available in the current directory, user home, /root, or /."
+    warn "Offline ${mode_label} requires nextdesk.zip to be available in the current directory, user home, /root, or /."
     press_enter_to_continue
     return 1
   fi
@@ -2048,7 +2048,7 @@ extract_offline_source_zip() {
   local source_root
   source_root="$(resolve_offline_source_root "$tmp_dir")" || {
     run_silent run_as_root rm -rf "$tmp_dir"
-    warn "Source zip does not appear to contain ChatDesk (missing server/client/worker/package.json)."
+    warn "Source zip does not appear to contain NextDesk (missing server/client/worker/package.json)."
     return 1
   }
 
@@ -2232,7 +2232,7 @@ update_source_from_zip() {
   run_silent run_as_root rm -rf "$tmp_dir" || return 1
 }
 
-install_chatdesk_dependencies() {
+install_nextdesk_dependencies() {
   local npm_registry_arg=""
   if [[ -n "$MIRROR_NPM" ]]; then
     npm_registry_arg="--registry $(printf '%q' "$MIRROR_NPM")"
@@ -2487,7 +2487,7 @@ ensure_env_secret() {
   else
     local data_dir=""
     data_dir="$(get_existing_env_value "DATA_DIR" "${INSTALL_DIR}/data")"
-    if [[ -f "${data_dir}/chatdesk.db" ]]; then
+    if [[ -f "${data_dir}/nextdesk.db" ]]; then
       log "Existing SQLite database found; leaving ${key} for the server to restore from it."
       return 0
     fi
@@ -2545,7 +2545,7 @@ APP_ENV=production
 DB_CLIENT=${DB_CLIENT:-postgres}
 POSTGRES_HOST=${POSTGRES_HOST:-127.0.0.1}
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
-POSTGRES_DB=${POSTGRES_DB:-chatdesk}
+POSTGRES_DB=${POSTGRES_DB:-nextdesk}
 POSTGRES_USER=${POSTGRES_USER:-postgres}
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
 POSTGRES_URL=${POSTGRES_URL:-}
@@ -2615,7 +2615,7 @@ ensure_vapid_keys() {
   fi
   local data_dir=""
   data_dir="$(get_existing_env_value "DATA_DIR" "${INSTALL_DIR}/data")"
-  if ! is_postgres_client && [[ -f "${data_dir}/chatdesk.db" ]]; then
+  if ! is_postgres_client && [[ -f "${data_dir}/nextdesk.db" ]]; then
     log "Existing SQLite database found; leaving VAPID keys for the server to restore from the database."
     return 0
   fi
@@ -3052,7 +3052,7 @@ configure_systemd_service() {
   fi
   if ! run_silent run_as_root tee "$SERVICE_FILE" >/dev/null <<EOF
 [Unit]
-Description=ChatDesk server
+Description=NextDesk server
 After=network.target
 
 [Service]
@@ -3076,7 +3076,7 @@ EOF
   log "Creating worker systemd service at ${WORKER_SERVICE_FILE}..."
   if ! run_silent run_as_root tee "$WORKER_SERVICE_FILE" >/dev/null <<EOF
 [Unit]
-Description=ChatDesk media worker
+Description=NextDesk media worker
 After=network.target ${SERVICE_NAME}.service
 
 [Service]
@@ -3097,15 +3097,15 @@ EOF
   fi
 
   run_as_root systemctl daemon-reload || return 1
-  run_as_root systemctl enable chatdesk.service || return 1
-  run_as_root systemctl enable chatdesk-worker.service || return 1
-  run_as_root systemctl restart chatdesk.service || return 1
+  run_as_root systemctl enable nextdesk.service || return 1
+  run_as_root systemctl enable nextdesk-worker.service || return 1
+  run_as_root systemctl restart nextdesk.service || return 1
   if [[ -n "${DB_BACKUP_PATH:-}" ]]; then
     wait_for_server_secrets 600 || true
   else
     wait_for_server_secrets || true
   fi
-  run_as_root systemctl restart chatdesk-worker.service || return 1
+  run_as_root systemctl restart nextdesk-worker.service || return 1
 }
 
 write_nginx_site_config() {
@@ -3456,7 +3456,7 @@ configure_lego_renewal_timer() {
   log "Creating lego renewal service at ${LEGO_RENEW_SERVICE_FILE}..."
   if ! run_silent run_as_root tee "$LEGO_RENEW_SERVICE_FILE" >/dev/null <<EOF
 [Unit]
-Description=Renew ChatDesk IP certificate with lego
+Description=Renew NextDesk IP certificate with lego
 After=network-online.target nginx.service
 Wants=network-online.target
 
@@ -3477,7 +3477,7 @@ EOF
   log "Creating lego renewal timer at ${LEGO_RENEW_TIMER_FILE}..."
   if ! run_silent run_as_root tee "$LEGO_RENEW_TIMER_FILE" >/dev/null <<EOF
 [Unit]
-Description=Run ChatDesk lego renewal twice daily
+Description=Run NextDesk lego renewal twice daily
 
 [Timer]
 OnBootSec=10m
@@ -3493,7 +3493,7 @@ EOF
   fi
 
   run_as_root systemctl daemon-reload || return 1
-  run_as_root systemctl enable --now chatdesk-lego-renew.timer || return 1
+  run_as_root systemctl enable --now nextdesk-lego-renew.timer || return 1
 }
 
 configure_selfsigned_ssl() {
@@ -3514,7 +3514,7 @@ configure_selfsigned_ssl() {
 
   log "Running gen-certs.sh for CN=${cn}..."
   # gen-certs.sh writes to <repo>/certs/ by default, but for a bare-metal install
-  # we want the certs in CERT_INSTALL_DIR (/etc/ssl/chatdesk). We temporarily
+  # we want the certs in CERT_INSTALL_DIR (/etc/ssl/nextdesk). We temporarily
   # override the output directory by symlinking, then copy to the final location.
   run_silent run_as_root mkdir -p "$CERT_INSTALL_DIR" || return 1
 
@@ -3616,7 +3616,7 @@ configure_coturn() {
   if [[ -z "$COTURN_PASSWORD" ]]; then
     COTURN_PASSWORD="$(generate_secret_hex 2>/dev/null || od -An -tx1 -N32 /dev/urandom 2>/dev/null | tr -d ' \n' || printf "secret%s" "$RANDOM$RANDOM")"
   fi
-  COTURN_USER="${COTURN_USER:-chatdesk}"
+  COTURN_USER="${COTURN_USER:-nextdesk}"
 
   replace_env_value "${INSTALL_DIR}/.env" "TURN_CREDENTIAL" "$COTURN_PASSWORD" || true
 
@@ -3745,14 +3745,14 @@ run_migrations() {
   return 0
 }
 
-chatdesk_service_is_running() {
-  if have_cmd systemctl && systemctl is-active --quiet chatdesk.service 2>/dev/null; then
+nextdesk_service_is_running() {
+  if have_cmd systemctl && systemctl is-active --quiet nextdesk.service 2>/dev/null; then
     return 0
   fi
   return 1
 }
 
-chatdesk_healthcheck_responds() {
+nextdesk_healthcheck_responds() {
   local port="$1"
 
   if have_cmd curl; then
@@ -3794,7 +3794,7 @@ setTimeout(() => process.exit(1), 800).unref();
   return 1
 }
 
-ensure_chatdesk_stopped_for_update() {
+ensure_nextdesk_stopped_for_update() {
   local port=""
   port="$(get_existing_env_value_with_fallback "SERVER_PORT" "PORT" "$DEFAULT_SERVER_PORT")"
   port="$(sanitize_input_value "$port")"
@@ -3802,23 +3802,23 @@ ensure_chatdesk_stopped_for_update() {
     port="$DEFAULT_SERVER_PORT"
   fi
 
-  log "Checking whether ChatDesk is running before update..."
+  log "Checking whether NextDesk is running before update..."
 
-  if chatdesk_service_is_running; then
-    log "ChatDesk service is running. Stopping it before update..."
-    if ! run_as_root systemctl stop chatdesk.service; then
-      warn "Failed to stop ChatDesk service. Stop it manually before updating."
+  if nextdesk_service_is_running; then
+    log "NextDesk service is running. Stopping it before update..."
+    if ! run_as_root systemctl stop nextdesk.service; then
+      warn "Failed to stop NextDesk service. Stop it manually before updating."
       press_enter_to_continue
       return 1
     fi
-    if have_cmd systemctl && systemctl is-active --quiet chatdesk-worker.service 2>/dev/null; then
-      run_as_root systemctl stop chatdesk-worker.service || true
+    if have_cmd systemctl && systemctl is-active --quiet nextdesk-worker.service 2>/dev/null; then
+      run_as_root systemctl stop nextdesk-worker.service || true
     fi
-    log "ChatDesk service stopped."
+    log "NextDesk service stopped."
   fi
 
-  if chatdesk_healthcheck_responds "$port"; then
-    warn "ChatDesk is still running on port ${port}. Stop it before updating."
+  if nextdesk_healthcheck_responds "$port"; then
+    warn "NextDesk is still running on port ${port}. Stop it before updating."
     press_enter_to_continue
     return 1
   fi
@@ -3826,25 +3826,25 @@ ensure_chatdesk_stopped_for_update() {
   return 0
 }
 
-# Restores the ChatDesk service when an update stopped it but never reached
+# Restores the NextDesk service when an update stopped it but never reached
 # its restart step (failed dependency install, failed build, failed migration,
 # aborted prompt, "already up to date" exit, ...). Without this the site stays
 # down behind nginx (HTTP 502) after any interrupted update.
-restore_chatdesk_service_after_update() {
-  if ! have_cmd systemctl || ! systemctl list-unit-files 2>/dev/null | grep -q "^chatdesk.service"; then
+restore_nextdesk_service_after_update() {
+  if ! have_cmd systemctl || ! systemctl list-unit-files 2>/dev/null | grep -q "^nextdesk.service"; then
     return 0
   fi
-  if chatdesk_service_is_running; then
+  if nextdesk_service_is_running; then
     return 0
   fi
-  warn "ChatDesk service is stopped after an interrupted update. Restoring it..."
-  if ! run_as_root systemctl restart chatdesk.service; then
-    warn "Automatic restart failed. Start it manually: systemctl restart chatdesk.service"
-    warn "Then check the logs: journalctl -u chatdesk --no-pager -n 50"
+  warn "NextDesk service is stopped after an interrupted update. Restoring it..."
+  if ! run_as_root systemctl restart nextdesk.service; then
+    warn "Automatic restart failed. Start it manually: systemctl restart nextdesk.service"
+    warn "Then check the logs: journalctl -u nextdesk --no-pager -n 50"
     return 0
   fi
-  if have_cmd systemctl && systemctl list-unit-files 2>/dev/null | grep -q "^chatdesk-worker.service"; then
-    run_as_root systemctl restart chatdesk-worker.service || true
+  if have_cmd systemctl && systemctl list-unit-files 2>/dev/null | grep -q "^nextdesk-worker.service"; then
+    run_as_root systemctl restart nextdesk-worker.service || true
   fi
   run_as_root systemctl reload nginx || true
 
@@ -3856,25 +3856,25 @@ restore_chatdesk_service_after_update() {
   fi
   local restored="no"
   for _ in $(seq 1 20); do
-    if chatdesk_healthcheck_responds "$port"; then
+    if nextdesk_healthcheck_responds "$port"; then
       restored="yes"
       break
     fi
     sleep 1
   done
   if [[ "$restored" == "yes" ]]; then
-    log "ChatDesk service restored and responding on port ${port}."
+    log "NextDesk service restored and responding on port ${port}."
   else
-    warn "ChatDesk service did not respond on port ${port} after restore."
-    warn "Check the logs: journalctl -u chatdesk --no-pager -n 50"
+    warn "NextDesk service did not respond on port ${port} after restore."
+    warn "Check the logs: journalctl -u nextdesk --no-pager -n 50"
   fi
 }
 
 # Post-restart health verification for the successful update path. Warning
 # only: a failed health check does not fail the update, but the operator gets
 # actionable output instead of a silent 502 later.
-verify_chatdesk_service_health() {
-  if ! have_cmd systemctl || ! systemctl list-unit-files 2>/dev/null | grep -q "^chatdesk.service"; then
+verify_nextdesk_service_health() {
+  if ! have_cmd systemctl || ! systemctl list-unit-files 2>/dev/null | grep -q "^nextdesk.service"; then
     return 0
   fi
   local port=""
@@ -3885,18 +3885,18 @@ verify_chatdesk_service_health() {
   fi
   local healthy="no"
   for _ in $(seq 1 15); do
-    if chatdesk_healthcheck_responds "$port"; then
+    if nextdesk_healthcheck_responds "$port"; then
       healthy="yes"
       break
     fi
     sleep 1
   done
   if [[ "$healthy" == "yes" ]]; then
-    log "ChatDesk is up and responding on port ${port}."
+    log "NextDesk is up and responding on port ${port}."
     return 0
   fi
-  warn "ChatDesk service did not respond on port ${port} within 15s — the site may be unreachable."
-  warn "Check the logs: journalctl -u chatdesk --no-pager -n 50"
+  warn "NextDesk service did not respond on port ${port} within 15s — the site may be unreachable."
+  warn "Check the logs: journalctl -u nextdesk --no-pager -n 50"
   return 1
 }
 
@@ -3943,10 +3943,10 @@ rebuild_and_restart_after_settings_change() {
   log "Rebuilding client after settings change..."
   run_in_install_dir "npm run build" || return 1
 
-  log "Restarting ChatDesk service..."
-  run_as_root systemctl restart chatdesk.service || return 1
-  if have_cmd systemctl && systemctl list-unit-files | grep -q "^chatdesk-worker.service"; then
-    run_as_root systemctl restart chatdesk-worker.service || true
+  log "Restarting NextDesk service..."
+  run_as_root systemctl restart nextdesk.service || return 1
+  if have_cmd systemctl && systemctl list-unit-files | grep -q "^nextdesk-worker.service"; then
+    run_as_root systemctl restart nextdesk-worker.service || true
   fi
 
   if [[ "$needs_nginx" == "yes" ]]; then
@@ -3959,24 +3959,24 @@ rebuild_and_restart_after_settings_change() {
 
 # Update entry point.
 #
-# update_chatdesk_run stops the service first and has many failure / early-exit
+# update_nextdesk_run stops the service first and has many failure / early-exit
 # paths; this wrapper guarantees the service is restored afterwards on every
 # path, so an interrupted update can never leave the site down (nginx 502).
-update_chatdesk() {
-  update_chatdesk_run
+update_nextdesk() {
+  update_nextdesk_run
   local update_rc=$?
-  restore_chatdesk_service_after_update
+  restore_nextdesk_service_after_update
   return "$update_rc"
 }
 
-update_chatdesk_run() {
+update_nextdesk_run() {
   if [[ ! -d "$INSTALL_DIR" ]]; then
-    warn "No ChatDesk install found at ${INSTALL_DIR}."
+    warn "No NextDesk install found at ${INSTALL_DIR}."
     press_enter_to_continue
     return 0
   fi
 
-  ensure_chatdesk_stopped_for_update || return 1
+  ensure_nextdesk_stopped_for_update || return 1
 
   if [[ "$(prompt_yes_no "Create a database backup before updating?" "no")" == "yes" ]]; then
     backup_database || return 1
@@ -4010,34 +4010,34 @@ update_chatdesk_run() {
 
     case "$version_rel" in
       newer)
-        log "Offline update available. Preparing to update ChatDesk..."
+        log "Offline update available. Preparing to update NextDesk..."
         ;;
       lower)
         local should_downgrade=""
         should_downgrade="$(prompt_yes_no "Local zip version (${source_ver}) is lower than installed version (${install_ver}). Do you want to downgrade to version ${source_ver}?" "no")"
         if [[ "$should_downgrade" != "yes" ]]; then
           run_silent run_as_root rm -rf "$tmp_dir"
-          log "ChatDesk is already up to date. No rebuild needed."
+          log "NextDesk is already up to date. No rebuild needed."
           press_enter_to_continue
           return 0
         fi
         is_downgrade="yes"
-        log "Offline downgrade requested. Preparing to downgrade ChatDesk to ${source_ver}..."
+        log "Offline downgrade requested. Preparing to downgrade NextDesk to ${source_ver}..."
         ;;
       same)
         local should_update=""
         should_update="$(prompt_yes_no "Local zip version (${source_ver}) is the same as installed version (${install_ver}). Do you want to update to version ${source_ver}?" "no")"
         if [[ "$should_update" != "yes" ]]; then
           run_silent run_as_root rm -rf "$tmp_dir"
-          log "ChatDesk is already up to date. No rebuild needed."
+          log "NextDesk is already up to date. No rebuild needed."
           press_enter_to_continue
           return 0
         fi
-        log "Offline update requested. Preparing to update ChatDesk to ${source_ver}..."
+        log "Offline update requested. Preparing to update NextDesk to ${source_ver}..."
         ;;
       *)
         run_silent run_as_root rm -rf "$tmp_dir"
-        log "ChatDesk is already up to date. No rebuild needed."
+        log "NextDesk is already up to date. No rebuild needed."
         press_enter_to_continue
         return 0
         ;;
@@ -4048,7 +4048,7 @@ update_chatdesk_run() {
     preserve_backup_and_restore_data
     update_source_from_zip "$offline_zip_path" || return 1
 
-    finalize_chatdesk_source_change || { press_enter_to_continue; return 1; }
+    finalize_nextdesk_source_change || { press_enter_to_continue; return 1; }
 
     show_deployment_success_frame "update"
     press_enter_to_continue
@@ -4096,7 +4096,7 @@ update_chatdesk_run() {
 
   # Check if update is available
   if [[ "$local_commit" == "$remote_commit" ]]; then
-    log "ChatDesk is already up to date."
+    log "NextDesk is already up to date."
     local should_downgrade=""
     should_downgrade="$(prompt_yes_no "Do you want to downgrade?" "no")"
     if [[ "$should_downgrade" != "yes" ]]; then
@@ -4125,7 +4125,7 @@ update_chatdesk_run() {
   fi
 
   if [[ "$is_downgrade" == "yes" ]]; then
-    log "Downgrade requested. Preparing to downgrade ChatDesk to ${target_version}..."
+    log "Downgrade requested. Preparing to downgrade NextDesk to ${target_version}..."
     preserve_backup_and_restore_data
 
     if ! run_in_install_dir "git checkout ${target_ref}"; then
@@ -4135,7 +4135,7 @@ update_chatdesk_run() {
     fi
   else
     # Update is available - proceed with safe update
-    log "Update available. Preparing to update ChatDesk..."
+    log "Update available. Preparing to update NextDesk..."
     preserve_backup_and_restore_data
 
     clean_tracked_lockfiles_for_pull
@@ -4163,10 +4163,10 @@ update_chatdesk_run() {
 # (Test channel on dev <-> Stable channel on main). Updates always keep
 # tracking the channel the install came from, so this is the only entry
 # point needed to move an install across channels. Runs the exact same
-# finalization pipeline as a normal update (see finalize_chatdesk_source_change).
+# finalization pipeline as a normal update (see finalize_nextdesk_source_change).
 switch_release_channel() {
   if [[ ! -d "$INSTALL_DIR" ]]; then
-    warn "No ChatDesk install found at ${INSTALL_DIR}."
+    warn "No NextDesk install found at ${INSTALL_DIR}."
     press_enter_to_continue
     return 0
   fi
@@ -4198,13 +4198,13 @@ switch_release_channel() {
   log "Current: ${current_channel}, version ${installed_version:-unknown}"
   log "Target:  ${target_channel}"
 
-  if [[ "$(prompt_yes_no "Switch ChatDesk from ${current_channel} to ${target_channel}?" "no")" != "yes" ]]; then
+  if [[ "$(prompt_yes_no "Switch NextDesk from ${current_channel} to ${target_channel}?" "no")" != "yes" ]]; then
     log "Channel switch canceled."
     press_enter_to_continue
     return 0
   fi
 
-  ensure_chatdesk_stopped_for_update || return 1
+  ensure_nextdesk_stopped_for_update || return 1
 
   if [[ "$(prompt_yes_no "Create a database backup before switching?" "no")" == "yes" ]]; then
     backup_database || return 1
@@ -4212,7 +4212,7 @@ switch_release_channel() {
 
   if ! run_in_install_dir "git fetch --all --prune --tags"; then
     warn "Failed to fetch from remote. Check your network and credentials."
-    restore_chatdesk_service_after_update
+    restore_nextdesk_service_after_update
     press_enter_to_continue
     return 1
   fi
@@ -4222,7 +4222,7 @@ switch_release_channel() {
 
   if ! run_in_install_dir "git checkout -B ${target_branch} origin/${target_branch}"; then
     warn "Failed to checkout ${target_branch}."
-    restore_chatdesk_service_after_update
+    restore_nextdesk_service_after_update
     press_enter_to_continue
     return 1
   fi
@@ -4230,30 +4230,30 @@ switch_release_channel() {
   REPO_BRANCH="${target_branch}"
   run_updated_finalize_pipeline || {
     warn "Channel switch failed while rebuilding. Check the logs before retrying."
-    restore_chatdesk_service_after_update
+    restore_nextdesk_service_after_update
     press_enter_to_continue
     return 1
   }
 
-  restore_chatdesk_service_after_update
+  restore_nextdesk_service_after_update
 
   local new_version=""
   new_version="$(read_version_file_value "$INSTALL_DIR/VERSION" 2>/dev/null || true)"
-  log "Channel switched. ChatDesk is now on ${target_channel} (version ${new_version:-unknown})."
+  log "Channel switched. NextDesk is now on ${target_channel} (version ${new_version:-unknown})."
   show_deployment_success_frame "update"
   press_enter_to_continue
   return 0
 }
 
-restart_chatdesk() {
-  log "Restarting ChatDesk service..."
-  run_as_root systemctl restart chatdesk.service || return 1
-  if have_cmd systemctl && systemctl list-unit-files | grep -q "^chatdesk-worker.service"; then
-    run_as_root systemctl restart chatdesk-worker.service || true
+restart_nextdesk() {
+  log "Restarting NextDesk service..."
+  run_as_root systemctl restart nextdesk.service || return 1
+  if have_cmd systemctl && systemctl list-unit-files | grep -q "^nextdesk-worker.service"; then
+    run_as_root systemctl restart nextdesk-worker.service || true
   fi
   run_as_root systemctl reload nginx || return 1
 
-  log "ChatDesk restarted successfully."
+  log "NextDesk restarted successfully."
   press_enter_to_continue
 }
 
@@ -4363,14 +4363,14 @@ free_service_port() {
   return 0
 }
 
-remove_chatdesk() {
+remove_nextdesk() {
   if [[ ! -d "$INSTALL_DIR" ]]; then
     warn "No install found at ${INSTALL_DIR}."
     press_enter_to_continue
     return 0
   fi
 
-  if [[ "$(prompt_yes_no "This will remove ChatDesk from this server. Continue?" "no")" != "yes" ]]; then
+  if [[ "$(prompt_yes_no "This will remove NextDesk from this server. Continue?" "no")" != "yes" ]]; then
     log "Removal canceled."
     return 0
   fi
@@ -4380,14 +4380,14 @@ remove_chatdesk() {
   server_port="$(get_existing_env_value "SERVER_PORT" "$DEFAULT_SERVER_PORT")"
   worker_port="$(get_existing_env_value "WORKER_PORT" "$DEFAULT_WORKER_PORT")"
 
-  if run_as_root systemctl list-unit-files | grep -q "^chatdesk.service"; then
-    run_as_root systemctl disable --now chatdesk.service || true
+  if run_as_root systemctl list-unit-files | grep -q "^nextdesk.service"; then
+    run_as_root systemctl disable --now nextdesk.service || true
   fi
-  if run_as_root systemctl list-unit-files | grep -q "^chatdesk-worker.service"; then
-    run_as_root systemctl disable --now chatdesk-worker.service || true
+  if run_as_root systemctl list-unit-files | grep -q "^nextdesk-worker.service"; then
+    run_as_root systemctl disable --now nextdesk-worker.service || true
   fi
-  if run_as_root systemctl list-unit-files | grep -q "^chatdesk-lego-renew.timer"; then
-    run_as_root systemctl disable --now chatdesk-lego-renew.timer || true
+  if run_as_root systemctl list-unit-files | grep -q "^nextdesk-lego-renew.timer"; then
+    run_as_root systemctl disable --now nextdesk-lego-renew.timer || true
   fi
   run_as_root rm -f "$SERVICE_FILE" "$WORKER_SERVICE_FILE"
   run_as_root rm -f "$LEGO_RENEW_SERVICE_FILE" "$LEGO_RENEW_TIMER_FILE"
@@ -4409,10 +4409,10 @@ remove_chatdesk() {
     run_as_root userdel "$SERVICE_USER" || true
   fi
 
-  log "ChatDesk removed."
+  log "NextDesk removed."
 
   if [[ -f "$GLOBAL_COMMAND_PATH" ]]; then
-    if [[ "$(prompt_yes_no "Remove global command (chatdesk-deploy) as well?" "no")" == "yes" ]]; then
+    if [[ "$(prompt_yes_no "Remove global command (nextdesk-deploy) as well?" "no")" == "yes" ]]; then
       run_as_root rm -f "$GLOBAL_COMMAND_PATH"
       log "Global command removed."
     fi
@@ -4424,7 +4424,7 @@ remove_chatdesk() {
 configure_push_proxy() {
   local env_file="$INSTALL_DIR/.env"
   if [[ ! -f "$env_file" ]]; then
-    warn ".env file not found. Install ChatDesk first."
+    warn ".env file not found. Install NextDesk first."
     press_enter_to_continue
     return 1
   fi
@@ -4484,8 +4484,8 @@ configure_push_proxy() {
     return 1
   fi
   
-  log "Restarting ChatDesk service..."
-  if ! run_logged_quiet run_as_root systemctl restart chatdesk; then
+  log "Restarting NextDesk service..."
+  if ! run_logged_quiet run_as_root systemctl restart nextdesk; then
     warn "Failed to restart service."
     press_enter_to_continue
     return 1
@@ -4497,7 +4497,7 @@ configure_push_proxy() {
   press_enter_to_continue
 }
 
-install_chatdesk() {
+install_nextdesk() {
   prompt_source_mode
   collect_install_options
   prompt_database_choice
@@ -4519,7 +4519,7 @@ install_chatdesk() {
   ensure_log_dir || return 1
   write_full_env_with_defaults || return 1
   ensure_local_postgres_setup || return 1
-  install_chatdesk_dependencies || return 1
+  install_nextdesk_dependencies || return 1
   RESTORE_BACKUP_QUIET="yes"
   if ! restore_backup_if_provided; then
     RESTORE_BACKUP_QUIET="no"
@@ -4567,7 +4567,7 @@ install_global_command_from_path() {
     return 1
   }
 
-  if ! sed -i "s|^# chatdesk-deploy-version:.*$|# chatdesk-deploy-version: ${install_version}|" "$temp_target"; then
+  if ! sed -i "s|^# nextdesk-deploy-version:.*$|# nextdesk-deploy-version: ${install_version}|" "$temp_target"; then
     rm -f "$temp_target"
     return 1
   fi
@@ -4578,7 +4578,6 @@ install_global_command_from_path() {
   fi
 
   rm -f "$temp_target"
-  run_silent run_as_root ln -sf "$GLOBAL_COMMAND_PATH" "/usr/local/bin/nextdesk-deploy" || true
   LAST_GLOBAL_COMMAND_VERSION="$install_version"
   return 0
 }
@@ -4596,7 +4595,7 @@ install_global_command_from_remote() {
   if [[ -n "$fetched_version" ]]; then
     install_version="$fetched_version"
   fi
-  if ! sed -i "s|^# chatdesk-deploy-version:.*$|# chatdesk-deploy-version: ${install_version}|" "$temp_target"; then
+  if ! sed -i "s|^# nextdesk-deploy-version:.*$|# nextdesk-deploy-version: ${install_version}|" "$temp_target"; then
     rm -f "$temp_target"
     return 1
   fi
@@ -4694,7 +4693,7 @@ update_menu() {
     rm -f "$temp_remote"
     LAST_GLOBAL_COMMAND_VERSION="$remote_version"
     log "Menu updated to version ${remote_version}."
-    log "Run it from anywhere with: chatdesk-deploy"
+    log "Run it from anywhere with: nextdesk-deploy"
     press_enter_to_continue
     return 0
   fi
@@ -4722,7 +4721,7 @@ install_global_command() {
 
 installed_global_command_version() {
   local version=""
-  version="$(run_as_root bash -lc "if [[ -f '$GLOBAL_COMMAND_PATH' ]]; then grep -E '^# chatdesk-deploy-version:' '$GLOBAL_COMMAND_PATH' | head -n 1 | cut -d ':' -f 2- | xargs; fi" 2>/dev/null || true)"
+  version="$(run_as_root bash -lc "if [[ -f '$GLOBAL_COMMAND_PATH' ]]; then grep -E '^# nextdesk-deploy-version:' '$GLOBAL_COMMAND_PATH' | head -n 1 | cut -d ':' -f 2- | xargs; fi" 2>/dev/null || true)"
   if [[ -z "$version" || "$version" == "auto" ]]; then
     return 1
   fi
@@ -4768,23 +4767,23 @@ show_logs() {
 }
 
 show_service_logs() {
-  if systemctl list-units --type=service --all | grep chatdesk; then
+  if systemctl list-units --type=service --all | grep nextdesk; then
     clear
-    printf "\n  Last %s lines of chatdesk service log:\n\n" "$LOG_LINES"
-    run_as_root journalctl -u chatdesk --no-pager -n "$LOG_LINES"
+    printf "\n  Last %s lines of nextdesk service log:\n\n" "$LOG_LINES"
+    run_as_root journalctl -u nextdesk --no-pager -n "$LOG_LINES"
   else
-    printf "\n  ChatDesk service not found.\n"
+    printf "\n  NextDesk service not found.\n"
   fi
   press_enter_to_continue
 }
 
 show_worker_service_logs() {
-  if systemctl list-units --type=service --all | grep chatdesk-worker; then
+  if systemctl list-units --type=service --all | grep nextdesk-worker; then
     clear
-    printf "\n  Last %s lines of chatdesk-worker service log:\n\n" "$LOG_LINES"
-    run_as_root journalctl -u chatdesk-worker --no-pager -n "$LOG_LINES"
+    printf "\n  Last %s lines of nextdesk-worker service log:\n\n" "$LOG_LINES"
+    run_as_root journalctl -u nextdesk-worker --no-pager -n "$LOG_LINES"
   else
-    printf "\n  ChatDesk worker service not found.\n"
+    printf "\n  NextDesk worker service not found.\n"
   fi
   press_enter_to_continue
 }
@@ -4817,7 +4816,7 @@ show_nginx_error_logs() {
 
 
 show_banner() {
-  printf '\033[1;38;2;42;186;130m'   # bold ChatDesk green (#2ABA82)
+  printf '\033[1;38;2;42;186;130m'   # bold NextDesk green (#2ABA82)
   cat << 'EOF'
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                                                                           ║
@@ -4839,9 +4838,9 @@ EOF
   installed_version="$(read_version_file_value "$INSTALL_DIR/VERSION" 2>/dev/null || true)"
   installed_branch="$(detect_install_branch 2>/dev/null || true)"
   if [[ -n "$installed_version" ]]; then
-    printf 'Installed ChatDesk: %s — %s\n' "$installed_version" "$(channel_label_for_branch "$installed_branch")"
+    printf 'Installed NextDesk: %s — %s\n' "$installed_version" "$(channel_label_for_branch "$installed_branch")"
   else
-    printf 'Installed ChatDesk: not installed\n'
+    printf 'Installed NextDesk: not installed\n'
   fi
   printf '\033[0m'      # reset
 }
@@ -4851,14 +4850,14 @@ show_menu() {
   clear
   show_banner
   printf "\n"
-  printf "ChatDesk Deploy Menu\n"
-  printf $'1) 📥  Install ChatDesk\n'
-  printf $'2) 🔄️  Update ChatDesk (stays on current channel)\n'
-  printf $'3) ♻️  Restart ChatDesk\n'
+  printf "NextDesk Deploy Menu\n"
+  printf $'1) 📥  Install NextDesk\n'
+  printf $'2) 🔄️  Update NextDesk (stays on current channel)\n'
+  printf $'3) ♻️  Restart NextDesk\n'
   printf $'4) 🔀  Switch Test (dev) / Stable (main) channel\n'
   printf $'5) ⚙️  Edit Settings (.env)\n'
   printf $'6) 🗃️  Manage Database\n'
-  printf $'7) 🗑️  Remove ChatDesk\n'
+  printf $'7) 🗑️  Remove NextDesk\n'
   printf $'8) 🔄️  Update menu\n'
   printf $'9) 🌐  Configure mirrors\n'
   printf $'l) 📋  View Logs\n'
@@ -5047,7 +5046,7 @@ create_owner_user() {
 
 print_db_script_help() {
   cat <<'EOF'
-ChatDesk Script Database Menu
+NextDesk Script Database Menu
 
 The installer collects every required value before running DB commands, then
 passes those values as CLI flags/arguments with stdin closed so the nested
@@ -5653,7 +5652,7 @@ db_remote_configure() {
   local args=()
 
   if [[ ! -d "${INSTALL_DIR}/server" ]]; then
-    warn "ChatDesk server directory not found at ${INSTALL_DIR}/server."
+    warn "NextDesk server directory not found at ${INSTALL_DIR}/server."
     press_enter_to_continue
     return 1
   fi
@@ -5847,7 +5846,7 @@ main() {
     SKIP_CLEAR_ON_EXIT="1"
     detect_os
     ensure_sudo
-    finalize_chatdesk_source_change
+    finalize_nextdesk_source_change
     return $?
   fi
 
@@ -5857,7 +5856,7 @@ main() {
     return 0
   fi
 
-  # Non-interactive status for scripts and quick checks: chatdesk-deploy --status
+  # Non-interactive status for scripts and quick checks: nextdesk-deploy --status
   if [[ "${1:-}" == "--status" ]]; then
     SKIP_CLEAR_ON_EXIT="1"
     local status_version="" status_branch=""
@@ -5865,10 +5864,10 @@ main() {
     status_branch="$(detect_install_branch 2>/dev/null || true)"
     printf "Installer/CLI version: %s\n" "$SCRIPT_VERSION"
     if [[ -n "$status_version" ]]; then
-      printf "Installed ChatDesk: %s\n" "$status_version"
+      printf "Installed NextDesk: %s\n" "$status_version"
       printf "Release channel:    %s\n" "$(channel_label_for_branch "$status_branch")"
     else
-      printf "Installed ChatDesk: not installed\n"
+      printf "Installed NextDesk: not installed\n"
     fi
     return 0
   fi
@@ -5886,13 +5885,13 @@ main() {
     show_menu
     prompt_read "Choose an option [0-9, l]: " choice
     case "$choice" in
-      1) run_menu_action install_chatdesk ;;
-      2) run_menu_action update_chatdesk ;;
-      3) run_menu_action restart_chatdesk ;;
+      1) run_menu_action install_nextdesk ;;
+      2) run_menu_action update_nextdesk ;;
+      3) run_menu_action restart_nextdesk ;;
       4) run_menu_action switch_release_channel ;;
       5) run_menu_action edit_settings ;;
       6) run_menu_action show_db_menu ;;
-      7) run_menu_action remove_chatdesk ;;
+      7) run_menu_action remove_nextdesk ;;
       8) run_menu_action update_menu ;;
       9) run_menu_action configure_mirrors_menu ;;
       l|L) run_menu_action show_logs_menu ;;

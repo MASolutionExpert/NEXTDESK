@@ -47,7 +47,7 @@ setup() {
   )
 
   # IMPORTANT: sourcing install.sh resets INSTALL_DIR and LOG_FILE to their
-  # hardcoded /opt/chatdesk values. Override them AFTER sourcing so the
+  # hardcoded /opt/nextdesk values. Override them AFTER sourcing so the
   # file-based helpers read/write inside our temp dir instead.
   INSTALL_DIR="$TEST_DIR/install"
   LOG_FILE="$TEST_DIR/install.log"
@@ -423,7 +423,7 @@ teardown() {
 # ===========================================================================
 
 @test "read_script_version_header: reads version from script header comment" {
-  printf '#!/usr/bin/env bash\n# chatdesk-deploy-version: 1.5.0\necho hi\n' > "$TEST_DIR/fake.sh"
+  printf '#!/usr/bin/env bash\n# nextdesk-deploy-version: 1.5.0\necho hi\n' > "$TEST_DIR/fake.sh"
   result="$(read_script_version_header "$TEST_DIR/fake.sh")"
   [ "$result" = "1.5.0" ]
 }
@@ -435,7 +435,7 @@ teardown() {
 }
 
 @test "read_script_version_header: returns non-zero when version is 'auto'" {
-  printf '#!/usr/bin/env bash\n# chatdesk-deploy-version: auto\necho hi\n' > "$TEST_DIR/fake.sh"
+  printf '#!/usr/bin/env bash\n# nextdesk-deploy-version: auto\necho hi\n' > "$TEST_DIR/fake.sh"
   run read_script_version_header "$TEST_DIR/fake.sh"
   [ "$status" -ne 0 ]
 }
@@ -627,7 +627,7 @@ make_valid_source_dir() {
 
 @test "resolve_offline_source_root: detects source one level deep in zip" {
   wrapper="$TEST_DIR/wrapper"
-  inner="$wrapper/ChatDesk-main"
+  inner="$wrapper/NextDesk-main"
   make_valid_source_dir "$inner"
   result="$(resolve_offline_source_root "$wrapper")"
   [ "$result" = "$inner" ]
@@ -635,7 +635,7 @@ make_valid_source_dir() {
 
 @test "resolve_offline_source_root: ignores extra non-source directories like __MACOSX" {
   wrapper="$TEST_DIR/wrapper_extra"
-  inner="$wrapper/ChatDesk-main"
+  inner="$wrapper/NextDesk-main"
   macosx="$wrapper/__MACOSX"
   make_valid_source_dir "$inner"
   mkdir -p "$macosx"
@@ -665,22 +665,22 @@ make_valid_source_dir() {
   [ "$status" -ne 0 ]
 }
 
-@test "find_offline_source_zip: finds chatdesk.zip in current working directory" {
+@test "find_offline_source_zip: finds nextdesk.zip in current working directory" {
   local fake_work_dir="$TEST_DIR/work"
   mkdir -p "$fake_work_dir"
-  touch "$fake_work_dir/chatdesk.zip"
+  touch "$fake_work_dir/nextdesk.zip"
   (
     cd "$fake_work_dir"
     result="$(find_offline_source_zip)"
-    [ "$result" = "$fake_work_dir/chatdesk.zip" ]
+    [ "$result" = "$fake_work_dir/nextdesk.zip" ]
   )
 }
 
 @test "install_source_from_zip: copies server, client, worker directories into INSTALL_DIR" {
-  local zip_file="$TEST_DIR/chatdesk.zip"
+  local zip_file="$TEST_DIR/nextdesk.zip"
   local staging="$TEST_DIR/staging"
   mkdir -p "$staging/server" "$staging/client" "$staging/worker"
-  echo '{"name":"chatdesk"}' > "$staging/package.json"
+  echo '{"name":"nextdesk"}' > "$staging/package.json"
   echo "console.log('worker');" > "$staging/worker/index.js"
   echo "console.log('server');" > "$staging/server/index.js"
   echo "export default {};" > "$staging/client/index.html"
@@ -974,7 +974,7 @@ EOF
 @test "ensure_local_postgres_setup: returns 0 when POSTGRES_URL is remote" {
   cat > "$INSTALL_DIR/.env" <<EOF
 DB_CLIENT=postgres
-POSTGRES_URL=postgresql://user:pass@ep-xyz.aws.neon.tech/chatdesk?sslmode=require
+POSTGRES_URL=postgresql://user:pass@ep-xyz.aws.neon.tech/nextdesk?sslmode=require
 EOF
   run ensure_local_postgres_setup
   [ "$status" -eq 0 ]
@@ -985,7 +985,7 @@ EOF
 DB_CLIENT=postgres
 POSTGRES_HOST=0.0.0.0
 POSTGRES_PORT=5432
-POSTGRES_DB=chatdesk
+POSTGRES_DB=nextdesk
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 EOF
@@ -1101,11 +1101,11 @@ EOF
 
 @test "configure_systemd_service: writes EnvironmentFile to systemd unit" {
   INSTALL_DIR="$TEST_DIR"
-  SERVICE_FILE="$TEST_DIR/chatdesk.service"
-  WORKER_SERVICE_FILE="$TEST_DIR/chatdesk-worker.service"
+  SERVICE_FILE="$TEST_DIR/nextdesk.service"
+  WORKER_SERVICE_FILE="$TEST_DIR/nextdesk-worker.service"
   NODE_EXEC_PATH="/usr/bin/node"
-  SERVICE_USER="chatdesk"
-  SERVICE_GROUP="chatdesk"
+  SERVICE_USER="nextdesk"
+  SERVICE_GROUP="nextdesk"
   run configure_systemd_service
   [ "$status" -eq 0 ]
   [ -f "$SERVICE_FILE" ]
@@ -1212,7 +1212,7 @@ EOF
 @test "run_data_command bootstraps a missing launcher from a versioned remote installer URL" {
   INSTALL_DIR="$TEST_DIR/install"
   DATA_COMMAND_LAUNCHER="$INSTALL_DIR/scripts/run-data-command.sh"
-  CURRENT_SCRIPT_PATH="$TEST_DIR/chatdesk-deploy"
+  CURRENT_SCRIPT_PATH="$TEST_DIR/nextdesk-deploy"
   SCRIPT_REMOTE_URL="https://example.test/releases/v1/deploy.sh?channel=stable"
   local remote_launcher="$TEST_DIR/remote-run-data-command.sh"
   mkdir -p "$INSTALL_DIR/scripts"
@@ -1238,7 +1238,7 @@ EOF
 @test "run_data_command rejects an invalid remote launcher download" {
   INSTALL_DIR="$TEST_DIR/install"
   DATA_COMMAND_LAUNCHER="$INSTALL_DIR/scripts/run-data-command.sh"
-  CURRENT_SCRIPT_PATH="$TEST_DIR/chatdesk-deploy"
+  CURRENT_SCRIPT_PATH="$TEST_DIR/nextdesk-deploy"
   SCRIPT_REMOTE_URL="https://example.test/releases/v1/deploy.sh"
   mkdir -p "$INSTALL_DIR/scripts"
   curl() {
@@ -1355,10 +1355,10 @@ setup_test_git_repo() {
 }
 
 # ===========================================================================
-# update_chatdesk downgrade flows
+# update_nextdesk downgrade flows
 # ===========================================================================
 
-@test "update_chatdesk: git mode prompt downgrade when up to date (declined)" {
+@test "update_nextdesk: git mode prompt downgrade when up to date (declined)" {
   setup_test_git_repo
   local hash="abcd1234abcd1234abcd1234abcd1234abcd1234"
   run_in_install_dir_output() {
@@ -1366,7 +1366,7 @@ setup_test_git_repo() {
   }
   run_in_install_dir() { return 0; }
   prompt_source_mode() { SOURCE_MODE="github"; }
-  ensure_chatdesk_stopped_for_update() { return 0; }
+  ensure_nextdesk_stopped_for_update() { return 0; }
   prompt_yes_no() {
     if [[ "$1" == *"backup"* ]]; then
       printf "no"
@@ -1375,15 +1375,15 @@ setup_test_git_repo() {
     fi
   }
   press_enter_to_continue() { return 0; }
-  export -f run_in_install_dir_output run_in_install_dir prompt_source_mode ensure_chatdesk_stopped_for_update prompt_yes_no press_enter_to_continue
+  export -f run_in_install_dir_output run_in_install_dir prompt_source_mode ensure_nextdesk_stopped_for_update prompt_yes_no press_enter_to_continue
 
-  run update_chatdesk
+  run update_nextdesk
   [ "$status" -eq 0 ]
-  [[ "$output" =~ "ChatDesk is already up to date." ]]
+  [[ "$output" =~ "NextDesk is already up to date." ]]
   [[ "$output" =~ "No rebuild needed." ]]
 }
 
-@test "update_chatdesk: git mode prompt downgrade when up to date (accepted)" {
+@test "update_nextdesk: git mode prompt downgrade when up to date (accepted)" {
   setup_test_git_repo
   local hash="abcd1234abcd1234abcd1234abcd1234abcd1234"
   local git_calls_file="$TEST_DIR/git-calls"
@@ -1407,7 +1407,7 @@ setup_test_git_repo() {
     return 0
   }
   prompt_source_mode() { SOURCE_MODE="github"; }
-  ensure_chatdesk_stopped_for_update() { return 0; }
+  ensure_nextdesk_stopped_for_update() { return 0; }
   prompt_yes_no() {
     if [[ "$1" == *"backup"* ]]; then
       printf "no"
@@ -1420,7 +1420,7 @@ setup_test_git_repo() {
       eval "$2='0.11.4'"
     fi
   }
-  install_chatdesk_dependencies() { return 0; }
+  install_nextdesk_dependencies() { return 0; }
   ensure_vapid_keys() { return 0; }
   run_migrations() { return 0; }
   ensure_service_user_exists() { return 0; }
@@ -1429,15 +1429,15 @@ setup_test_git_repo() {
   show_deployment_success_frame() { return 0; }
   press_enter_to_continue() { return 0; }
   systemctl() { return 0; }
-  export -f run_in_install_dir_output run_in_install_dir prompt_source_mode ensure_chatdesk_stopped_for_update prompt_yes_no prompt_read install_chatdesk_dependencies ensure_vapid_keys run_migrations ensure_service_user_exists apply_ownership install_global_command_from_path show_deployment_success_frame press_enter_to_continue systemctl
+  export -f run_in_install_dir_output run_in_install_dir prompt_source_mode ensure_nextdesk_stopped_for_update prompt_yes_no prompt_read install_nextdesk_dependencies ensure_vapid_keys run_migrations ensure_service_user_exists apply_ownership install_global_command_from_path show_deployment_success_frame press_enter_to_continue systemctl
 
-  run update_chatdesk
+  run update_nextdesk
   [ "$status" -eq 0 ]
   [[ "$output" =~ "Downgrade requested." ]]
   grep -Fq "git checkout refs/tags/v0.11.4" "$git_calls_file"
 }
 
-@test "update_chatdesk: offline mode prompt downgrade when zip version is lower (declined)" {
+@test "update_nextdesk: offline mode prompt downgrade when zip version is lower (declined)" {
   INSTALL_DIR="$TEST_DIR/install"
   mkdir -p "$INSTALL_DIR"
   printf "0.12.0\n" > "$INSTALL_DIR/VERSION"
@@ -1447,12 +1447,12 @@ setup_test_git_repo() {
   printf "0.10.0\n" > "$src_dir/VERSION"
   echo '{}' > "$src_dir/package.json"
 
-  SOURCE_ZIP_PATH="$TEST_DIR/chatdesk.zip"
+  SOURCE_ZIP_PATH="$TEST_DIR/nextdesk.zip"
   touch "$SOURCE_ZIP_PATH"
 
   prompt_source_mode() { SOURCE_MODE="offline"; }
   ensure_offline_source_ready() { return 0; }
-  ensure_chatdesk_stopped_for_update() { return 0; }
+  ensure_nextdesk_stopped_for_update() { return 0; }
   extract_offline_source_zip() { printf "%s|%s" "$TEST_DIR/tmp" "$src_dir"; }
   prompt_yes_no() {
     if [[ "$1" == *"backup"* ]]; then
@@ -1462,14 +1462,14 @@ setup_test_git_repo() {
     fi
   }
   press_enter_to_continue() { return 0; }
-  export -f prompt_source_mode ensure_offline_source_ready ensure_chatdesk_stopped_for_update extract_offline_source_zip prompt_yes_no press_enter_to_continue
+  export -f prompt_source_mode ensure_offline_source_ready ensure_nextdesk_stopped_for_update extract_offline_source_zip prompt_yes_no press_enter_to_continue
 
-  run update_chatdesk
+  run update_nextdesk
   [ "$status" -eq 0 ]
-  [[ "$output" =~ "ChatDesk is already up to date. No rebuild needed." ]]
+  [[ "$output" =~ "NextDesk is already up to date. No rebuild needed." ]]
 }
 
-@test "update_chatdesk: offline mode prompt downgrade when zip version is lower (accepted)" {
+@test "update_nextdesk: offline mode prompt downgrade when zip version is lower (accepted)" {
   INSTALL_DIR="$TEST_DIR/install"
   mkdir -p "$INSTALL_DIR"
   printf "0.12.0\n" > "$INSTALL_DIR/VERSION"
@@ -1479,7 +1479,7 @@ setup_test_git_repo() {
   printf "0.10.0\n" > "$src_dir/VERSION"
   echo '{}' > "$src_dir/package.json"
 
-  SOURCE_ZIP_PATH="$TEST_DIR/chatdesk.zip"
+  SOURCE_ZIP_PATH="$TEST_DIR/nextdesk.zip"
   touch "$SOURCE_ZIP_PATH"
 
   local updated_from_zip="no"
@@ -1491,7 +1491,7 @@ setup_test_git_repo() {
 
   prompt_source_mode() { SOURCE_MODE="offline"; }
   ensure_offline_source_ready() { return 0; }
-  ensure_chatdesk_stopped_for_update() { return 0; }
+  ensure_nextdesk_stopped_for_update() { return 0; }
   extract_offline_source_zip() { printf "%s|%s" "$TEST_DIR/tmp" "$src_dir"; }
   prompt_yes_no() {
     if [[ "$1" == *"backup"* ]]; then
@@ -1500,7 +1500,7 @@ setup_test_git_repo() {
       printf "yes"
     fi
   }
-  install_chatdesk_dependencies() { return 0; }
+  install_nextdesk_dependencies() { return 0; }
   ensure_vapid_keys() { return 0; }
   run_migrations() { return 0; }
   ensure_service_user_exists() { return 0; }
@@ -1509,15 +1509,15 @@ setup_test_git_repo() {
   show_deployment_success_frame() { return 0; }
   press_enter_to_continue() { return 0; }
   systemctl() { return 0; }
-  export -f prompt_source_mode ensure_offline_source_ready ensure_chatdesk_stopped_for_update extract_offline_source_zip prompt_yes_no update_source_from_zip install_chatdesk_dependencies ensure_vapid_keys run_migrations ensure_service_user_exists apply_ownership install_global_command_from_path show_deployment_success_frame press_enter_to_continue systemctl
+  export -f prompt_source_mode ensure_offline_source_ready ensure_nextdesk_stopped_for_update extract_offline_source_zip prompt_yes_no update_source_from_zip install_nextdesk_dependencies ensure_vapid_keys run_migrations ensure_service_user_exists apply_ownership install_global_command_from_path show_deployment_success_frame press_enter_to_continue systemctl
 
-  run update_chatdesk
+  run update_nextdesk
   [ "$status" -eq 0 ]
   [[ "$output" =~ "Offline downgrade requested." ]]
   [ -f "$TEST_DIR/zip-extracted" ]
 }
 
-@test "update_chatdesk: offline mode prompt update when zip version is the same (declined)" {
+@test "update_nextdesk: offline mode prompt update when zip version is the same (declined)" {
   INSTALL_DIR="$TEST_DIR/install"
   mkdir -p "$INSTALL_DIR"
   printf "0.12.0\n" > "$INSTALL_DIR/VERSION"
@@ -1527,12 +1527,12 @@ setup_test_git_repo() {
   printf "0.12.0\n" > "$src_dir/VERSION"
   echo '{}' > "$src_dir/package.json"
 
-  SOURCE_ZIP_PATH="$TEST_DIR/chatdesk.zip"
+  SOURCE_ZIP_PATH="$TEST_DIR/nextdesk.zip"
   touch "$SOURCE_ZIP_PATH"
 
   prompt_source_mode() { SOURCE_MODE="offline"; }
   ensure_offline_source_ready() { return 0; }
-  ensure_chatdesk_stopped_for_update() { return 0; }
+  ensure_nextdesk_stopped_for_update() { return 0; }
   extract_offline_source_zip() { printf "%s|%s" "$TEST_DIR/tmp" "$src_dir"; }
   prompt_yes_no() {
     if [[ "$1" == *"backup"* ]]; then
@@ -1542,14 +1542,14 @@ setup_test_git_repo() {
     fi
   }
   press_enter_to_continue() { return 0; }
-  export -f prompt_source_mode ensure_offline_source_ready ensure_chatdesk_stopped_for_update extract_offline_source_zip prompt_yes_no press_enter_to_continue
+  export -f prompt_source_mode ensure_offline_source_ready ensure_nextdesk_stopped_for_update extract_offline_source_zip prompt_yes_no press_enter_to_continue
 
-  run update_chatdesk
+  run update_nextdesk
   [ "$status" -eq 0 ]
-  [[ "$output" =~ "ChatDesk is already up to date. No rebuild needed." ]]
+  [[ "$output" =~ "NextDesk is already up to date. No rebuild needed." ]]
 }
 
-@test "update_chatdesk: offline mode prompt update when zip version is the same (accepted)" {
+@test "update_nextdesk: offline mode prompt update when zip version is the same (accepted)" {
   INSTALL_DIR="$TEST_DIR/install"
   mkdir -p "$INSTALL_DIR"
   printf "0.12.0\n" > "$INSTALL_DIR/VERSION"
@@ -1559,7 +1559,7 @@ setup_test_git_repo() {
   printf "0.12.0\n" > "$src_dir/VERSION"
   echo '{}' > "$src_dir/package.json"
 
-  SOURCE_ZIP_PATH="$TEST_DIR/chatdesk.zip"
+  SOURCE_ZIP_PATH="$TEST_DIR/nextdesk.zip"
   touch "$SOURCE_ZIP_PATH"
 
   local updated_from_zip="no"
@@ -1571,7 +1571,7 @@ setup_test_git_repo() {
 
   prompt_source_mode() { SOURCE_MODE="offline"; }
   ensure_offline_source_ready() { return 0; }
-  ensure_chatdesk_stopped_for_update() { return 0; }
+  ensure_nextdesk_stopped_for_update() { return 0; }
   extract_offline_source_zip() { printf "%s|%s" "$TEST_DIR/tmp" "$src_dir"; }
   prompt_yes_no() {
     if [[ "$1" == *"backup"* ]]; then
@@ -1580,7 +1580,7 @@ setup_test_git_repo() {
       printf "yes"
     fi
   }
-  install_chatdesk_dependencies() { return 0; }
+  install_nextdesk_dependencies() { return 0; }
   ensure_vapid_keys() { return 0; }
   run_migrations() { return 0; }
   ensure_service_user_exists() { return 0; }
@@ -1589,9 +1589,9 @@ setup_test_git_repo() {
   show_deployment_success_frame() { return 0; }
   press_enter_to_continue() { return 0; }
   systemctl() { return 0; }
-  export -f prompt_source_mode ensure_offline_source_ready ensure_chatdesk_stopped_for_update extract_offline_source_zip prompt_yes_no update_source_from_zip install_chatdesk_dependencies ensure_vapid_keys run_migrations ensure_service_user_exists apply_ownership install_global_command_from_path show_deployment_success_frame press_enter_to_continue systemctl
+  export -f prompt_source_mode ensure_offline_source_ready ensure_nextdesk_stopped_for_update extract_offline_source_zip prompt_yes_no update_source_from_zip install_nextdesk_dependencies ensure_vapid_keys run_migrations ensure_service_user_exists apply_ownership install_global_command_from_path show_deployment_success_frame press_enter_to_continue systemctl
 
-  run update_chatdesk
+  run update_nextdesk
   [ "$status" -eq 0 ]
   [[ "$output" =~ "Offline update requested." ]]
   [ -f "$TEST_DIR/zip-extracted" ]
@@ -1602,11 +1602,11 @@ setup_test_git_repo() {
 # ===========================================================================
 
 @test "update_menu: updates global command when newer version is available on GitHub" {
-  GLOBAL_COMMAND_PATH="$TEST_DIR/chatdesk-deploy"
+  GLOBAL_COMMAND_PATH="$TEST_DIR/nextdesk-deploy"
   SCRIPT_VERSION="0.12.0"
 
   fetch_remote_installer_script() {
-    printf '#!/usr/bin/env bash\n# chatdesk-deploy-version: 0.13.0\necho remote\n' > "$1"
+    printf '#!/usr/bin/env bash\n# nextdesk-deploy-version: 0.13.0\necho remote\n' > "$1"
     return 0
   }
   press_enter_to_continue() { return 0; }
@@ -1621,13 +1621,13 @@ setup_test_git_repo() {
 }
 
 @test "update_menu: prompts to reinstall when menu is already up to date (accepted)" {
-  GLOBAL_COMMAND_PATH="$TEST_DIR/chatdesk-deploy"
+  GLOBAL_COMMAND_PATH="$TEST_DIR/nextdesk-deploy"
   SCRIPT_VERSION="0.12.0"
   CURRENT_SCRIPT_PATH="$TEST_DIR/current.sh"
-  printf '#!/usr/bin/env bash\n# chatdesk-deploy-version: 0.12.0\necho current\n' > "$CURRENT_SCRIPT_PATH"
+  printf '#!/usr/bin/env bash\n# nextdesk-deploy-version: 0.12.0\necho current\n' > "$CURRENT_SCRIPT_PATH"
 
   fetch_remote_installer_script() {
-    printf '#!/usr/bin/env bash\n# chatdesk-deploy-version: 0.12.0\necho remote\n' > "$1"
+    printf '#!/usr/bin/env bash\n# nextdesk-deploy-version: 0.12.0\necho remote\n' > "$1"
     return 0
   }
   prompt_yes_no() { printf "yes"; }
@@ -1642,11 +1642,11 @@ setup_test_git_repo() {
 }
 
 @test "update_menu: prompts to reinstall when menu is already up to date (declined)" {
-  GLOBAL_COMMAND_PATH="$TEST_DIR/chatdesk-deploy"
+  GLOBAL_COMMAND_PATH="$TEST_DIR/nextdesk-deploy"
   SCRIPT_VERSION="0.12.0"
 
   fetch_remote_installer_script() {
-    printf '#!/usr/bin/env bash\n# chatdesk-deploy-version: 0.12.0\necho remote\n' > "$1"
+    printf '#!/usr/bin/env bash\n# nextdesk-deploy-version: 0.12.0\necho remote\n' > "$1"
     return 0
   }
   prompt_yes_no() { printf "no"; }
@@ -1660,10 +1660,10 @@ setup_test_git_repo() {
 }
 
 @test "update_menu: prompts to reinstall when fetch fails from GitHub (accepted)" {
-  GLOBAL_COMMAND_PATH="$TEST_DIR/chatdesk-deploy"
+  GLOBAL_COMMAND_PATH="$TEST_DIR/nextdesk-deploy"
   SCRIPT_VERSION="0.12.0"
   CURRENT_SCRIPT_PATH="$TEST_DIR/current.sh"
-  printf '#!/usr/bin/env bash\n# chatdesk-deploy-version: 0.12.0\necho current\n' > "$CURRENT_SCRIPT_PATH"
+  printf '#!/usr/bin/env bash\n# nextdesk-deploy-version: 0.12.0\necho current\n' > "$CURRENT_SCRIPT_PATH"
 
   fetch_remote_installer_script() { return 1; }
   prompt_yes_no() { printf "yes"; }
@@ -1678,7 +1678,7 @@ setup_test_git_repo() {
 }
 
 @test "update_menu: prompts to reinstall when fetch fails from GitHub (declined)" {
-  GLOBAL_COMMAND_PATH="$TEST_DIR/chatdesk-deploy"
+  GLOBAL_COMMAND_PATH="$TEST_DIR/nextdesk-deploy"
   SCRIPT_VERSION="0.12.0"
 
   fetch_remote_installer_script() { return 1; }
@@ -1783,14 +1783,14 @@ setup_test_git_repo() {
     if [[ "$1" == *"Choice"* ]]; then
       eval "$2='2'"
     elif [[ "$1" == *"Host"* ]]; then
-      eval "$2='postgresql://user:pass@ep-xyz.aws.neon.tech/chatdesk?sslmode=require'"
+      eval "$2='postgresql://user:pass@ep-xyz.aws.neon.tech/nextdesk?sslmode=require'"
     fi
   }
   export -f prompt_read
 
   prompt_database_choice
   [ "$DB_CLIENT" = "postgres" ]
-  [ "$POSTGRES_URL" = "postgresql://user:pass@ep-xyz.aws.neon.tech/chatdesk?sslmode=require" ]
+  [ "$POSTGRES_URL" = "postgresql://user:pass@ep-xyz.aws.neon.tech/nextdesk?sslmode=require" ]
   [ "$POSTGRES_SSL" = "true" ]
 }
 
@@ -1803,7 +1803,7 @@ setup_test_git_repo() {
     elif [[ "$1" == *"Port"* ]]; then
       eval "$2='5432'"
     elif [[ "$1" == *"Database Name"* ]]; then
-      eval "$2='chatdesk'"
+      eval "$2='nextdesk'"
     elif [[ "$1" == *"Username"* ]]; then
       eval "$2='user'"
     elif [[ "$1" == *"Password"* ]]; then
@@ -1883,7 +1883,7 @@ setup_test_git_repo() {
   CERT_MODE="certbot"
   CLIENT_PORT="443"
   SERVER_PORT="3000"
-  NGINX_SITE_FILE="$TEST_DIR/chatdesk_nginx.conf"
+  NGINX_SITE_FILE="$TEST_DIR/nextdesk_nginx.conf"
   NGINX_SERVER_NAME="144.31.68.17"
   MAX_UPLOAD_MB="50"
   ACME_WEBROOT="$TEST_DIR/acme"
@@ -2008,7 +2008,7 @@ setup_test_git_repo() {
   COTURN_MAX_PORT="65535"
   COTURN_EXTERNAL_IP="203.0.113.1"
   COTURN_REALM="chat.example.com"
-  COTURN_USER="chatdesk"
+  COTURN_USER="nextdesk"
   COTURN_PASSWORD=""
 
   COTURN_CONF_FILE="$TEST_DIR/turnserver.conf"
@@ -2029,7 +2029,7 @@ setup_test_git_repo() {
   local env_credential
   env_credential="$(sed -n 's/^TURN_CREDENTIAL=//p' "$INSTALL_DIR/.env")"
   local conf_credential
-  conf_credential="$(sed -n 's/^user=chatdesk://p' "$COTURN_CONF_FILE")"
+  conf_credential="$(sed -n 's/^user=nextdesk://p' "$COTURN_CONF_FILE")"
 
   # .env must carry the same generated credential as the conf file, non-empty.
   [ -n "$env_credential" ]
@@ -2042,7 +2042,7 @@ setup_test_git_repo() {
   COTURN_MAX_PORT="65535"
   COTURN_EXTERNAL_IP="203.0.113.1"
   COTURN_REALM="chat.example.com"
-  COTURN_USER="chatdesk"
+  COTURN_USER="nextdesk"
   COTURN_PASSWORD="supersecretpassword123"
 
   COTURN_CONF_FILE="$TEST_DIR/turnserver.conf"
@@ -2074,7 +2074,7 @@ setup_test_git_repo() {
   [[ "$conf" =~ "fingerprint" ]]
   [[ "$conf" =~ "lt-cred-mech" ]]
   [[ "$conf" =~ "realm=chat.example.com" ]]
-  [[ "$conf" =~ "user=chatdesk:supersecretpassword123" ]]
+  [[ "$conf" =~ "user=nextdesk:supersecretpassword123" ]]
   [[ "$conf" =~ "external-ip=203.0.113.1" ]]
 
   local default_content
@@ -2084,13 +2084,13 @@ setup_test_git_repo() {
 }
 
 @test "write_env_fallback: writes TURN_* settings when ENABLE_COTURN is yes" {
-  local env_file="$TEST_DIR/chatdesk.env"
+  local env_file="$TEST_DIR/nextdesk.env"
   SERVER_PORT="3000"
   CLIENT_PORT="80"
   WORKER_PORT="3001"
   ENABLE_COTURN="yes"
   COTURN_PORT="3478"
-  COTURN_USER="chatdesk"
+  COTURN_USER="nextdesk"
   COTURN_PASSWORD="coturnpassword123"
   COTURN_EXTERNAL_IP="203.0.113.10"
   DEPLOY_MODE="ip"
@@ -2105,7 +2105,7 @@ setup_test_git_repo() {
   env_content="$(cat "$env_file")"
   [[ "$env_content" =~ 'TURN_STUN_URL="stun:203.0.113.10:3478"' ]]
   [[ "$env_content" =~ 'TURN_URL="turn:203.0.113.10:3478"' ]]
-  [[ "$env_content" =~ 'TURN_USERNAME="chatdesk"' ]]
+  [[ "$env_content" =~ 'TURN_USERNAME="nextdesk"' ]]
   [[ "$env_content" =~ 'TURN_CREDENTIAL="coturnpassword123"' ]]
 }
 
@@ -2171,16 +2171,16 @@ setup_test_git_repo() {
   [[ "$output" == *"skipping DB migrations"* ]]
 }
 
-@test "handle_interrupt: restores a stopped ChatDesk service before exiting" {
+@test "handle_interrupt: restores a stopped NextDesk service before exiting" {
   # install.sh is sourced with traps stripped, so define the trap body the way
   # the live script does and verify the restore call happens on SIGINT.
   restore_called="no"
-  restore_chatdesk_service_after_update() { restore_called="yes"; return 0; }
-  export -f restore_chatdesk_service_after_update
+  restore_nextdesk_service_after_update() { restore_called="yes"; return 0; }
+  export -f restore_nextdesk_service_after_update
 
   local interrupt_body
   interrupt_body="$(sed -n '/^handle_interrupt()/,/^}/p' "$INSTALL_SCRIPT")"
-  [[ "$interrupt_body" == *"restore_chatdesk_service_after_update"* ]]
+  [[ "$interrupt_body" == *"restore_nextdesk_service_after_update"* ]]
 }
 
 @test "handle_interrupt: guards the restore call when it is not yet defined" {
@@ -2188,7 +2188,7 @@ setup_test_git_repo() {
   # declare -F guard must prevent an "unbound function" failure path.
   local interrupt_body
   interrupt_body="$(sed -n '/^handle_interrupt()/,/^}/p' "$INSTALL_SCRIPT")"
-  [[ "$interrupt_body" == *"declare -F restore_chatdesk_service_after_update"* ]]
+  [[ "$interrupt_body" == *"declare -F restore_nextdesk_service_after_update"* ]]
 }
 
 @test "db menu offers Database diagnostics (db:doctor) as option 25" {

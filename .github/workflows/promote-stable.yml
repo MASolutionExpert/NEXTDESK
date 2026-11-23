@@ -86,8 +86,8 @@ jobs:
 
           let install = fs.readFileSync("scripts/install.sh", "utf8");
           install = install.replace(
-            /^# chatdesk-deploy-version:.*$/m,
-            `# chatdesk-deploy-version: ${stable}`
+            /^# nextdesk-deploy-version:.*$/m,
+            `# nextdesk-deploy-version: ${stable}`
           );
           fs.writeFileSync("scripts/install.sh", install);
 
@@ -121,13 +121,13 @@ jobs:
           const heading = new RegExp(`^## ${stable.replace(/\./g, "\\.")}\\s*$`, "m");
           const start = text.search(heading);
           if (start === -1) {
-            console.log(`ChatDesk ${stable} — stable release.`);
+            console.log(`NextDesk ${stable} — stable release.`);
           } else {
             const next = text.slice(start + 1).search(/^## /m);
             const section = next === -1
               ? text.slice(start)
               : text.slice(start, start + 1 + next);
-            console.log(section.replace(/^## .*$/m, `ChatDesk ${stable} — Stable Release`).trim());
+            console.log(section.replace(/^## .*$/m, `NextDesk ${stable} — Stable Release`).trim());
           }
           EOF
 
@@ -137,5 +137,5 @@ jobs:
         run: |
           gh release create "$STABLE_TAG" \
             --target main \
-            --title "ChatDesk $STABLE_VERSION — Stable Release" \
+            --title "NextDesk $STABLE_VERSION — Stable Release" \
             --notes-file notes.md

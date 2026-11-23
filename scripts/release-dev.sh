@@ -11,7 +11,7 @@ if [[ -z "$NEW_VERSION" ]] || ! [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev
 fi
 
 printf "%s\n" "$NEW_VERSION" > VERSION
-sed -i "s|^# chatdesk-deploy-version:.*$|# chatdesk-deploy-version: ${NEW_VERSION}|" scripts/install.sh
+sed -i "s|^# nextdesk-deploy-version:.*$|# nextdesk-deploy-version: ${NEW_VERSION}|" scripts/install.sh
 
 echo "Updated VERSION and scripts/install.sh header to ${NEW_VERSION}."
 echo "Add a '## ${NEW_VERSION}' section to CHANGELOG.md, then run: bash scripts/verify-release-sync.sh --channel dev"

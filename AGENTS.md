@@ -24,7 +24,7 @@ NextDesk (`MASolutionExpert/NEXTDESK`) has EXACTLY TWO spaces on GitHub — `dev
 
 ### Space 1 — `dev` (development & testing)
 - EVERY completed change is IMMEDIATELY pushed to `dev` and registered as a NEW dev version:
-  1. Bump root `VERSION` (`X.Y.Z-dev.YYYYMMDDNN`, YYYYMMDD + 2-digit daily sequence `01..99`) and `# chatdesk-deploy-version:` header in `scripts/install.sh` (can use `bash scripts/release-dev.sh X.Y.Z-dev.YYYYMMDDNN`).
+  1. Bump root `VERSION` (`X.Y.Z-dev.YYYYMMDDNN`, YYYYMMDD + 2-digit daily sequence `01..99`) and `# nextdesk-deploy-version:` header in `scripts/install.sh` (can use `bash scripts/release-dev.sh X.Y.Z-dev.YYYYMMDDNN`).
   2. Add a `## {VERSION}` section to `CHANGELOG.md`.
   3. Pass `bash scripts/verify-release-sync.sh --channel dev` and `bash -n scripts/install.sh`.
   4. Commit, create an annotated git tag `v{VERSION}`, push `dev` + tag, and publish a bilingual (EN + FA) GitHub **prerelease**.
@@ -41,7 +41,7 @@ NextDesk (`MASolutionExpert/NEXTDESK`) has EXACTLY TWO spaces on GitHub — `dev
 ### Installer/CLI release-sync law (MANDATORY — every change, no exceptions)
 Every change MUST ship together with the installer and CLI (`nextdesk-deploy`).
 - Run `bash scripts/verify-release-sync.sh` before ANY release.
-- Any install/update step MUST live in `finalize_chatdesk_source_change()` (shared by git update, offline update, channel switch, and invoked via `--finalize-update` self-handoff).
+- Any install/update step MUST live in `finalize_nextdesk_source_change()` (shared by git update, offline update, channel switch, and invoked via `--finalize-update` self-handoff).
 - Never use raw `dpkg --compare-versions` for SemVer comparisons; always use `semver_compare_versions` / `semver_gt` / `semver_lt`.
 
 ## Sandbox / Environment Workflow (IMPORTANT)
@@ -99,7 +99,7 @@ npm run docs:build           # Build docs
 
 ## Release Delivery Checklist (PERMANENT MEMORY — run at the end of EVERY change)
 1. **Root-cause fix only.**
-2. **Installer coverage** inside `finalize_chatdesk_source_change()`.
+2. **Installer coverage** inside `finalize_nextdesk_source_change()`.
 3. **Release-sync gate**: bump `VERSION`, `scripts/install.sh` header, `CHANGELOG.md`, then pass `bash scripts/verify-release-sync.sh --channel dev`.
 4. **Static & unit checks**: `bash -n scripts/install.sh`, syntax/import checks, tests.
 5. **Push + register dev release**: commit, push `dev`, push annotated tag `v{VERSION}`, publish bilingual GitHub prerelease.
