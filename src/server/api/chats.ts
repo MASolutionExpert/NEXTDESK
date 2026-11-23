@@ -71,7 +71,20 @@ function registerChatRoutes(app, deps) {
     getMessages,
     remoteChannelManager,
     upsertRemoteChannelSource,
+    writeAdminAuditLog = null,
   } = deps;
+  const MODERATOR_ROLES = new Set(["owner", "admin", "operator"]);
+  const isModeratorRole = (role: any) =>
+    MODERATOR_ROLES.has(String(role || "").trim().toLowerCase());
+  const recordModerationAudit = async (entry: any) => {
+    if (typeof writeAdminAuditLog !== "function") return;
+    try {
+      const r: any = writeAdminAuditLog(entry);
+      if (r && typeof r.then === "function") await r;
+    } catch {
+      // Audit logging must never break request flows
+    }
+  };
 
   const resolveMaybePromise = async (value) =>
     value && typeof value.then === "function" ? await value : value;
@@ -1374,6 +1387,18 @@ function registerChatRoutes(app, deps) {
         emitSseEvent(ev.targetUsername, ev.payload);
       } catch (_) {}
     });
+    await recordModerationAudit({
+      actorUserId: user.id,
+      actorUsername: user.username,
+      action: "chat.delete",
+      targetType: "chat",
+      targetLabel: chat.name || String(chatId),
+      details: {
+        chatId,
+        type: chat.type,
+        removedFiles: Array.isArray(result.storedFilesToRemove) ? result.storedFilesToRemove.length : 0,
+      },
+    });
     return res.json({ ok: true, deleted: true });
   });
 
@@ -1672,7 +1697,40 @@ function registerChatRoutes(app, deps) {
       return res.status(404).json({ error: "User not found." });
     }
 
-    await resolveMaybePromise(hideChatsForUser(user.id, chatIds.filter(Boolean)));
+    const cleanIds = chatIds.filter(Boolean);
+    const resolvedChats: any[] = [];
+    for (const cid of cleanIds) {
+      const c: any = await resolveMaybePromise(findChatById(cid));
+      if (c) resolvedChats.push(c);
+    }
+
+    const dmChats = resolvedChats.filter(
+      (c) => String(c?.type || "").toLowerCase() === "dm",
+    );
+    if (dmChats.length > 0 && !isModeratorRole(user.role)) {
+      return res.status(403).json({
+        error: "Only moderators can delete threads.",
+      });
+    }
+
+    await resolveMaybePromise(hideChatsForUser(user.id, cleanIds));
+
+    if (dmChats.length > 0 && isModeratorRole(user.role)) {
+      for (const dm of dmChats) {
+        await recordModerationAudit({
+          actorUserId: user.id,
+          actorUsername: user.username,
+          action: "thread.delete",
+          targetType: "chat",
+          targetLabel: String(dm.id),
+          details: {
+            chatId: dm.id,
+            channel: dm.channel || "direct",
+            departmentId: dm.department_id ?? null,
+          },
+        });
+      }
+    }
 
     res.json({ ok: true });
   });

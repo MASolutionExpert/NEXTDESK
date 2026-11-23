@@ -63,6 +63,7 @@ function registerMessageRoutes(app, deps) {
     setMessageForwardOrigin,
     storageEncryption,
     unhideChat,
+    writeAdminAuditLog = null,
     uploadFiles,
     uploadRootDir,
     enqueueVideoTranscodeJob,
@@ -70,6 +71,18 @@ function registerMessageRoutes(app, deps) {
     markMessageRead,
   } = deps;
 
+  const MODERATOR_ROLES = new Set(["owner", "admin", "operator"]);
+  const isModeratorRole = (role: any) =>
+    MODERATOR_ROLES.has(String(role || "").trim().toLowerCase());
+  const recordModerationAudit = async (entry: any) => {
+    if (typeof writeAdminAuditLog !== "function") return;
+    try {
+      const r: any = writeAdminAuditLog(entry);
+      if (r && typeof r.then === "function") await r;
+    } catch {
+      // Audit logging must never break request flows
+    }
+  };
   const safeBasename = (p) => {
     if (path && typeof path.basename === "function") return path.basename(p);
     return String(p || "").split("/").pop().split("\\").pop();
@@ -878,6 +891,12 @@ function registerMessageRoutes(app, deps) {
         }
         let editTarget: any = null;
         if (editMessageId) {
+          if (!isModeratorRole(user.role)) {
+            removeUploadedFiles(uploadedFiles);
+            return res.status(403).json({
+              error: "Only moderators can edit messages.",
+            });
+          }
           editTarget = await resolveMaybePromise(findMessageById(editMessageId));
           if (!editTarget || editTarget.chat_id !== chatId) {
             removeUploadedFiles(uploadedFiles);
@@ -1827,6 +1846,9 @@ function registerMessageRoutes(app, deps) {
     if (!user) {
       return res.status(404).json({ error: "User not found." });
     }
+    if (!isModeratorRole(user.role)) {
+      return res.status(403).json({ error: "Only moderators can edit messages." });
+    }
     const rawIsMem = isMember(chatId, user.id);
     const memberCheck = rawIsMem && typeof rawIsMem.then === "function" ? await rawIsMem : rawIsMem;
     if (!memberCheck) {
@@ -1885,6 +1907,9 @@ function registerMessageRoutes(app, deps) {
     if (!user) {
       return res.status(404).json({ error: "User not found." });
     }
+    if (!isModeratorRole(user.role)) {
+      return res.status(403).json({ error: "Only moderators can delete messages." });
+    }
     const rawIsMem = isMember(chatId, user.id);
     const memberCheck = rawIsMem && typeof rawIsMem.then === "function" ? await rawIsMem : rawIsMem;
     if (!memberCheck) {
@@ -1899,6 +1924,7 @@ function registerMessageRoutes(app, deps) {
     const deleteScope = String(scope || "").toLowerCase() === "everyone"
       ? "everyone"
       : "self";
+    const previewText = String(message.edited_body || message.body || "").trim().slice(0, 120);
 
     if (deleteScope === "everyone") {
       const rawChat = findChatById(chatId);
@@ -1910,9 +1936,11 @@ function registerMessageRoutes(app, deps) {
       const role = String(rawRole && typeof rawRole.then === "function" ? await rawRole : rawRole).toLowerCase();
       const rawCanPost = canUserPostInChat(chatId, user.id, chat);
       const canPost = rawCanPost && typeof rawCanPost.then === "function" ? await rawCanPost : rawCanPost;
+      // Moderators (owner/admin/operator) who belong to the thread may delete
+      // any participant's message for everyone.
       const canDeleteForEveryone =
         canPost &&
-        (message.user_id === user.id || role === "owner");
+        (isModeratorRole(user.role) || message.user_id === user.id || role === "owner");
       if (!canDeleteForEveryone) {
         return res.status(403).json({
           error: "You cannot delete this message for everyone.",
@@ -1925,11 +1953,37 @@ function registerMessageRoutes(app, deps) {
         chatId,
         messageIds: [message.id],
       });
+      await recordModerationAudit({
+        actorUserId: user.id,
+        actorUsername: user.username,
+        action: "message.delete.everyone",
+        targetType: "message",
+        targetLabel: String(message.id),
+        details: {
+          chatId,
+          messageId: message.id,
+          authorUserId: message.user_id ?? null,
+          preview: previewText || null,
+        },
+      });
       return res.json({ ok: true, scope: "everyone", id: message.id });
     }
 
     const hSelf = hideMessageForUser(message.id, user.id);
     if (hSelf && typeof hSelf.then === "function") await hSelf;
+    await recordModerationAudit({
+      actorUserId: user.id,
+      actorUsername: user.username,
+      action: "message.delete.self",
+      targetType: "message",
+      targetLabel: String(message.id),
+      details: {
+        chatId,
+        messageId: message.id,
+        authorUserId: message.user_id ?? null,
+        preview: previewText || null,
+      },
+    });
     return res.json({ ok: true, scope: "self", id: message.id });
   });
 

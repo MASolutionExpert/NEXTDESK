@@ -268,7 +268,7 @@ describe("POST /api/messages", () => {
 // ─── POST /api/messages/edit ──────────────────────────────────────────────────
 
 describe("POST /api/messages/edit", () => {
-  function makeEditApp(messageOverride: any = {}) {
+  function makeEditApp(messageOverride: any = {}, role = "operator") {
     const hash = bcrypt.hashSync("secret123", 4);
     const userStore = makeUserStore([
       {
@@ -279,7 +279,7 @@ describe("POST /api/messages/edit", () => {
         avatar_url: null,
         color: "#10b981",
         status: "online",
-        role: "user",
+        role,
         banned: false,
       },
     ]);
@@ -385,7 +385,7 @@ describe("POST /api/messages/edit", () => {
 // ─── POST /api/messages/delete ────────────────────────────────────────────────
 
 describe("POST /api/messages/delete", () => {
-  function makeDeleteApp(messageOverride: any = {}) {
+  function makeDeleteApp(messageOverride: any = {}, role = "operator") {
     const hash = bcrypt.hashSync("secret123", 4);
     const userStore = makeUserStore([
       {
@@ -396,7 +396,7 @@ describe("POST /api/messages/delete", () => {
         avatar_url: null,
         color: "#10b981",
         status: "online",
-        role: "user",
+        role,
         banned: false,
       },
     ]);

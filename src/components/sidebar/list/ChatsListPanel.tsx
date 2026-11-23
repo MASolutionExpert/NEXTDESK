@@ -899,7 +899,11 @@ export default function ChatsListPanel({
                 } ${editMode ? "animate-chat-wiggle-ios" : ""}`}
                 style={wiggleStyle}
               >
-                {editMode ? (
+                {editMode &&
+                (conv.type !== "dm" ||
+                  ["owner", "admin", "operator"].includes(
+                    String(user?.role || "").toLowerCase(),
+                  )) ? (
                   <button
                     type="button"
                     onClick={(event) => {

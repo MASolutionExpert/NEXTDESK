@@ -19,7 +19,7 @@ describe("PostgreSQL Promise mode - Chat Mute, Unmute, and Hide endpoints", () =
     avatar_url: null,
     color: "#10b981",
     status: "online",
-    role: "user",
+    role: "operator",
     banned: false,
   };
 

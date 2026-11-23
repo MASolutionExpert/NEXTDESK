@@ -31,7 +31,9 @@ export function useAppContextMenu({
   canCurrentUserEditGroup,
   canReplyToMessage,
   canEditMessage,
+  canDeleteMessage = true,
   canDeleteMessageForEveryone,
+  canDeleteChat = null,
   onReplyToMessage,
   onEditMessage,
   onDeleteMessage,
@@ -171,18 +173,22 @@ export function useAppContextMenu({
                   onSelect: () => onForwardMessage?.(message),
                 },
               ]),
-          {
-            id: "delete",
-            label: t("common.actions.delete"),
-            icon: Trash,
-            danger: true,
-            onSelect: () =>
-              onDeleteMessage?.(message, {
-                allowDeleteForEveryone: Boolean(
-                  canDeleteMessageForEveryone?.(message),
-                ),
-              }),
-          },
+          ...(canDeleteMessage
+            ? [
+                {
+                  id: "delete",
+                  label: t("common.actions.delete"),
+                  icon: Trash,
+                  danger: true,
+                  onSelect: () =>
+                    onDeleteMessage?.(message, {
+                      allowDeleteForEveryone: Boolean(
+                        canDeleteMessageForEveryone?.(message),
+                      ),
+                    }),
+                },
+              ]
+            : []),
         );
       }
 
@@ -251,13 +257,15 @@ export function useAppContextMenu({
             onSelect: () => onToggleChatMute?.(chat?.id),
           });
         }
-        items.push({
-          id: "delete",
-          label: t("common.actions.delete"),
-          icon: Trash,
-          danger: true,
-          onSelect: () => onDeleteChats?.([chat?.id]),
-        });
+        if (typeof canDeleteChat !== "function" || canDeleteChat(chat)) {
+          items.push({
+            id: "delete",
+            label: t("common.actions.delete"),
+            icon: Trash,
+            danger: true,
+            onSelect: () => onDeleteChats?.([chat?.id]),
+          });
+        }
       }
 
       if (!items.length) return;
@@ -291,6 +299,8 @@ export function useAppContextMenu({
       onRemoveGroupMember,
       onReplyToMessage,
       onToggleChatMute,
+      canDeleteChat,
+      canDeleteMessage,
       canDeleteMessageForEveryone,
       canEditMessage,
       isOfflineProp,

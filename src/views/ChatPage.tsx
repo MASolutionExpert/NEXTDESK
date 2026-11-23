@@ -3173,24 +3173,36 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
     setConfirmDeleteOpen(true);
   };
 
+  const isModeratorUser = ["owner", "admin", "operator"].includes(
+    String(user?.role || "").toLowerCase(),
+  );
+
   const canDeleteMessageForEveryone: any = useCallback(
     (message) => {
+      if (!isModeratorUser) return false;
       if (String(activeChat?.type || "").toLowerCase() === "saved") return false;
       if (isActiveChannelChat && !canCurrentUserEditGroup) return false;
       const messageAuthor: any = String(message?.username || "").toLowerCase();
-      const currentUsername: any = String(user?.username || "").toLowerCase();
       if (!messageAuthor) return false;
-      if (messageAuthor === currentUsername) return true;
-      return canCurrentUserEditGroup;
+      return true;
     },
-    [activeChat?.type, canCurrentUserEditGroup, isActiveChannelChat, user?.username],
+    [activeChat?.type, canCurrentUserEditGroup, isActiveChannelChat, isModeratorUser],
   );
 
   const canEditMessageFromContext: any = useCallback(
     (message) =>
+      isModeratorUser &&
       (!isActiveChannelChat || canCurrentUserEditGroup) &&
       isMessageAuthoredByUser(message, { username: user?.username }),
-    [canCurrentUserEditGroup, isActiveChannelChat, user?.username],
+    [canCurrentUserEditGroup, isActiveChannelChat, isModeratorUser, user?.username],
+  );
+
+  const canDeleteChatFromContext: any = useCallback(
+    (chat) => {
+      if (isModeratorUser) return true;
+      return String(chat?.type || "").toLowerCase() !== "dm";
+    },
+    [isModeratorUser],
   );
 
   function handleDeleteMessageRequest(message, _options: any = {}) {
@@ -6660,7 +6672,9 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
     canCurrentUserEditGroup,
     canReplyToMessage: canSendInActiveChat,
     canEditMessage: canEditMessageFromContext,
+    canDeleteMessage: isModeratorUser,
     canDeleteMessageForEveryone,
+    canDeleteChat: canDeleteChatFromContext,
     onReplyToMessage: handleStartReply,
     onEditMessage: handleStartEdit,
     onDeleteMessage: handleDeleteMessageRequest,
