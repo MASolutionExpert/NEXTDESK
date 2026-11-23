@@ -2,6 +2,25 @@
 
 All notable changes to **NextDesk** are documented in this file.
 
+## 2.0.0-dev.2026112304
+
+### Added
+- **Direct vs. Support Channel Separation & `ChannelBadge`**: added a persisted `chats.channel` column (`direct` | `support`) via Prisma migration `0002_chat_channel` so regular messenger DMs and helpdesk support threads stay strictly separated, accompanied by the LTR-pinned `ChannelBadge` across chat lists, headers, message bubbles, and the admin Chats tab (with channel filtering and department names).
+- **Per-Thread Files Gallery & Full-History Search**: added member-only `GET /api/chats/:chatId/files` (with presigned remote URLs and thumbnail resolution) and `GET /api/chats/:chatId/search` (chunked scan decrypting at-rest messages across text, edited text, and attachment filenames), plus `ChatFilesModal`, `ChatSearchModal`, and jump-to-message scroll + highlight flash from `ChatProfileModal`.
+- **Admin Call History Report & One-Click TURN Setup**: added admin-only `GET /api/admin/calls` and a dedicated **Call history** sub-view inside the admin Chats tab (search, voice/video type filter, outcome filter, sortable columns, pagination, EN/FA i18n), plus `scripts/setup-turn.sh` for one-click coturn deployment and `.env` wiring.
+- **Read-Only Search Diagnostics (`npm run search:doctor`)**: added a strictly read-only CLI diagnostic tool (`src/server/scripts/search-doctor.ts`) to inspect user search normalization and case-insensitive matching against PostgreSQL.
+
+### Changed
+- **Moderator-Only Edit & Delete Policy with Audit Trail**: enforced server-side moderator role checks (`owner` | `admin` | `operator`) on message edits, message deletions (both `self` and `everyone`, allowing moderators to remove any participant's message inside chats they belong to), and DM/support thread hiding, while recording `message.delete.everyone`, `message.delete.self`, `thread.delete`, and `chat.delete` in `admin_audit_logs`.
+
+### Fixed
+- **WebRTC Call Stability & Failure Diagnostics**:
+  - Externalized `callManager` timers (`ringTimers`, `maxDurationTimers`, `bothOfflineSince`) so active call objects serialize cleanly without circular-JSON 500 errors when `CALL_MAX_DURATION` is enabled.
+  - Added 60-second server ring timeout (`missed` outcome + push dismissal), cross-session `call:ring-ended` broadcasts, `409 callee_busy` pre-check, caller redial resume, 30-second stale-call reaper with 45-second offline grace window and 12-hour lifetime cap, last-session-only WebSocket disconnect cleanup, and `call:error` feedback on failed signal relays.
+  - Added 1 automatic client ICE restart with a 10-second recovery window, verified HTTP/WS signal delivery, structured media/server/signaling/ICE failure diagnostics (with TURN hints shown only for genuine ICE failures), and full bilingual (FA/EN) call status and call-log labels (`outgoing`, `connected`, `cancelled`, `declined`, `missed`, `failed`).
+- **User Search & `@` Prefix Normalization**: fixed case-insensitive user search and stripped leading `@` characters in server queries and client search hooks; removed the `dmUsernames` filter so existing contacts remain searchable when starting or revisiting a chat.
+- **Mobile Overlay Back-Button Navigation (`useOverlayBack`)**: rewrote `useOverlayBack` with a module-level sentinel registry, deferred 1-tick close-pop verification, and sibling-overlay `popstate` guards to prevent accidental app exits or broken modal dismissal.
+
 ## 2.0.0-dev.2026112303
 
 ### Fixed
