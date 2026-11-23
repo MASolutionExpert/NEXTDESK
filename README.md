@@ -19,7 +19,7 @@
 | **Stable** (production) | `main` | `vX.Y.Z` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/main/scripts/install.sh \| bash` |
 | **Test** (pre-release) | `dev` | `vX.Y.Z-dev.YYYYMMDDNN` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/dev/scripts/install.sh \| REPO_BRANCH=dev bash` |
 
-Manage your installation anytime from anywhere with `nextdesk-deploy` (or `chatdesk-deploy`):
+Manage your installation anytime from anywhere with `nextdesk-deploy`:
 - `nextdesk-deploy --status` — inspect installed version and release channel.
 - Menu option **2) Update** stays inside your installed channel and self-hands-off to the latest installer pipeline.
 - Menu option **4) Switch channel** safely transitions between `dev` (Test) and `main` (Stable).
@@ -39,6 +39,3 @@ npm run build
 npm start
 ```
 
-## License
-
-MIT — see [LICENSE](./LICENSE).

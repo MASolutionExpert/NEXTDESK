@@ -68,9 +68,9 @@ export default defineRailway(() => {
     },
   });
 
-  const chatdeskGroup = group("nextdesk", [app, worker, db, uploads]);
+  const nextdeskGroup = group("nextdesk", [app, worker, db, uploads]);
 
   return project("nextdesk", {
-    resources: [chatdeskGroup],
+    resources: [nextdeskGroup],
   });
 });

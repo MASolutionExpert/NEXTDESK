@@ -13,7 +13,7 @@ services:
       - key: DB_CLIENT
         value: postgres
       # Provide your PostgreSQL connection string (e.g. from Neon, Supabase, Aiven, or Render Postgres)
-      # Example: postgresql://user:password@ep-xyz.us-east-2.aws.neon.tech/chatdesk?sslmode=require
+      # Example: postgresql://user:password@ep-xyz.us-east-2.aws.neon.tech/nextdesk?sslmode=require
       - key: POSTGRES_URL
         sync: false
       - key: POSTGRES_SSL

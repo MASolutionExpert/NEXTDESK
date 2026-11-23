@@ -1,5 +1,5 @@
 {
-  "name": "chatdesk-worker",
+  "name": "nextdesk-worker",
   "private": true,
   "repository": {
     "type": "git",

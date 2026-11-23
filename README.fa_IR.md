@@ -19,7 +19,7 @@
 | **اصلی / Stable** (پروداکشن) | `main` | `vX.Y.Z` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/main/scripts/install.sh \| bash` |
 | **تست / Test** (پیش‌انتشار) | `dev` | `vX.Y.Z-dev.YYYYMMDDNN` | `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/dev/scripts/install.sh \| REPO_BRANCH=dev bash` |
 
-مدیریت کامل سرور با ابزار `nextdesk-deploy` (و معادل سازگار `chatdesk-deploy`):
+مدیریت کامل سرور با ابزار `nextdesk-deploy`:
 - `nextdesk-deploy --status` — مشاهده نسخه نصب‌شده و کانال فعال (`dev` یا `main`).
 - گزینه **2) Update** همیشه داخل همان کانال می‌ماند، ابتدا فایل‌های جدید را دریافت می‌کند و سپس نهایی‌سازی را به نسخه جدید اینستالر واگذار می‌کند (`--finalize-update`).
 - گزینه **4) Switch channel** جابه‌جایی امن بین کانال تست (`dev`) و پایدار (`main`) را انجام می‌دهد.
@@ -39,6 +39,3 @@ npm run build
 npm start
 ```
 
-## مجوز
-
-MIT — فایل [LICENSE](./LICENSE) را ببینید.

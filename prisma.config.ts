@@ -18,7 +18,7 @@ function resolvePrismaDatabaseUrl(): string {
     process.env.POSTGRES_PASSWORD ?? "postgres",
   );
   const database = encodeURIComponent(
-    (process.env.POSTGRES_DB || "chatdesk").trim(),
+    (process.env.POSTGRES_DB || "nextdesk").trim(),
   );
   const sslQuery = process.env.POSTGRES_SSL === "true" ? "?sslmode=require" : "";
   return `postgresql://${user}:${password}@${host}:${port}/${database}${sslQuery}`;

@@ -39,7 +39,7 @@ NextDesk (`MASolutionExpert/NEXTDESK`) has EXACTLY TWO spaces on GitHub — `dev
 - **Dev / Test**: `curl -fsSL https://raw.githubusercontent.com/MASolutionExpert/NEXTDESK/dev/scripts/install.sh | REPO_BRANCH=dev bash`
 
 ### Installer/CLI release-sync law (MANDATORY — every change, no exceptions)
-Every change MUST ship together with the installer and CLI (`nextdesk-deploy` / `chatdesk-deploy`).
+Every change MUST ship together with the installer and CLI (`nextdesk-deploy`).
 - Run `bash scripts/verify-release-sync.sh` before ANY release.
 - Any install/update step MUST live in `finalize_chatdesk_source_change()` (shared by git update, offline update, channel switch, and invoked via `--finalize-update` self-handoff).
 - Never use raw `dpkg --compare-versions` for SemVer comparisons; always use `semver_compare_versions` / `semver_gt` / `semver_lt`.
