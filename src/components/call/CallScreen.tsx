@@ -29,6 +29,7 @@ import VerifiedBadge from "../common/VerifiedBadge.tsx";
 import { getAvatarInitials } from "../../utils/avatarInitials.ts";
 import { hasPersian } from "../../utils/fontUtils.ts";
 import { useMobileViewport } from "../../hooks/chat/useMobileViewport.ts";
+import { useI18n } from "../../i18n/index.ts";
 
 function formatDuration(seconds) {
   const mins = Math.floor(seconds / 60);
@@ -74,6 +75,7 @@ function SignalIndicator({ quality }: any) {
 export const CallScreen = memo(function CallScreen({
   callState,
   callEndReason,
+  callFailureDetail = null,
   isCallClosing,
   callType,
   callPeer,
@@ -124,6 +126,7 @@ export const CallScreen = memo(function CallScreen({
   const [remoteAspect, setRemoteAspect] = useState(3 / 4);
   const [localAspect, setLocalAspect] = useState(3 / 4);
   const { isMobileViewport } = useMobileViewport();
+  const { t } = useI18n();
   const boxRef = useRef<any>(null);
   const isDraggingRef = useRef(false);
   const remoteStreamRef = useRef<any>(null);
@@ -157,10 +160,66 @@ export const CallScreen = memo(function CallScreen({
   const isEnding = Boolean(callEndReason);
   const endLabel =
     callEndReason === "declined"
-      ? "Call declined"
-      : callEndReason === "failed"
-        ? "Call failed"
-        : "Call ended";
+      ? t("chat.call.screen.declined")
+      : callEndReason === "busy"
+        ? t("chat.call.screen.busy")
+        : callEndReason === "missed"
+          ? t("chat.call.screen.missed")
+          : callEndReason === "peer_media_failed"
+            ? t("chat.call.screen.peerMediaFailed")
+            : callEndReason === "failed"
+              ? t("chat.call.screen.failed")
+              : t("chat.call.screen.ended");
+
+  const failureExplanation = (() => {
+    if (!isEnding || !callFailureDetail) return null;
+    const { kind, code, message, verdict } = callFailureDetail;
+    if (kind === "unsupported") {
+      return t("chat.call.errors.insecureContext");
+    }
+    if (kind === "media") {
+      if (code === "insecure_context") return t("chat.call.errors.insecureContext");
+      if (code === "permission_denied") return t("chat.call.errors.permissionDenied");
+      if (code === "no_device") return t("chat.call.errors.noDevice");
+      if (code === "device_busy") return t("chat.call.errors.deviceBusy");
+      return t("chat.call.errors.mediaFailed");
+    }
+    if (kind === "rejected") {
+      if (code === "peer_media_failed") return t("chat.call.errors.peerMediaFailed");
+      if (code === "unsupported") return t("chat.call.errors.peerUnsupported");
+      if (code === "busy") return t("chat.call.errors.calleeBusy");
+      return null;
+    }
+    if (kind === "server") {
+      if (code === "callee_busy") return t("chat.call.errors.calleeBusy");
+      return message ? String(message) : t("chat.call.errors.serverFailed");
+    }
+    if (kind === "signaling") {
+      if (code === "handshake_failed") return t("chat.call.errors.handshakeFailed");
+      return message ? String(message) : t("chat.call.errors.signalingFailed");
+    }
+    if (kind === "ice") {
+      if (verdict === "relay_failed") return t("chat.call.errors.iceRelayFailed");
+      if (verdict === "stun_only") return t("chat.call.errors.iceStunOnly");
+      if (verdict === "host_only") return t("chat.call.errors.iceHostOnly");
+      return t("chat.call.errors.iceNoCandidates");
+    }
+    return null;
+  })();
+
+  const iceTechLine =
+    isEnding && callFailureDetail?.kind === "ice"
+      ? t("chat.call.errors.iceTechLine", {
+          types:
+            Array.isArray(callFailureDetail.candidateTypes) &&
+            callFailureDetail.candidateTypes.length > 0
+              ? callFailureDetail.candidateTypes.join(", ")
+              : t("chat.call.errors.iceNone"),
+          turn: callFailureDetail.turnConfigured
+            ? t("chat.call.errors.turnOn")
+            : t("chat.call.errors.turnOff"),
+        })
+      : null;
 
   // Reset minimized state and dragged position if call disconnects
   useEffect(() => {
@@ -459,9 +518,9 @@ export const CallScreen = memo(function CallScreen({
   const stateLabel = isEnding
     ? endLabel
     : callState === "calling"
-      ? "Calling..."
+      ? t("chat.call.screen.calling")
       : callState === "ringing"
-        ? "Incoming call"
+        ? t("chat.call.screen.incoming")
         : callState === "connected"
           ? formatDuration(callDuration)
           : "";
@@ -640,10 +699,10 @@ export const CallScreen = memo(function CallScreen({
 
         {/* Secure badge - very top */}
         <div className="absolute inset-x-0 top-0 z-30 flex justify-center pt-4">
-          <Tooltip label="Peer-to-peer encrypted">
+          <Tooltip label={t("chat.call.screen.secureTooltip")}>
             <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400">
               <Lock size={12} />
-              Secure
+              {t("chat.call.screen.secure")}
             </span>
           </Tooltip>
         </div>
@@ -674,11 +733,25 @@ export const CallScreen = memo(function CallScreen({
                   <UserRoleBadge role={peerRole} size={16} />
                 </div>
                 <p
-                  className={`mt-0.5 flex items-center gap-1.5 text-sm font-medium ${stateLabelColor}`}
+                  className={`mt-0.5 flex items-center gap-1.5 text-sm font-medium ${stateLabelColor} ${hasPersian(stateLabel) ? "font-fa" : ""}`}
+                  dir="auto"
                 >
                   {isEnding ? null : <SignalIndicator quality={callQuality} />}
                   {stateLabel}
                 </p>
+                {failureExplanation ? (
+                  <p
+                    className={`mt-1 max-w-md text-xs text-white/75 ${hasPersian(failureExplanation) ? "font-fa" : ""}`}
+                    dir="auto"
+                  >
+                    {failureExplanation}
+                  </p>
+                ) : null}
+                {iceTechLine ? (
+                  <p className="mt-0.5 font-mono text-[11px] text-white/50" dir="ltr">
+                    {iceTechLine}
+                  </p>
+                ) : null}
               </div>
             </div>
             <Tooltip label="Back to chats">
@@ -722,11 +795,31 @@ export const CallScreen = memo(function CallScreen({
           </div>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-white/60">
             {isVideo ? <Video size={14} /> : <Phone size={14} />}
-            {isVideo ? "Video call" : "Voice call"}
+            <span className={hasPersian(isVideo ? t("chat.call.video") : t("chat.call.voice")) ? "font-fa" : ""} dir="auto">
+              {isVideo ? t("chat.call.video") : t("chat.call.voice")}
+            </span>
           </p>
-          <p className={`mt-2 text-sm font-medium ${stateLabelColor}`}>
+          <p
+            className={`mt-2 text-sm font-medium ${stateLabelColor} ${hasPersian(stateLabel) ? "font-fa" : ""}`}
+            dir="auto"
+          >
             {stateLabel}
           </p>
+          {failureExplanation ? (
+            <div className="mt-3 max-w-xs rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5 text-center backdrop-blur-xs">
+              <p
+                className={`text-xs leading-relaxed text-white/85 ${hasPersian(failureExplanation) ? "font-fa" : ""}`}
+                dir="auto"
+              >
+                {failureExplanation}
+              </p>
+              {iceTechLine ? (
+                <p className="mt-1.5 font-mono text-[11px] text-white/55" dir="ltr">
+                  {iceTechLine}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       )}
 

@@ -6,17 +6,17 @@ import { hasPersian } from "../../utils/fontUtils.ts";
 import { getAvatarInitials } from "../../utils/avatarInitials.ts";
 import {
   getCallLogLabel,
+  isMissedCallStatus,
   parseCallLogBody,
 } from "../../utils/messageContent.ts";
+import { useI18n } from "../../i18n/index.ts";
 import { formatChatCardTimestamp } from "../../utils/chatFormat.ts";
 import Avatar from "../common/Avatar.tsx";
 import UserRoleBadge from "../common/UserRoleBadge.tsx";
 import VerifiedBadge from "../common/VerifiedBadge.tsx";
 import Tooltip from "../common/Tooltip.tsx";
 
-const MISSED_STATUSES: any = new Set(["failed", "cancelled"]);
-
-function mapCallRow(row) {
+function mapCallRow(row, t?: any) {
   const callLog: any = parseCallLogBody(String(row?.body || ""));
   if (!callLog) return null;
   const peer: any = {
@@ -38,7 +38,7 @@ function mapCallRow(row) {
     status: callLog.status,
     durationSeconds: callLog.durationSeconds,
     own,
-    label: getCallLogLabel(callLog, own),
+    label: getCallLogLabel(callLog, own, t),
     peer,
   };
 }
@@ -55,12 +55,13 @@ export default function CallsPanel({
   callsDisabled = false,
   isInCall = false,
 }: any) {
+  const { t } = useI18n();
   const visibleCalls: any = useMemo(() => {
     if (!Array.isArray(calls)) return [];
     return calls
-      .map((row) => mapCallRow({ ...row, viewerId: user?.id }))
+      .map((row) => mapCallRow({ ...row, viewerId: user?.id }, t))
       .filter(Boolean);
-  }, [calls, user?.id]);
+  }, [calls, user?.id, t]);
 
   const isEmptyState = !loadingCalls && !visibleCalls.length;
 
@@ -100,7 +101,7 @@ export default function CallsPanel({
             role: "user",
           };
           const name = peer.nickname || peer.username || "Deleted account";
-          const missed: any = MISSED_STATUSES.has(call.status);
+          const missed: any = isMissedCallStatus(call.status);
           const wiggleStyle = callsEditMode
             ? {
                 animationDuration: `${wiggleDurations[index % 6]}ms`,

@@ -825,10 +825,24 @@ export async function sendCallSignal(action, body: any = {}) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    return res.ok ? await res.json().catch(() => ({})) : null;
-  } catch (err) {
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      return { ok: true, ...data };
+    }
+    return {
+      ok: false,
+      status: res.status,
+      error: data?.error || `HTTP ${res.status}`,
+      code: data?.code || null,
+    };
+  } catch (err: any) {
     console.error(`Call signal '${action}' failed:`, err);
-    return null;
+    return {
+      ok: false,
+      status: 0,
+      error: err?.message || "Network error",
+      code: "network_error",
+    };
   }
 }
 

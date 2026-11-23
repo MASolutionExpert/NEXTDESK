@@ -33,6 +33,7 @@ import {
   extractMessageBodyText,
   FILE_SUMMARY_PATTERN,
   getCallLogLabel,
+  isMissedCallStatus,
   parseCallLogBody,
 } from "../../../utils/messageContent.ts";
 import { resolveMention, getCachedMention } from "../../../utils/mentions.ts";
@@ -303,7 +304,7 @@ export const MessageItem: any = memo(function MessageItem({
   const normalizedBodyText: any = String(bodyText || "").trim();
   const callLog: any = parseCallLogBody(normalizedBodyText);
   const callLogLabel = callLog
-    ? getCallLogLabel(callLog, Boolean(isOwn))
+    ? getCallLogLabel(callLog, Boolean(isOwn), t)
     : null;
   const hasMixedVoiceAndOtherFiles =
     hasFiles &&
@@ -1395,7 +1396,7 @@ export const MessageItem: any = memo(function MessageItem({
                 >
                   <span
                     className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white ${
-                      callLog.status === "failed" || callLog.status === "cancelled"
+                      isMissedCallStatus(callLog.status)
                         ? "bg-rose-500 dark:bg-rose-600"
                         : "bg-emerald-500 dark:bg-emerald-600"
                     }`}

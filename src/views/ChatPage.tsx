@@ -1054,6 +1054,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
   const {
     callState,
     callEndReason,
+    callFailureDetail,
     isCallClosing,
     callType,
     callPeer,
@@ -7278,6 +7279,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
         <CallScreen
           callState={callState}
           callEndReason={callEndReason}
+          callFailureDetail={callFailureDetail}
           isCallClosing={isCallClosing}
           callType={callType}
           callPeer={resolvedCallPeer}

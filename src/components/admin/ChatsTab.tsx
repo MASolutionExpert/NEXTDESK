@@ -1,10 +1,11 @@
 'use client';
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { ChevronDown, Globe, Lock, Megaphone, MessageCircleMore, Pencil, Plus, Trash, User, Users } from "../../icons/lucide.ts";
+import { ChevronDown, Globe, Lock, Megaphone, MessageCircleMore, Pencil, Phone, Plus, Trash, User, Users } from "../../icons/lucide.ts";
 import { api, cardCls, btnPrimary, iconBtn, fmtDate, DEFAULT_PAGE_SIZE } from "./adminShared.ts";
 import { LoadingRows, EmptyState, FilterPopover, SortTh, Pagination, TabToolbar, TabSearchInput } from "./AdminCommon.tsx";
 import AdminGroupModal from "./AdminGroupModal.tsx";
+import AdminCallsSubView from "./AdminCallsSubView.tsx";
 import ConfirmModal from "../modals/ConfirmModal.tsx";
 import Avatar from "../common/Avatar.tsx";
 import ChannelBadge from "../common/ChannelBadge.tsx";
@@ -16,6 +17,8 @@ import { useI18n } from "../../i18n/index.ts";
 
 const ChatsTab = forwardRef<any, any>(function ChatsTab({ active = true, onMutated, onStatsChange }: any, ref) {
   const { t } = useI18n();
+  const [subView, setSubView]         = useState<"chats" | "calls">("chats");
+  const callsSubViewRef               = useRef<any>(null);
   const [chats, setChats]             = useState<any>([]);
   const [total, setTotal]             = useState(0);
   const [page, setPage]               = useState(1);
@@ -87,13 +90,19 @@ const ChatsTab = forwardRef<any, any>(function ChatsTab({ active = true, onMutat
 
   // Refetch (debounced) whenever the query or page changes while the tab is visible.
   useEffect(() => {
-    if (!active) return undefined;
+    if (!active || subView !== "chats") return undefined;
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchPage(page), 250);
     return () => clearTimeout(debounceRef.current);
-  }, [active, page, fetchPage]);
+  }, [active, subView, page, fetchPage]);
 
-  const refresh = useCallback(() => fetchPage(page), [fetchPage, page]);
+  const refresh = useCallback(() => {
+    if (subView === "calls") {
+      callsSubViewRef.current?.refresh?.();
+      return;
+    }
+    fetchPage(page);
+  }, [subView, fetchPage, page]);
   useImperativeHandle(ref, () => ({ refresh }), [refresh]);
 
   // Changing the query resets to page 1. This lives in the handlers (not an
@@ -187,6 +196,37 @@ const ChatsTab = forwardRef<any, any>(function ChatsTab({ active = true, onMutat
 
   return (
     <div className="space-y-3">
+      <div className="inline-flex rounded-xl border border-slate-200/80 bg-slate-100/80 p-1 dark:border-white/10 dark:bg-slate-800/60">
+        <button
+          type="button"
+          onClick={() => setSubView("chats")}
+          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+            subView === "chats"
+              ? "bg-white text-emerald-700 shadow-xs dark:bg-slate-900 dark:text-emerald-300"
+              : "text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white"
+          }`}
+        >
+          <MessageCircleMore size={14} />
+          {t("admin.chats.subTabs.chats")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubView("calls")}
+          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+            subView === "calls"
+              ? "bg-white text-emerald-700 shadow-xs dark:bg-slate-900 dark:text-emerald-300"
+              : "text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white"
+          }`}
+        >
+          <Phone size={14} />
+          {t("admin.chats.subTabs.calls")}
+        </button>
+      </div>
+
+      {subView === "calls" ? (
+        <AdminCallsSubView ref={callsSubViewRef} active={active && subView === "calls"} />
+      ) : (
+      <>
       <TabToolbar>
         <TabSearchInput value={search} onChange={changeSearch} placeholder="admin.chats.search" />
         <FilterPopover sections={chatFilterSections} onReset={resetChatFilters} />
@@ -374,6 +414,8 @@ const ChatsTab = forwardRef<any, any>(function ChatsTab({ active = true, onMutat
           <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage}
             onPageSizeChange={changePageSize} busy={loading} />
         </>
+      )}
+      </>
       )}
 
       {createType && <AdminGroupModal mode="create" initialType={createType} onClose={() => setCreateType(null)} onSaved={() => { refresh(); onMutated(); onStatsChange(); }} />}

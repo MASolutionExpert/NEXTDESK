@@ -2,9 +2,19 @@ export const FILE_SUMMARY_PATTERN =
   /^Sent (a media file|a file|a photo|a video|a document|a voice message|\d+ (files|photos|videos|documents|media files|voice messages))$/i;
 
 const CALL_LOG_BODY_PATTERN =
-  /^\[\[call:(voice|video):(outgoing|cancelled|failed|connected)(?::(\d+))?\]\]$/i;
+  /^\[\[call:(voice|video):(outgoing|cancelled|declined|missed|failed|connected)(?::(\d+))?\]\]$/i;
 
-export const extractMessageBodyText = (value) => {
+export const MISSED_CALL_STATUSES = new Set([
+  "failed",
+  "cancelled",
+  "declined",
+  "missed",
+]);
+
+export const isMissedCallStatus = (status: any) =>
+  MISSED_CALL_STATUSES.has(String(status || "").toLowerCase());
+
+export const extractMessageBodyText = (value: any) => {
   if (typeof value === "string") {
     return value === "[object Object]" ? "" : value;
   }
@@ -14,31 +24,58 @@ export const extractMessageBodyText = (value) => {
   return String(value ?? "");
 };
 
-export const parseCallLogBody = (body) => {
+export const parseCallLogBody = (body: any) => {
   const raw = extractMessageBodyText(body).trim();
   const match = raw.match(CALL_LOG_BODY_PATTERN);
   if (!match) return null;
+  const duration = match[3] == null ? null : Math.max(0, parseInt(match[3], 10));
   return {
     type: match[1].toLowerCase(),
     status: match[2].toLowerCase(),
-    duration: match[3] == null ? null : Math.max(0, parseInt(match[3], 10)),
+    duration,
+    durationSeconds: duration,
   };
 };
 
-export const isCallLogBody = (body) => parseCallLogBody(body) !== null;
+export const isCallLogBody = (body: any) => parseCallLogBody(body) !== null;
 
-export const getCallLogLabel = (callLog, isOwnMessage) => {
+export const getCallLogLabel = (
+  callLog: any,
+  isOwnMessage: boolean,
+  t?: (key: string, vars?: Record<string, any>) => string,
+) => {
   if (!callLog) return "";
-  if (callLog.status === "cancelled") return "Cancelled call";
-  if (callLog.status === "failed") return "Failed call";
-  if (callLog.status === "outgoing") return "Outgoing call";
-  return isOwnMessage ? "Outgoing call" : "Incoming call";
+  const translate = (key: string, fallback: string) => {
+    if (typeof t === "function") {
+      const value = t(key);
+      if (value && value !== key) return value;
+    }
+    return fallback;
+  };
+  if (callLog.status === "cancelled") {
+    return translate("chat.call.log.cancelled", "Cancelled call");
+  }
+  if (callLog.status === "declined") {
+    return translate("chat.call.log.declined", "Declined call");
+  }
+  if (callLog.status === "missed") {
+    return translate("chat.call.log.missed", "Missed call");
+  }
+  if (callLog.status === "failed") {
+    return translate("chat.call.log.failed", "Failed call");
+  }
+  if (callLog.status === "outgoing") {
+    return translate("chat.call.log.outgoing", "Outgoing call");
+  }
+  return isOwnMessage
+    ? translate("chat.call.log.outgoing", "Outgoing call")
+    : translate("chat.call.log.incoming", "Incoming call");
 };
 
-export const getMessageFiles = (message) =>
+export const getMessageFiles = (message: any) =>
   Array.isArray(message?.files) ? message.files : [];
 
-export const hasMessageText = (message) => {
+export const hasMessageText = (message: any) => {
   const bodyText = extractMessageBodyText(message?.body).trim();
   if (!bodyText) return false;
   if (bodyText.startsWith("sb-enc-v1:")) return false;

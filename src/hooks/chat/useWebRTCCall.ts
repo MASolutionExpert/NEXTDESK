@@ -7,7 +7,11 @@ import {
   isScreenShareSupported,
   foldIncomingRemoteStream,
 } from "../../utils/callCapabilities.ts";
-import { logIceDiagnostics } from "../../utils/iceDiagnostics.ts";
+import {
+  classifyMediaError,
+  collectIceFailureSummary,
+  logIceDiagnostics,
+} from "../../utils/iceDiagnostics.ts";
 
 /**
  * Grade connection quality from WebRTC stats into signal bars.
@@ -28,7 +32,9 @@ export function gradeCallQuality(rttMs, lossPct) {
 
 const UNKNOWN_QUALITY = { level: 0, rttMs: null, packetLossPct: null };
 export const CALL_END_NOTICE_MS = 1750;
+export const CALL_FAILURE_DETAIL_NOTICE_MS = 4500;
 export const CALL_EXIT_MS = 250;
+export const ICE_RESTART_RECOVERY_MS = 10000;
 
 /**
  * Capture the local media stream for a call. A video request fails on
@@ -138,8 +144,9 @@ export function hasUnnegotiatedSend(pc) {
 export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
   const [callState, setCallState] = useState("idle");
   // Set while the call is winding down so the screen can show why it ended
-  // (declined | ended | failed) before dropping out.
+  // (declined | busy | missed | peer_media_failed | ended | failed) before dropping out.
   const [callEndReason, setCallEndReason] = useState<any>(null);
+  const [callFailureDetail, setCallFailureDetail] = useState<any>(null);
   const [isCallClosing, setIsCallClosing] = useState(false);
   const [callType, setCallType] = useState("voice"); // voice | video
   const [callChatId, setCallChatId] = useState<any>(null);
@@ -169,6 +176,8 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
   const screenAudioStreamRef = useRef<any>(null);
   const durationTimerRef = useRef<any>(null);
   const disconnectTimerRef = useRef<any>(null);
+  const iceRestartTimerRef = useRef<any>(null);
+  const iceRestartAttemptedRef = useRef(false);
   const endNoticeTimerRef = useRef<any>(null);
   const endExitTimerRef = useRef<any>(null);
   const callEndReasonRef = useRef<any>(null);
@@ -313,9 +322,15 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
       clearTimeout(disconnectTimerRef.current);
       disconnectTimerRef.current = null;
     }
+    if (iceRestartTimerRef.current) {
+      clearTimeout(iceRestartTimerRef.current);
+      iceRestartTimerRef.current = null;
+    }
+    iceRestartAttemptedRef.current = false;
     clearEndTimers();
     callEndReasonRef.current = null;
     setCallEndReason(null);
+    setCallFailureDetail(null);
 
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
@@ -391,7 +406,7 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
 
   // Show why the call ended for a few seconds before the screen goes away.
   const finishCall = useCallback(
-    (reason) => {
+    (reason, detail: any = null) => {
       if (
         callStateRef.current === "idle" ||
         callEndReasonRef.current ||
@@ -400,6 +415,7 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
         return;
       callEndReasonRef.current = reason;
       setCallEndReason(reason);
+      setCallFailureDetail(detail);
       if (durationTimerRef.current) {
         clearInterval(durationTimerRef.current);
         durationTimerRef.current = null;
@@ -408,6 +424,11 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
         clearTimeout(disconnectTimerRef.current);
         disconnectTimerRef.current = null;
       }
+      if (iceRestartTimerRef.current) {
+        clearTimeout(iceRestartTimerRef.current);
+        iceRestartTimerRef.current = null;
+      }
+      iceRestartAttemptedRef.current = false;
       // Stop capturing immediately; the notice is purely visual.
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach((t) => t.stop());
@@ -424,17 +445,24 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
         } catch (_) {}
         peerConnectionRef.current = null;
       }
-      endNoticeTimerRef.current = setTimeout(beginCallExit, CALL_END_NOTICE_MS);
+      const noticeMs =
+        detail && detail.kind !== "rejected"
+          ? CALL_FAILURE_DETAIL_NOTICE_MS
+          : CALL_END_NOTICE_MS;
+      endNoticeTimerRef.current = setTimeout(beginCallExit, noticeMs);
     },
     [beginCallExit, releaseScreenShare],
   );
 
   // Media path broke locally: tell the peer/server the call is over too.
-  const failCall = useCallback(() => {
-    const chatId = callChatIdRef.current;
-    finishCall("failed");
-    if (chatId) void postSignal("end", { chatId });
-  }, [finishCall, postSignal]);
+  const failCall = useCallback(
+    (detail: any = null) => {
+      const chatId = callChatIdRef.current;
+      finishCall("failed", detail);
+      if (chatId) void postSignal("end", { chatId, reason: "failed" });
+    },
+    [finishCall, postSignal],
+  );
 
   const createPeerConnection = useCallback(async () => {
     const iceServers = await ensureIceServers();
@@ -485,12 +513,73 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
       setRemoteStreamTick((t) => t + 1);
     };
 
+    const failWithIceSummary = (targetPc: any) => {
+      void collectIceFailureSummary(targetPc, iceServersRef.current).then(
+        (summary) => {
+          failCall({ kind: "ice", ...summary });
+        },
+        () => {
+          failCall({ kind: "ice", verdict: "no_candidates", candidateTypes: [], turnConfigured: false });
+        },
+      );
+    };
+
+    const attemptIceRestart = (targetPc: any) => {
+      if (
+        iceRestartAttemptedRef.current ||
+        !targetPc ||
+        targetPc.signalingState === "closed"
+      ) {
+        return false;
+      }
+      iceRestartAttemptedRef.current = true;
+      try {
+        if (typeof targetPc.restartIce === "function") {
+          targetPc.restartIce();
+        }
+      } catch (_) {}
+      // Caller (impolite peer) initiates the ICE-restart offer; both sides wait
+      // up to ICE_RESTART_RECOVERY_MS before declaring the call failed.
+      if (!isPolitePeerRef.current && callChatIdRef.current) {
+        void (async () => {
+          try {
+            const offer = await targetPc.createOffer({ iceRestart: true });
+            await targetPc.setLocalDescription(offer);
+            if (targetPc.signalingState === "have-local-offer") {
+              await postSignal("offer", {
+                chatId: callChatIdRef.current,
+                sdp: offer,
+              });
+            }
+          } catch (_) {}
+        })();
+      }
+      if (iceRestartTimerRef.current) {
+        clearTimeout(iceRestartTimerRef.current);
+      }
+      iceRestartTimerRef.current = setTimeout(() => {
+        iceRestartTimerRef.current = null;
+        if (
+          peerConnectionRef.current === targetPc &&
+          targetPc.connectionState !== "connected"
+        ) {
+          failWithIceSummary(targetPc);
+        }
+      }, ICE_RESTART_RECOVERY_MS);
+      return true;
+    };
+
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === "connected") {
         if (disconnectTimerRef.current) {
           clearTimeout(disconnectTimerRef.current);
           disconnectTimerRef.current = null;
         }
+        if (iceRestartTimerRef.current) {
+          clearTimeout(iceRestartTimerRef.current);
+          iceRestartTimerRef.current = null;
+        }
+        iceRestartAttemptedRef.current = false;
         setCallState("connected");
         callStateRef.current = "connected";
         if (!durationTimerRef.current) {
@@ -500,19 +589,25 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
         }
       }
       if (pc.connectionState === "disconnected") {
-        // Transient ICE blips are common; only hang up if it persists.
+        // Transient ICE blips are common; attempt 1 automatic ICE restart with
+        // a 10s recovery window before giving up.
         void logIceDiagnostics(pc, "disconnected");
+        if (attemptIceRestart(pc)) return;
         if (!disconnectTimerRef.current) {
           disconnectTimerRef.current = setTimeout(() => {
             disconnectTimerRef.current = null;
-            failCall();
+            failWithIceSummary(pc);
           }, 5000);
         }
       }
-      if (pc.connectionState === "failed" || pc.connectionState === "closed") {
-        if (pc.connectionState === "failed") {
-          void logIceDiagnostics(pc, "failed");
+      if (pc.connectionState === "failed") {
+        void logIceDiagnostics(pc, "failed");
+        if (callStateRef.current === "connected" && attemptIceRestart(pc)) {
+          return;
         }
+        failWithIceSummary(pc);
+      }
+      if (pc.connectionState === "closed") {
         failCall();
       }
     };
@@ -522,19 +617,29 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
   }, [postSignal, failCall, ensureIceServers]);
 
   const sendOffer = useCallback(
-    async (pc) => {
+    async (pc, options?: any) => {
       isMakingOfferRef.current = true;
       try {
-        const offer = await pc.createOffer();
+        const offer = options ? await pc.createOffer(options) : await pc.createOffer();
         await pc.setLocalDescription(offer);
         // A colliding remote offer may have rolled this one back already.
         if (pc.signalingState !== "have-local-offer") return;
-        await postSignal("offer", { chatId: callChatIdRef.current, sdp: offer });
+        const res = await postSignal("offer", {
+          chatId: callChatIdRef.current,
+          sdp: offer,
+        });
+        if (!res || res.ok === false) {
+          finishCall("failed", {
+            kind: "signaling",
+            code: res?.code || "offer_failed",
+            message: res?.error,
+          });
+        }
       } finally {
         isMakingOfferRef.current = false;
       }
     },
-    [postSignal],
+    [postSignal, finishCall],
   );
 
   // Start a call (caller)
@@ -552,15 +657,34 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
       const normalizedChatId = String(chatId || "").trim();
       if (!normalizedChatId || !calleeUsername) return;
       if (callStateRef.current !== "idle") return;
-      if (!isCallSupported()) {
-        console.warn("Calls are only supported over secure HTTPS connections");
-        return;
-      }
-
       clearEndTimers();
       callEndReasonRef.current = null;
       setCallEndReason(null);
+      setCallFailureDetail(null);
       setIsCallClosing(false);
+
+      if (!isCallSupported()) {
+        console.warn("Calls are only supported over secure HTTPS connections");
+        setCallType(type);
+        callTypeRef.current = type;
+        setCallChatId(normalizedChatId);
+        callChatIdRef.current = normalizedChatId;
+        setCallPeer({
+          username: calleeUsername,
+          nickname: calleeNickname,
+          avatar: calleeAvatar,
+          color: calleeColor,
+          verified: calleeVerified,
+          role: calleeRole,
+        });
+        setCallState("calling");
+        callStateRef.current = "calling";
+        finishCall("failed", {
+          kind: "unsupported",
+          code: "insecure_context",
+        });
+        return;
+      }
       isPolitePeerRef.current = false;
       setCallState("calling");
       callStateRef.current = "calling";
@@ -597,8 +721,20 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
           chatId: normalizedChatId,
           type,
         });
-        if (!res?.ok && !res?.call) {
-          finishCall("failed");
+        if (!res || (res.ok === false && !res.call)) {
+          if (res?.code === "callee_busy" || res?.status === 409) {
+            finishCall("busy", {
+              kind: "server",
+              code: "callee_busy",
+              message: res?.error,
+            });
+          } else {
+            finishCall("failed", {
+              kind: "server",
+              code: res?.code || "start_failed",
+              message: res?.error,
+            });
+          }
         } else if (type === "video" && !hasVideo) {
           // A camera-less video caller joins audio-only.
           void postSignal("camera-state", {
@@ -606,9 +742,13 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
             cameraOff: true,
           });
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to start call:", err);
-        finishCall("failed");
+        finishCall("failed", {
+          kind: "media",
+          code: classifyMediaError(err),
+          message: err?.message,
+        });
       }
     },
     [postSignal, finishCall, clearEndTimers]
@@ -727,8 +867,12 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
       }
 
       const res = await postSignal("accept", { chatId });
-      if (res === null) {
-        finishCall("failed");
+      if (!res || res.ok === false) {
+        finishCall("failed", {
+          kind: "server",
+          code: res?.code || "accept_failed",
+          message: res?.error,
+        });
         return;
       }
       if (acceptedType === "video" && !hasVideo) {
@@ -745,10 +889,14 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
           setCallDuration((prev) => prev + 1);
         }, 1000);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to accept call:", err);
-      finishCall("failed");
-      await postSignal("reject", { chatId });
+      finishCall("failed", {
+        kind: "media",
+        code: classifyMediaError(err),
+        message: err?.message,
+      });
+      await postSignal("reject", { chatId, reason: "peer_media_failed" });
     }
   }, [createPeerConnection, postSignal, finishCall]);
 
@@ -1057,18 +1205,18 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
 
       switch (payload.type) {
         case "call:incoming": {
-          // If this client does not support WebRTC / is on insecure HTTP, auto-reject without showing modal
+          // Do not auto-reject from an insecure/unsupported tab: the user may
+          // have another HTTPS or mobile session open that can still answer.
           if (!isCallSupported()) {
-            void postSignal("reject", {
-              chatId: payload.chatId,
-              reason: "unsupported",
-            });
             return;
           }
 
           // Busy: reject second call if already active
           if (callStateRef.current !== "idle") {
-            void postSignal("reject", { chatId: payload.chatId });
+            void postSignal("reject", {
+              chatId: payload.chatId,
+              reason: "busy",
+            });
             return;
           }
           isPolitePeerRef.current = true;
@@ -1156,17 +1304,29 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
 
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-            await postSignal("answer", {
+            const answerRes = await postSignal("answer", {
               chatId: callChatIdRef.current,
               sdp: answer,
             });
+            if (!answerRes || answerRes.ok === false) {
+              finishCall("failed", {
+                kind: "signaling",
+                code: answerRes?.code || "answer_failed",
+                message: answerRes?.error,
+              });
+              break;
+            }
             // Whatever the rolled-back offer carried still has to go out.
             if (!isReadyForOffer && hasUnnegotiatedSend(pc)) {
               await sendOffer(pc);
             }
-          } catch (err) {
+          } catch (err: any) {
             console.error("Failed to handle offer:", err);
-            finishCall("failed");
+            finishCall("failed", {
+              kind: "signaling",
+              code: "handshake_failed",
+              message: err?.message,
+            });
           }
           break;
         }
@@ -1204,8 +1364,13 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
                 }, 1000);
               }
             }
-          } catch (err) {
+          } catch (err: any) {
             console.error("Failed to handle answer:", err);
+            finishCall("failed", {
+              kind: "signaling",
+              code: "handshake_failed",
+              message: err?.message,
+            });
           }
           break;
         }
@@ -1259,6 +1424,17 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
           break;
         }
 
+        case "call:ring-ended": {
+          if (
+            callStateRef.current === "ringing" &&
+            callChatIdRef.current &&
+            String(payload.chatId) === String(callChatIdRef.current)
+          ) {
+            beginCallExit();
+          }
+          break;
+        }
+
         case "call:rejected": {
           if (
             callChatIdRef.current &&
@@ -1266,11 +1442,18 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
           ) {
             return;
           }
-          // "unsupported" means the peer could not take the call at all
-          // (e.g. insecure HTTP instance), not a deliberate decline.
-          finishCall(
-            payload.reason === "unsupported" ? "failed" : "declined"
-          );
+          if (payload.reason === "unsupported") {
+            finishCall("failed", { kind: "rejected", code: "unsupported" });
+          } else if (payload.reason === "peer_media_failed") {
+            finishCall("peer_media_failed", {
+              kind: "rejected",
+              code: "peer_media_failed",
+            });
+          } else if (payload.reason === "busy") {
+            finishCall("busy", { kind: "rejected", code: "busy" });
+          } else {
+            finishCall("declined");
+          }
           break;
         }
 
@@ -1281,16 +1464,35 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
           ) {
             return;
           }
-          finishCall("ended");
+          if (payload.reason === "missed") {
+            finishCall("missed");
+          } else if (payload.reason === "failed") {
+            finishCall("failed");
+          } else {
+            finishCall("ended");
+          }
           break;
         }
 
         case "call:error": {
           if (
-            callChatIdRef.current &&
-            String(payload.chatId) === String(callChatIdRef.current)
+            !payload.chatId ||
+            (callChatIdRef.current &&
+              String(payload.chatId) === String(callChatIdRef.current))
           ) {
-            finishCall("failed");
+            if (payload.code === "callee_busy") {
+              finishCall("busy", {
+                kind: "server",
+                code: "callee_busy",
+                message: payload.error,
+              });
+            } else {
+              finishCall("failed", {
+                kind: "server",
+                code: payload.code || "signaling_error",
+                message: payload.error,
+              });
+            }
           }
           break;
         }
@@ -1299,7 +1501,7 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
           break;
       }
     },
-    [createPeerConnection, postSignal, finishCall, sendOffer]
+    [createPeerConnection, postSignal, finishCall, beginCallExit, sendOffer]
   );
 
   // Recover a call that started while this app was closed.
@@ -1325,6 +1527,7 @@ export function useWebRTCCall({ realtimeSenderRef }: any = {}) {
   return {
     callState,
     callEndReason,
+    callFailureDetail,
     isCallClosing,
     callType,
     callChatId,
