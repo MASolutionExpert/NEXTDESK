@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nextdesk-deploy-version: 2.0.0-dev.2026112301
+# nextdesk-deploy-version: 2.0.0-dev.2026112302
 
 set -uo pipefail
 

@@ -2,6 +2,23 @@
 
 All notable changes to **NextDesk** are documented in this file.
 
+## 2.0.0-dev.2026112302
+
+### Fixed
+
+- **Installer Monolith Alignment (`scripts/install.sh`)**: fixed legacy `$INSTALL_DIR/server` directory checks and unconditional `npm --prefix server install` calls that did not match NextDesk's unified TypeScript monolith layout (`package.json` + `src/server/`). `run_migrations`, `backup_database`, `restore_database`, `db_doctor`, VAPID key generation, offline zip validation, and `db:doctor` diagnostic hints now target the unified monolith root cleanly.
+- **Installer Streaming Log Permissions**: `ensure_log_dir` now hands ownership of the install log file to the invoking `SUDO_USER`, and `run_in_install_dir_streaming` falls back gracefully to `sudo -n tee` (or direct terminal output) so live migration streaming never fails with `Permission denied`.
+- **PostgreSQL SSL Precedence (`POSTGRES_SSL=true` vs `sslmode=`)**: `POSTGRES_SSL=true` is now applied to `DATABASE_URL`/`POSTGRES_URL` connections (supporting self-signed Postgres servers) only when the URL has no explicit `sslmode=` parameter; any explicit `sslmode=` inside the URL always takes precedence, and `describePgTarget()` reflects the effective TLS state accurately.
+- **Migration Watchdog (`DB_MIGRATION_TIMEOUT_MS=0`)**: explicit `DB_MIGRATION_TIMEOUT_MS=0` now truly disables the per-migration watchdog as documented, while blank or unset values safely fall back to the 120s default. `prisma migrate deploy` now streams output live with elapsed timing and a clear timeout error if aborted.
+- **Pre-Migration `pg_dump` Backup Hardening**: `createPostgresPreMigrationBackup()` now defaults `DB_BACKUP_TIMEOUT_MS` to 120s with `PGCONNECT_TIMEOUT` and `PGSSLMODE` support, warns cleanly if `pg_dump` is not installed (without blocking), and removes any partial dump file on timeout or failure.
+- **GitHub Update Check Pagination**: `fetchLatestGitHubTag()` now paginates up to 3×100 tags (stopping early when fewer than 100 tags are returned) so newer releases are never missed on repositories with long tag histories.
+
+### Improved
+
+- **3-Probe PostgreSQL Connectivity Preflight**: `runPostgresPreflight()` now performs up to 3 quick `SELECT 1` probes (failing immediately on non-retryable auth/database/SSL errors) with root-cause classification (`connection_refused`, `dns`, `auth`, `missing_database`, `ssl`, `timeout`), latency measurement, and password-redacted target reporting.
+- **Strictly Read-Only `db:doctor` Diagnostics**: `npm run db:doctor` now measures connection latency, compares `prisma/migrations/` on disk against `_prisma_migrations` to report pending or failed migrations accurately, detects leftover temporary rebuild tables, and reports PostgreSQL server version, database size, active connections, and blocking lock waits — without mutating the database.
+- **Environment Documentation & Tests**: documented all PostgreSQL timeout and migration hardening variables in `.env.example` and added unit, server, and Bats test coverage.
+
 ## 2.0.0-dev.2026112301
 
 - **100% Pure NextDesk Brand & Codebase Independence**: removed all remaining legacy brand references (`ChatDesk`, `Songbird` / `سانگبرد`) across backend, frontend, media worker, tests, installer/CLI (`nextdesk-deploy`, `# nextdesk-deploy-version:`), Docker/Nginx/Ansible/Railway/Render configs, GitHub workflows, and English/Persian documentation.
