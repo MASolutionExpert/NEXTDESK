@@ -136,6 +136,8 @@ import {
 } from "../utils/chatPageConstants.ts";
 
 const loadChatProfileModal = () => import("../components/modals/ChatProfileModal.tsx");
+const loadChatFilesModal = () => import("../components/modals/ChatFilesModal.tsx");
+const loadChatSearchModal = () => import("../components/modals/ChatSearchModal.tsx");
 const loadDeleteChatsModal = () => import("../components/modals/DeleteChatsModal.tsx");
 const loadDeleteMessageScopeModal = () =>
   import("../components/modals/DeleteMessageScopeModal.tsx");
@@ -154,6 +156,8 @@ const loadNotificationsSettingsModal = () =>
 const loadWhatsNewModal = () => import("../components/modals/WhatsNewModal.tsx");
 
 const ChatProfileModal: any = lazy(loadChatProfileModal);
+const ChatFilesModal: any = lazy(loadChatFilesModal);
+const ChatSearchModal: any = lazy(loadChatSearchModal);
 const DeleteChatsModal: any = lazy(loadDeleteChatsModal);
 const DeleteMessageScopeModal: any = lazy(loadDeleteMessageScopeModal);
 const ForwardMessageModal: any = lazy(loadForwardMessageModal);

@@ -67,6 +67,8 @@ export default function ChatProfileModal({
   onOpenUserContextMenu,
   onEditGroup,
   onEditSelfProfile,
+  onOpenFiles = null,
+  onOpenSearch = null,
   showJoinAction = false,
   onJoinChat,
   showMembers = true,
@@ -598,6 +600,36 @@ export default function ChatProfileModal({
                 {muted ? t("modals.shared.unmute") : t("modals.shared.mute")}
               </p>
             </button>
+            {onOpenFiles ? (
+              <button
+                type="button"
+                onClick={() => {
+                  handleClose();
+                  onOpenFiles();
+                }}
+                className="group rounded-2xl border border-emerald-200 bg-white px-2 py-3 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-200 dark:hover:bg-emerald-500/10 cursor-pointer"
+              >
+                <div className="mx-auto inline-flex h-11 w-11 items-center justify-center rounded-full">
+                  <Files size={24} className="icon-anim-pop" />
+                </div>
+                <p className="mt-1 text-xs font-semibold">{t("modals.profile.files")}</p>
+              </button>
+            ) : null}
+            {onOpenSearch ? (
+              <button
+                type="button"
+                onClick={() => {
+                  handleClose();
+                  onOpenSearch();
+                }}
+                className="group rounded-2xl border border-emerald-200 bg-white px-2 py-3 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-200 dark:hover:bg-emerald-500/10 cursor-pointer"
+              >
+                <div className="mx-auto inline-flex h-11 w-11 items-center justify-center rounded-full">
+                  <Search size={24} className="icon-anim-pop" />
+                </div>
+                <p className="mt-1 text-xs font-semibold">{t("modals.profile.search")}</p>
+              </button>
+            ) : null}
             {isGroup || isChannel ? (
               <button
                 type="button"
